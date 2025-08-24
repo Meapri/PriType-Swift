@@ -1,0 +1,639 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		627B9C922E5B00C0006D3AA2 /* InputMethodKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 627B9C912E5B00C0006D3AA2 /* InputMethodKit.framework */; };
+		627B9C942E5B00C9006D3AA2 /* Carbon.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 627B9C932E5B00C9006D3AA2 /* Carbon.framework */; };
+		627B9C962E5B00D1006D3AA2 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 627B9C952E5B00D1006D3AA2 /* Cocoa.framework */; };
+		627B9DA62E5B098C006D3AA2 /* MASShortcut in Frameworks */ = {isa = PBXBuildFile; productRef = 627B9DA52E5B098C006D3AA2 /* MASShortcut */; };
+		627B9DC12E5B0C12006D3AA2 /* LibHangul in Frameworks */ = {isa = PBXBuildFile; productRef = 627B9DC02E5B0C12006D3AA2 /* LibHangul */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		627B9C682E5B0049006D3AA2 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 627B9C512E5B0049006D3AA2 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 627B9C582E5B0049006D3AA2;
+			remoteInfo = "PriType-Swift";
+		};
+		627B9C722E5B0049006D3AA2 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 627B9C512E5B0049006D3AA2 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 627B9C582E5B0049006D3AA2;
+			remoteInfo = "PriType-Swift";
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		627B9C592E5B0049006D3AA2 /* PriType-Swift.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "PriType-Swift.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		627B9C672E5B0049006D3AA2 /* PriType-SwiftTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "PriType-SwiftTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		627B9C712E5B0049006D3AA2 /* PriType-SwiftUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "PriType-SwiftUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		627B9C912E5B00C0006D3AA2 /* InputMethodKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = InputMethodKit.framework; path = System/Library/Frameworks/InputMethodKit.framework; sourceTree = SDKROOT; };
+		627B9C932E5B00C9006D3AA2 /* Carbon.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Carbon.framework; path = System/Library/Frameworks/Carbon.framework; sourceTree = SDKROOT; };
+		627B9C952E5B00D1006D3AA2 /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = System/Library/Frameworks/Cocoa.framework; sourceTree = SDKROOT; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		6260DA852E5B151B00079731 /* Exceptions for "PriType-Swift" folder in "PriType-Swift" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Resources/InputMethodIcons/priType_icon_16.png,
+				Resources/InputMethodIcons/priType_icon_32.png,
+			);
+			target = 627B9C582E5B0049006D3AA2 /* PriType-Swift */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		627B9C5B2E5B0049006D3AA2 /* PriType-Swift */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				6260DA852E5B151B00079731 /* Exceptions for "PriType-Swift" folder in "PriType-Swift" target */,
+			);
+			path = "PriType-Swift";
+			sourceTree = "<group>";
+		};
+		627B9C6A2E5B0049006D3AA2 /* PriType-SwiftTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "PriType-SwiftTests";
+			sourceTree = "<group>";
+		};
+		627B9C742E5B0049006D3AA2 /* PriType-SwiftUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "PriType-SwiftUITests";
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		627B9C562E5B0049006D3AA2 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				627B9DC12E5B0C12006D3AA2 /* LibHangul in Frameworks */,
+				627B9DA62E5B098C006D3AA2 /* MASShortcut in Frameworks */,
+				627B9C922E5B00C0006D3AA2 /* InputMethodKit.framework in Frameworks */,
+				627B9C942E5B00C9006D3AA2 /* Carbon.framework in Frameworks */,
+				627B9C962E5B00D1006D3AA2 /* Cocoa.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		627B9C642E5B0049006D3AA2 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		627B9C6E2E5B0049006D3AA2 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		627B9C502E5B0049006D3AA2 = {
+			isa = PBXGroup;
+			children = (
+				627B9C5B2E5B0049006D3AA2 /* PriType-Swift */,
+				627B9C6A2E5B0049006D3AA2 /* PriType-SwiftTests */,
+				627B9C742E5B0049006D3AA2 /* PriType-SwiftUITests */,
+				627B9C902E5B00C0006D3AA2 /* Frameworks */,
+				627B9C5A2E5B0049006D3AA2 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		627B9C5A2E5B0049006D3AA2 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				627B9C592E5B0049006D3AA2 /* PriType-Swift.app */,
+				627B9C672E5B0049006D3AA2 /* PriType-SwiftTests.xctest */,
+				627B9C712E5B0049006D3AA2 /* PriType-SwiftUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		627B9C902E5B00C0006D3AA2 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				627B9C952E5B00D1006D3AA2 /* Cocoa.framework */,
+				627B9C932E5B00C9006D3AA2 /* Carbon.framework */,
+				627B9C912E5B00C0006D3AA2 /* InputMethodKit.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		627B9C582E5B0049006D3AA2 /* PriType-Swift */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 627B9C7B2E5B0049006D3AA2 /* Build configuration list for PBXNativeTarget "PriType-Swift" */;
+			buildPhases = (
+				627B9C552E5B0049006D3AA2 /* Sources */,
+				627B9C562E5B0049006D3AA2 /* Frameworks */,
+				627B9C572E5B0049006D3AA2 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				627B9C5B2E5B0049006D3AA2 /* PriType-Swift */,
+			);
+			name = "PriType-Swift";
+			packageProductDependencies = (
+				627B9DA52E5B098C006D3AA2 /* MASShortcut */,
+				627B9DC02E5B0C12006D3AA2 /* LibHangul */,
+			);
+			productName = "PriType-Swift";
+			productReference = 627B9C592E5B0049006D3AA2 /* PriType-Swift.app */;
+			productType = "com.apple.product-type.application";
+		};
+		627B9C662E5B0049006D3AA2 /* PriType-SwiftTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 627B9C7E2E5B0049006D3AA2 /* Build configuration list for PBXNativeTarget "PriType-SwiftTests" */;
+			buildPhases = (
+				627B9C632E5B0049006D3AA2 /* Sources */,
+				627B9C642E5B0049006D3AA2 /* Frameworks */,
+				627B9C652E5B0049006D3AA2 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				627B9C692E5B0049006D3AA2 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				627B9C6A2E5B0049006D3AA2 /* PriType-SwiftTests */,
+			);
+			name = "PriType-SwiftTests";
+			packageProductDependencies = (
+			);
+			productName = "PriType-SwiftTests";
+			productReference = 627B9C672E5B0049006D3AA2 /* PriType-SwiftTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		627B9C702E5B0049006D3AA2 /* PriType-SwiftUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 627B9C812E5B0049006D3AA2 /* Build configuration list for PBXNativeTarget "PriType-SwiftUITests" */;
+			buildPhases = (
+				627B9C6D2E5B0049006D3AA2 /* Sources */,
+				627B9C6E2E5B0049006D3AA2 /* Frameworks */,
+				627B9C6F2E5B0049006D3AA2 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				627B9C732E5B0049006D3AA2 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				627B9C742E5B0049006D3AA2 /* PriType-SwiftUITests */,
+			);
+			name = "PriType-SwiftUITests";
+			packageProductDependencies = (
+			);
+			productName = "PriType-SwiftUITests";
+			productReference = 627B9C712E5B0049006D3AA2 /* PriType-SwiftUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		627B9C512E5B0049006D3AA2 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1640;
+				LastUpgradeCheck = 1640;
+				TargetAttributes = {
+					627B9C582E5B0049006D3AA2 = {
+						CreatedOnToolsVersion = 16.4;
+					};
+					627B9C662E5B0049006D3AA2 = {
+						CreatedOnToolsVersion = 16.4;
+						TestTargetID = 627B9C582E5B0049006D3AA2;
+					};
+					627B9C702E5B0049006D3AA2 = {
+						CreatedOnToolsVersion = 16.4;
+						TestTargetID = 627B9C582E5B0049006D3AA2;
+					};
+				};
+			};
+			buildConfigurationList = 627B9C542E5B0049006D3AA2 /* Build configuration list for PBXProject "PriType-Swift" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 627B9C502E5B0049006D3AA2;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				627B9DA32E5B097E006D3AA2 /* XCRemoteSwiftPackageReference "MASShortcut-Swift" */,
+				627B9DA42E5B0988006D3AA2 /* XCRemoteSwiftPackageReference "libhangul-swift" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 627B9C5A2E5B0049006D3AA2 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				627B9C582E5B0049006D3AA2 /* PriType-Swift */,
+				627B9C662E5B0049006D3AA2 /* PriType-SwiftTests */,
+				627B9C702E5B0049006D3AA2 /* PriType-SwiftUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		627B9C572E5B0049006D3AA2 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		627B9C652E5B0049006D3AA2 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		627B9C6F2E5B0049006D3AA2 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		627B9C552E5B0049006D3AA2 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		627B9C632E5B0049006D3AA2 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		627B9C6D2E5B0049006D3AA2 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		627B9C692E5B0049006D3AA2 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 627B9C582E5B0049006D3AA2 /* PriType-Swift */;
+			targetProxy = 627B9C682E5B0049006D3AA2 /* PBXContainerItemProxy */;
+		};
+		627B9C732E5B0049006D3AA2 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 627B9C582E5B0049006D3AA2 /* PriType-Swift */;
+			targetProxy = 627B9C722E5B0049006D3AA2 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		627B9C792E5B0049006D3AA2 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = M4U438VG59;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.5;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		627B9C7A2E5B0049006D3AA2 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = M4U438VG59;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.5;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		627B9C7C2E5B0049006D3AA2 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "PriType-Swift/PriType_Swift.entitlements";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = M4U438VG59;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "Meapri.PriType-Swift";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		627B9C7D2E5B0049006D3AA2 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "PriType-Swift/PriType_Swift.entitlements";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = M4U438VG59;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "Meapri.PriType-Swift";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		627B9C7F2E5B0049006D3AA2 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = M4U438VG59;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.5;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "Meapri.PriType-SwiftTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/PriType-Swift.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/PriType-Swift";
+			};
+			name = Debug;
+		};
+		627B9C802E5B0049006D3AA2 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = M4U438VG59;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.5;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "Meapri.PriType-SwiftTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/PriType-Swift.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/PriType-Swift";
+			};
+			name = Release;
+		};
+		627B9C822E5B0049006D3AA2 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = M4U438VG59;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "Meapri.PriType-SwiftUITests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TEST_TARGET_NAME = "PriType-Swift";
+			};
+			name = Debug;
+		};
+		627B9C832E5B0049006D3AA2 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = M4U438VG59;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "Meapri.PriType-SwiftUITests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TEST_TARGET_NAME = "PriType-Swift";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		627B9C542E5B0049006D3AA2 /* Build configuration list for PBXProject "PriType-Swift" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				627B9C792E5B0049006D3AA2 /* Debug */,
+				627B9C7A2E5B0049006D3AA2 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		627B9C7B2E5B0049006D3AA2 /* Build configuration list for PBXNativeTarget "PriType-Swift" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				627B9C7C2E5B0049006D3AA2 /* Debug */,
+				627B9C7D2E5B0049006D3AA2 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		627B9C7E2E5B0049006D3AA2 /* Build configuration list for PBXNativeTarget "PriType-SwiftTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				627B9C7F2E5B0049006D3AA2 /* Debug */,
+				627B9C802E5B0049006D3AA2 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		627B9C812E5B0049006D3AA2 /* Build configuration list for PBXNativeTarget "PriType-SwiftUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				627B9C822E5B0049006D3AA2 /* Debug */,
+				627B9C832E5B0049006D3AA2 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		627B9DA32E5B097E006D3AA2 /* XCRemoteSwiftPackageReference "MASShortcut-Swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/Meapri/MASShortcut-Swift";
+			requirement = {
+				branch = master;
+				kind = branch;
+			};
+		};
+		627B9DA42E5B0988006D3AA2 /* XCRemoteSwiftPackageReference "libhangul-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/Meapri/libhangul-swift";
+			requirement = {
+				branch = main;
+				kind = branch;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		627B9DA52E5B098C006D3AA2 /* MASShortcut */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 627B9DA32E5B097E006D3AA2 /* XCRemoteSwiftPackageReference "MASShortcut-Swift" */;
+			productName = MASShortcut;
+		};
+		627B9DC02E5B0C12006D3AA2 /* LibHangul */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 627B9DA42E5B0988006D3AA2 /* XCRemoteSwiftPackageReference "libhangul-swift" */;
+			productName = LibHangul;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 627B9C512E5B0049006D3AA2 /* Project object */;
+}

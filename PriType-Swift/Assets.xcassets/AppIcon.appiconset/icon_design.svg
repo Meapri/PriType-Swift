@@ -1,0 +1,31 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="textGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#f0f0f0;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- 배경 원 -->
+  <circle cx="256" cy="256" r="240" fill="url(#bgGradient)" stroke="#4a5568" stroke-width="4"/>
+
+  <!-- 한글 "한" 텍스트 -->
+  <text x="256" y="280" font-family="Apple Gothic, sans-serif" font-size="180" font-weight="bold"
+        text-anchor="middle" fill="url(#textGradient)" dominant-baseline="middle">
+    한
+  </text>
+
+  <!-- 입력을 상징하는 물결선 -->
+  <path d="M 120 380 Q 140 360 160 380 Q 180 360 200 380 Q 220 360 240 380"
+        stroke="#ffffff" stroke-width="6" fill="none" stroke-linecap="round" opacity="0.8"/>
+
+  <!-- 키보드 힌트를 위한 작은 사각형들 -->
+  <rect x="320" y="350" width="20" height="20" rx="3" fill="#ffffff" opacity="0.6"/>
+  <rect x="350" y="350" width="20" height="20" rx="3" fill="#ffffff" opacity="0.6"/>
+  <rect x="320" y="380" width="20" height="20" rx="3" fill="#ffffff" opacity="0.6"/>
+  <rect x="350" y="380" width="20" height="20" rx="3" fill="#ffffff" opacity="0.6"/>
+</svg>
