@@ -26,16 +26,16 @@
 	<key>InputMethodConnectionName</key>
 	<string>Meapri_PriType_Swift_Connection</string>
 	<key>InputMethodServerControllerClass</key>
-	<string>$(PRODUCT_MODULE_NAME).InputController</string>
+	<string>PriTypeInputController</string>
 	<key>NSPrincipalClass</key>
-	<string>IMKApplication</string>
+	<string>NSApplication</string>
 
 	<key>TISInputSourceID</key>
 	[cite_start]<string>Meapri.PriType-Swift</string> [cite: 3]
 	<key>TISIntendedLanguage</key>
 	[cite_start]<string>ko</string> [cite: 3]
-	<key>TISIconFile</key>
-	<string>$(ASSETCATALOG_COMPILER_APPICON_NAME).icns</string>
+	<key>tsInputMethodIconFileKey</key>
+	<string>priType_icon_32.png</string>
 	
 	<key>ComponentInputModeDict</key>
 	<dict>
