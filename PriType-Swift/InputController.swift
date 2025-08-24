@@ -7,8 +7,8 @@ import LibHangul
 /// PriType 한글 입력 컨트롤러 - Input Method Kit 기반
 /// macOS 시스템과 완벽하게 통합되는 입력 메소드
 /// Swift 6 Strict Concurrency 완전 준수
-@objc(PriTypeInputController)
-final class PriTypeInputController: IMKInputController, @unchecked Sendable {
+@objc(InputController)
+final class InputController: IMKInputController, @unchecked Sendable {
 
     // MARK: - Type Definitions
     // HangulInputManager에서 정의된 공통 타입들을 사용
