@@ -22,6 +22,8 @@
 	<string>1</string>
 	<key>LSUIElement</key>
 	<true/>
+	<key>CFBundleIconFile</key>
+	<string>Resources/InputMethodIcons/priType_icon.icns</string>
 
 	<key>InputMethodConnectionName</key>
 	<string>Meapri_PriType_Swift_Connection</string>
