@@ -13,7 +13,7 @@
 	<key>CFBundleName</key>
 	<string>$(PRODUCT_NAME)</string>
 	<key>CFBundleDisplayName</key>
-	[cite_start]<string>PriType 한글 입력기</string> [cite: 1]
+	<string>PriType 한글 입력기</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -31,12 +31,12 @@
 	<string>NSApplication</string>
 
 	<key>TISInputSourceID</key>
-	[cite_start]<string>Meapri.PriType-Swift</string> [cite: 3]
+	<string>Meapri.PriType-Swift</string>
 	<key>TISIntendedLanguage</key>
-	[cite_start]<string>ko</string> [cite: 3]
+	<string>ko</string>
 	<key>tsInputMethodIconFileKey</key>
 	<string>priType_icon_32.png</string>
-	
+
 	<key>ComponentInputModeDict</key>
 	<dict>
 		<key>tsInputModeListKey</key>
@@ -44,22 +44,22 @@
 			<key>Meapri.PriType-Swift.hangul</key>
 			<dict>
 				<key>TISInputSourceID</key>
-				[cite_start]<string>Meapri.PriType-Swift.hangul</string> [cite: 4]
+				<string>Meapri.PriType-Swift.hangul</string>
 				<key>TISIntendedLanguage</key>
-				[cite_start]<string>ko</string> [cite: 4]
+				<string>ko</string>
 				<key>tsInputModeIsVisibleKey</key>
-				[cite_start]<true/> [cite: 4]
+				<true/>
 				<key>tsInputModeScriptKey</key>
 				<string>Hang</string>
 				<key>tsInputModeIconFileKey</key>
-				[cite_start]<string>priType_icon_32.png</string> [cite: 4]
+				<string>priType_icon_32.png</string>
 				<key>tsInputModePrimaryInScriptKey</key>
-				[cite_start]<true/> [cite: 5]
+				<true/>
 			</dict>
 		</dict>
 		<key>tsVisibleInputModeOrderedArrayKey</key>
 		<array>
-			[cite_start]<string>Meapri.PriType-Swift.hangul</string> [cite: 6]
+			<string>Meapri.PriType-Swift.hangul</string>
 		</array>
 	</dict>
 </dict>
