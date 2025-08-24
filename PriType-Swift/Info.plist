@@ -26,9 +26,9 @@
 	<key>InputMethodConnectionName</key>
 	<string>Meapri_PriType_Swift_Connection</string>
 	<key>InputMethodServerControllerClass</key>
-	<string>PriTypeInputController</string>
+	<string>$(PRODUCT_MODULE_NAME).InputController</string>
 	<key>NSPrincipalClass</key>
-	<string>NSApplication</string>
+	<string>IMKApplication</string>
 
 	<key>TISInputSourceID</key>
 	<string>Meapri.PriType-Swift</string>

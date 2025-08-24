@@ -40,9 +40,22 @@
 		627B9C952E5B00D1006D3AA2 /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = System/Library/Frameworks/Cocoa.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		622943322E5B26EB005E71A9 /* Exceptions for "PriType-Swift" folder in "PriType-Swift" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 627B9C582E5B0049006D3AA2 /* PriType-Swift */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		627B9C5B2E5B0049006D3AA2 /* PriType-Swift */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				622943322E5B26EB005E71A9 /* Exceptions for "PriType-Swift" folder in "PriType-Swift" target */,
+			);
 			path = "PriType-Swift";
 			sourceTree = "<group>";
 		};
@@ -437,7 +450,8 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = NO;
 				GENERATE_INFOPLIST_FILE = NO;
-                                INFOPLIST_FILE = PriType-Swift/Info.plist;				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INFOPLIST_FILE = "PriType-Swift/Info.plist";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -465,7 +479,8 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = NO;
 				GENERATE_INFOPLIST_FILE = NO;
-                                INFOPLIST_FILE = PriType-Swift/Info.plist;				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INFOPLIST_FILE = "PriType-Swift/Info.plist";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -488,7 +503,8 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = M4U438VG59;
 				GENERATE_INFOPLIST_FILE = NO;
-                                INFOPLIST_FILE = PriType-Swift/Info.plist;				MACOSX_DEPLOYMENT_TARGET = 15.5;
+				INFOPLIST_FILE = "PriType-Swift/Info.plist";
+				MACOSX_DEPLOYMENT_TARGET = 15.5;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "Meapri.PriType-SwiftTests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -506,7 +522,8 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = M4U438VG59;
 				GENERATE_INFOPLIST_FILE = NO;
-                                INFOPLIST_FILE = PriType-Swift/Info.plist;				MACOSX_DEPLOYMENT_TARGET = 15.5;
+				INFOPLIST_FILE = "PriType-Swift/Info.plist";
+				MACOSX_DEPLOYMENT_TARGET = 15.5;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "Meapri.PriType-SwiftTests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -523,7 +540,8 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = M4U438VG59;
 				GENERATE_INFOPLIST_FILE = NO;
-                                INFOPLIST_FILE = PriType-Swift/Info.plist;				MARKETING_VERSION = 1.0;
+				INFOPLIST_FILE = "PriType-Swift/Info.plist";
+				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "Meapri.PriType-SwiftUITests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
@@ -539,7 +557,8 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = M4U438VG59;
 				GENERATE_INFOPLIST_FILE = NO;
-                                INFOPLIST_FILE = PriType-Swift/Info.plist;				MARKETING_VERSION = 1.0;
+				INFOPLIST_FILE = "PriType-Swift/Info.plist";
+				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "Meapri.PriType-SwiftUITests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
