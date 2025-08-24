@@ -2,84 +2,65 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <!-- 기본 앱 설정 -->
-    <key>CFBundleDevelopmentRegion</key>
-    <string>ko</string>
-    <key>CFBundleExecutable</key>
-    <string>$(EXECUTABLE_NAME)</string>
-    <key>CFBundleIdentifier</key>
-    <string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
-    <key>CFBundleInfoDictionaryVersion</key>
-    <string>6.0</string>
-    <key>CFBundleName</key>
-    <string>$(PRODUCT_NAME)</string>
-    <key>CFBundleDisplayName</key>
-    <string>PriType 한글 입력기</string>
-    <key>CFBundlePackageType</key>
-    <string>APPL</string>
-    <key>CFBundleShortVersionString</key>
-    <string>1.0.0</string>
-    <key>CFBundleVersion</key>
-    <string>1</string>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>$(PRODUCT_NAME)</string>
+	<key>CFBundleDisplayName</key>
+	[cite_start]<string>PriType 한글 입력기</string> [cite: 1]
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0.0</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
+	<key>LSUIElement</key>
+	<true/>
 
-    <!-- 입력 메소드 필수 설정 -->
-    <key>InputMethodConnectionName</key>
-    <string>PriTypeInputConnection</string>
+	<key>InputMethodConnectionName</key>
+	<string>Meapri_PriType_Swift_Connection</string>
+	<key>InputMethodServerControllerClass</key>
+	<string>$(PRODUCT_MODULE_NAME).InputController</string>
+	<key>NSPrincipalClass</key>
+	<string>IMKApplication</string>
 
-    <key>InputMethodServerControllerClass</key>
-    <string>PriTypeInputController</string>
-
-    <!-- 지원하는 문자 집합 (한글 입력 필수) -->
-    <key>tsInputMethodCharacterRepertoireKey</key>
-    <array>
-        <string>Hang</string>
-        <string>Latn</string>
-    </array>
-
-    <!-- 입력기 아이콘 파일 (두 가지 방식으로 설정) -->
-    <key>tsInputMethodIconFileKey</key>
-    <string>priType_icon_32</string>
-    <key>tsInputMethodIconFileName</key>
-    <string>priType_icon_32</string>
-
-    <!-- 한국어 입력기 필수 설정 -->
-    <key>TISInputSourceID</key>
-    <string>Meapri.PriType-Swift</string>
-    <key>TISIntendedLanguage</key>
-    <string>ko</string>
-
-    <!-- 입력 모드 설정 (한국어 카테고리에 표시되도록 필수) -->
-    <key>ComponentInputModeDict</key>
-    <dict>
-        <key>tsInputModeListKey</key>
-        <dict>
-            <key>Meapri.PriType-Swift.hangul</key>
-            <dict>
-                <key>TISInputSourceID</key>
-                <string>Meapri.PriType-Swift.hangul</string>
-                <key>TISIntendedLanguage</key>
-                <string>ko</string>
-                <key>tsInputModeIsVisibleKey</key>
-                <true/>
-                <key>tsInputModeMenuIconFileKey</key>
-                <string>priType_icon_32.png</string>
-                <key>tsInputModePrimaryInScriptKey</key>
-                <true/>
-                <key>tsInputModeScriptKey</key>
-                <string>smKorean</string>
-            </dict>
-        </dict>
-        <key>tsVisibleInputModeOrderedArrayKey</key>
-        <array>
-            <string>Meapri.PriType-Swift.hangul</string>
-        </array>
-    </dict>
-
-    <!-- 시스템 통합 설정 -->
-    <key>LSUIElement</key>
-    <true/>
-    <key>LSBackgroundOnly</key>
-    <false/>
+	<key>TISInputSourceID</key>
+	[cite_start]<string>Meapri.PriType-Swift</string> [cite: 3]
+	<key>TISIntendedLanguage</key>
+	[cite_start]<string>ko</string> [cite: 3]
+	<key>TISIconFile</key>
+	<string>$(ASSETCATALOG_COMPILER_APPICON_NAME).icns</string>
+	
+	<key>ComponentInputModeDict</key>
+	<dict>
+		<key>tsInputModeListKey</key>
+		<dict>
+			<key>Meapri.PriType-Swift.hangul</key>
+			<dict>
+				<key>TISInputSourceID</key>
+				[cite_start]<string>Meapri.PriType-Swift.hangul</string> [cite: 4]
+				<key>TISIntendedLanguage</key>
+				[cite_start]<string>ko</string> [cite: 4]
+				<key>tsInputModeIsVisibleKey</key>
+				[cite_start]<true/> [cite: 4]
+				<key>tsInputModeScriptKey</key>
+				<string>Hang</string>
+				<key>tsInputModeIconFileKey</key>
+				[cite_start]<string>priType_icon_32.png</string> [cite: 4]
+				<key>tsInputModePrimaryInScriptKey</key>
+				[cite_start]<true/> [cite: 5]
+			</dict>
+		</dict>
+		<key>tsVisibleInputModeOrderedArrayKey</key>
+		<array>
+			[cite_start]<string>Meapri.PriType-Swift.hangul</string> [cite: 6]
+		</array>
+	</dict>
 </dict>
 </plist>
-
