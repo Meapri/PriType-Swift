@@ -27,9 +27,9 @@ do {
     // MARK: - 서버 상태 모니터링
     // 디버깅을 위한 서버 상태 정보 출력
     print("📊 서버 정보:")
-    print("   - 서버 이름: \(server.name)")
-    print("   - 번들 ID: \(server.bundleIdentifier)")
-    print("   - 연결 상태: \(server.isRunning ? "실행 중" : "중지됨")")
+    print("   - 연결 이름: \(connectionName)")
+    print("   - 번들 ID: \(bundleID)")
+    print("   - 서버 인스턴스: \(String(describing: server))")
 
     // MARK: - 메인 이벤트 루프 실행
     // 입력기는 백그라운드에서 항상 실행되어야 합니다.

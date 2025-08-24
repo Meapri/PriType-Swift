@@ -40,23 +40,9 @@
 		627B9C952E5B00D1006D3AA2 /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = System/Library/Frameworks/Cocoa.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
-/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		6260DA852E5B151B00079731 /* Exceptions for "PriType-Swift" folder in "PriType-Swift" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				Resources/InputMethodIcons/priType_icon_16.png,
-				Resources/InputMethodIcons/priType_icon_32.png,
-			);
-			target = 627B9C582E5B0049006D3AA2 /* PriType-Swift */;
-		};
-/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
-
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		627B9C5B2E5B0049006D3AA2 /* PriType-Swift */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				6260DA852E5B151B00079731 /* Exceptions for "PriType-Swift" folder in "PriType-Swift" target */,
-			);
 			path = "PriType-Swift";
 			sourceTree = "<group>";
 		};
