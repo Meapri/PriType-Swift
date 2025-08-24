@@ -35,7 +35,7 @@
 	<key>TISIntendedLanguage</key>
 	<string>ko</string>
 	<key>tsInputMethodIconFileKey</key>
-	<string>priType_icon_32.png</string>
+	<string>priType_icon_32 2.png</string>
 
 	<key>ComponentInputModeDict</key>
 	<dict>
@@ -52,7 +52,7 @@
 				<key>tsInputModeScriptKey</key>
 				<string>Hang</string>
 				<key>tsInputModeIconFileKey</key>
-				<string>priType_icon_32.png</string>
+				<string>priType_icon_32 2.png</string>
 				<key>tsInputModePrimaryInScriptKey</key>
 				<true/>
 			</dict>
