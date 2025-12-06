@@ -12,31 +12,12 @@ public class HangulComposer {
     @available(*, deprecated, message: "Intentionally using synchronous context")
     private lazy var context: HangulInputContext = {
        let ctx = HangulInputContext(keyboard: PriTypeConfig.defaultKeyboardId)
-       log("Configured context with 2-set (id: '\(PriTypeConfig.defaultKeyboardId)')")
+       DebugLogger.log("Configured context with 2-set (id: '\(PriTypeConfig.defaultKeyboardId)')")
        return ctx
     }()
     
     public init() {
-        log("HangulComposer init")
-    }
-    
-    private func log(_ msg: String) {
-        let logMsg = "\(Date()): \(msg)\n"
-        if let data = logMsg.data(using: .utf8) {
-            let url = URL(fileURLWithPath: PriTypeConfig.logPath)
-            do {
-                try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
-                if let handle = FileHandle(forWritingAtPath: PriTypeConfig.logPath) {
-                    handle.seekToEndOfFile()
-                    handle.write(data)
-                    handle.closeFile()
-                } else {
-                    try logMsg.write(to: url, atomically: true, encoding: .utf8)
-                }
-            } catch {
-                // Ignore log error
-            }
-        }
+        DebugLogger.log("HangulComposer init")
     }
     
     public func handle(_ event: NSEvent, delegate: HangulComposerDelegate) -> Bool {
@@ -74,7 +55,7 @@ public class HangulComposer {
         // 1. Check for Special Keys
         // Return / Enter
         if keyCode == KeyCode.return || keyCode == KeyCode.numpadEnter {
-             log("Return key -> commit")
+             DebugLogger.log("Return key -> commit")
              commitComposition(delegate: delegate)
              // Return true to consume if we want to handle newline ourselves,
              // or return false to let system insert newline. 
@@ -84,14 +65,14 @@ public class HangulComposer {
         
         // Escape
         if keyCode == KeyCode.escape {
-             log("Escape -> cancel")
+             DebugLogger.log("Escape -> cancel")
              cancelComposition(delegate: delegate)
              return true
         }
         
         // Space
         if keyCode == KeyCode.space {
-            log("Space -> flush and space")
+            DebugLogger.log("Space -> flush and space")
             commitComposition(delegate: delegate)
             // Let system handle space insertion? Or strict consumption?
             // "Windows-style": Space commits, then inserts space.
@@ -102,30 +83,30 @@ public class HangulComposer {
         // 방향키 - 조합 커밋 후 시스템에 전달
         if keyCode == KeyCode.leftArrow || keyCode == KeyCode.rightArrow ||
            keyCode == KeyCode.upArrow || keyCode == KeyCode.downArrow {
-            log("Arrow key -> commit and pass to system")
+            DebugLogger.log("Arrow key -> commit and pass to system")
             commitComposition(delegate: delegate)
             return false // 시스템이 커서 이동 처리
         }
         
         // Tab 키 - 조합 커밋 후 시스템에 전달
         if keyCode == KeyCode.tab {
-            log("Tab key -> commit")
+            DebugLogger.log("Tab key -> commit")
             commitComposition(delegate: delegate)
             return false
         }
         
         // Backspace
         if keyCode == KeyCode.backspace {
-            log("Backspace")
+            DebugLogger.log("Backspace")
             // If composing, try to backspace within engine
             if !context.isEmpty() {
                  if context.backspace() {
-                     log("Engine backspace success")
+                     DebugLogger.log("Engine backspace success")
                      updateComposition(delegate: delegate)
                      return true
                  } else {
                      // Empty context after backspace? reset UI
-                     log("Engine backspace caused empty")
+                     DebugLogger.log("Engine backspace caused empty")
                      updateComposition(delegate: delegate)
                      return true
                  }
@@ -151,16 +132,16 @@ public class HangulComposer {
             // If it's a typing key, we MUST consume it (return true).
             // Fallback: If libhangul fails, we insert it manually.
             
-            log("Processing char code: \(charCode)")
+            DebugLogger.log("Processing char code: \(charCode)")
             
             // Primary attempt
             if context.process(charCode) {
-                log("Process success")
+                DebugLogger.log("Process success")
                 handledAtLeastOnce = true
                 updateComposition(delegate: delegate)
             } else {
                 // Failure case (e.g. invalid key for engine, or boundary)
-                log("Process failed")
+                DebugLogger.log("Process failed")
                 
                 // If we have composition, commit it first (boundary case)
                 if !context.isEmpty() {
@@ -169,13 +150,13 @@ public class HangulComposer {
                 
                 // Retry with clean context
                 if context.process(charCode) {
-                     log("Retry success")
+                     DebugLogger.log("Retry success")
                      handledAtLeastOnce = true
                      updateComposition(delegate: delegate)
                 } else {
                      // Still failed. It's an unprocessable char (e.g. maybe symbol not in map).
                      // CONSUME IT ANYWAY and insert raw char to avoid "leakage" reordering.
-                     log("Retry failed, inserting raw char")
+                     DebugLogger.log("Retry failed, inserting raw char")
                      delegate.insertText(String(char))
                      handledAtLeastOnce = true
                 }
