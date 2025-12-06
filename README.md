@@ -1,54 +1,53 @@
-# PriType (Project Primitive Type)
+# PriType
 
-**PriType** is a modern, Swift-based Korean Input Method for macOS. It aims to provide a native, stable, and customizable Hangul typing experience, built on top of the robust `libhangul` engine.
+**PriType**은 macOS를 위한 모던한 Swift 기반 한글 입력기입니다. `libhangul` 엔진의 강력함을 바탕으로 네이티브하고 안정적인, 그리고 커스터마이징 가능한 한글 입력 경험을 제공합니다.
 
-## ✨ Features
+## ✨ 주요 기능
 
-- **Pure Swift Implementation**: Native macOS input method built with Swift and InputMethodKit.
-- **Stable & Fast**: 
-  - Optimized for rapid typing without character loss.
-  - Correctly handles input source switching events.
-- **Smart Behavior**:
-  - **Caps Lock Support**: Types lowercase Hangul even when Caps Lock is on (prevents `ㄲ` when you want `ㄱ`).
-  - **Standard Double Consonant**: Types `ㄱ` + `ㄱ` as `ㄱㄱ` (requires `Shift` for `ㄲ`), giving you more control.
-- **Native Aesthetics**:
-  - Includes **High-Resolution Icons** (Retina ready) extracted and recreated from genuine system assets.
-  - Fully supports the macOS Input Source Switcher (HUD) with proper icons.
-  - Native selection and candidate UI integration.
+- **순수 Swift 구현**: Swift와 InputMethodKit으로 구축된 네이티브 macOS 입력기입니다.
+- **안정성 및 속도**: 
+  - 빠른 타이핑 시에도 글자 유실이 없도록 최적화되었습니다.
+  - 입력 소스 전환 시 이벤트를 정확하게 처리합니다.
+- **스마트한 동작**:
+  - **Caps Lock 지원**: Caps Lock이 켜져 있어도 소문자 한글을 입력합니다 (`ㄱ`을 입력하려다 `ㄲ`이 입력되는 현상 방지).
+  - **표준 쌍자음 처리**: `ㄱ` + `ㄱ` 입력 시 `ㄱㄱ`로 입력됩니다 (`ㄲ`은 `Shift` 사용), 사용자에게 더 많은 제어권을 제공합니다.
+- **네이티브 디자인**:
+  - **고해상도 아이콘**: macOS 시스템 리소스에서 추출 및 재구성한 Retina 아이콘을 지원합니다.
+  - macOS 입력 소스 전환기(HUD) 및 메뉴바에서 완벽하게 통합됩니다.
+  - 네이티브 선택 및 후보창 UI를 사용합니다.
 
-## 🛠️ Installation
+## 🛠️ 설치 방법
 
-1. **Clone the repository**
+1. **저장소 복제 (Clone)**
    ```bash
-   git clone https://github.com/your-username/PriType-Swift.git
+   git clone https://github.com/Meapri/PriType-Swift.git
    cd PriType-Swift
    ```
 
-2. **Run the installer**
-   The included script will build the project and install it to `~/Library/Input Methods`.
+2. **설치 스크립트 실행**
+   포함된 스크립트가 프로젝트를 빌드하고 `~/Library/Input Methods`에 설치합니다.
    ```bash
    ./install.sh
    ```
 
-3. **Activate**
-   - **Log out** and log back in (or restart your Mac) to let the system recognize the new input method.
-   - Go to **System Settings** > **Keyboard** > **Input Sources**.
-   - Click **Edit...** (or `+`).
-   - Select **Korean** (or **Korea**) from the sidebar.
-   - Add **PriType** to your list.
+3. **활성화**
+   - **로그아웃** 후 다시 로그인(또는 재부팅)하여 시스템이 새 입력기를 인식하도록 합니다.
+   - **시스템 설정** > **키보드** > **텍스트 입력 (입력 소스)** > **편집...**으로 이동합니다.
+   - 사이드바에서 **한국어**를 선택합니다.
+   - **PriType**을 목록에 추가합니다.
 
-## ⌨️ Usage
+## ⌨️ 사용 방법
 
-- Switch to **PriType** using your standard input switching shortcut (e.g., `Control + Space`).
-- Type Hangul naturally.
-- Use `Shift` for double consonants (`ㄲ`, `ㄸ`, `ㅃ`, `ㅆ`, `ㅉ`).
-- `Caps Lock` behaves smartly: input remains Hangul, preventing accidental English or double-consonant shifts.
+- 기본 입력 전환 단축키(예: `Control + Space`)를 사용하여 **PriType**으로 전환합니다.
+- 자연스럽게 한글을 입력하세요.
+- 쌍자음(`ㄲ`, `ㄸ`, `ㅃ`, `ㅆ`, `ㅉ`)은 `Shift` 키를 사용합니다.
+- `Caps Lock`은 스마트하게 동작합니다: 한글 입력 상태를 유지하며, 실수로 영어가 입력되거나 쌍자음이 입력되는 것을 방지합니다.
 
-## 🏗️ Development
+## 🏗️ 개발
 
-- **Build**: `swift build -c release`
-- **Icon Generation**: To regenerate icons, see the Python scripts in the history or use the `PriType.iconset` source.
+- **빌드**: `swift build -c release`
+- **아이콘 생성**: 아이콘 생성 및 업데이트 방법은 커밋 기록 내의 Python 스크립트 또는 `PriType.iconset`을 참조하세요.
 
-## 📄 License
+## 📄 라이선스
 
-Based on `libhangul`. See LICENSE for details.
+이 프로젝트는 `libhangul`을 기반으로 합니다. 자세한 내용은 LICENSE 파일을 참조하세요.
