@@ -271,6 +271,10 @@
       "inputs" : [
         {
           "kind" : "file",
+          "name" : "/Users/naen/Git/PriType-Swift/Sources/PriTypeCore/DebugLogger.swift"
+        },
+        {
+          "kind" : "file",
           "name" : "/Users/naen/Git/PriType-Swift/Sources/PriTypeCore/HangulComposer.swift"
         },
         {
@@ -306,6 +310,7 @@
       "moduleName" : "PriTypeCore",
       "moduleOutputPath" : "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/Modules/PriTypeCore.swiftmodule",
       "objects" : [
+        "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/DebugLogger.swift.o",
         "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/HangulComposer.swift.o",
         "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/JamoMapper.swift.o",
         "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/KeyCode.swift.o",
@@ -357,6 +362,10 @@
       "outputs" : [
         {
           "kind" : "file",
+          "name" : "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/DebugLogger.swift.o"
+        },
+        {
+          "kind" : "file",
           "name" : "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/HangulComposer.swift.o"
         },
         {
@@ -382,6 +391,7 @@
       ],
       "prepareForIndexing" : false,
       "sources" : [
+        "/Users/naen/Git/PriType-Swift/Sources/PriTypeCore/DebugLogger.swift",
         "/Users/naen/Git/PriType-Swift/Sources/PriTypeCore/HangulComposer.swift",
         "/Users/naen/Git/PriType-Swift/Sources/PriTypeCore/JamoMapper.swift",
         "/Users/naen/Git/PriType-Swift/Sources/PriTypeCore/KeyCode.swift",
@@ -604,6 +614,7 @@
       "-package-name",
       "pritype_swift",
       "-c",
+      "/Users/naen/Git/PriType-Swift/Sources/PriTypeCore/DebugLogger.swift",
       "/Users/naen/Git/PriType-Swift/Sources/PriTypeCore/HangulComposer.swift",
       "/Users/naen/Git/PriType-Swift/Sources/PriTypeCore/JamoMapper.swift",
       "/Users/naen/Git/PriType-Swift/Sources/PriTypeCore/KeyCode.swift",
@@ -835,6 +846,10 @@
         },
         {
           "kind" : "file",
+          "name" : "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/DebugLogger.swift.o"
+        },
+        {
+          "kind" : "file",
           "name" : "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/HangulComposer.swift.o"
         },
         {
@@ -862,6 +877,10 @@
         {
           "kind" : "virtual",
           "name" : "<sources-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/naen/Git/PriType-Swift/Sources/PriTypeCore/DebugLogger.swift"
         },
         {
           "kind" : "file",
@@ -938,6 +957,10 @@
         {
           "kind" : "file",
           "name" : "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/LibHangul.build/ThreadSafeHangulInputContext.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/DebugLogger.swift.o"
         },
         {
           "kind" : "file",

@@ -30,7 +30,7 @@ mv build_dist "$APP_BUNDLE"
 
 echo "==== 2. Code Signing ===="
 echo "Signing with $SIGNING_IDENTITY..."
-codesign --force --options runtime --timestamp --entitlements "PriType.entitlements" --sign "$SIGNING_IDENTITY" "$APP_BUNDLE"
+codesign --force --options runtime --timestamp --sign "$SIGNING_IDENTITY" "$APP_BUNDLE"
 
 echo "==== 3. Verifying Signature ===="
 codesign -vv -d "$APP_BUNDLE"

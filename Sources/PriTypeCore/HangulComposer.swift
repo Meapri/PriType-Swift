@@ -119,7 +119,7 @@ public class HangulComposer {
         // We define "typing keys" as Printable ASCII usually.
         // For simplicity, let's process everything that has characters.
         
-        log("Handle key: \(inputCharacters) code: \(keyCode)")
+        DebugLogger.log("Handle key: \(inputCharacters) code: \(keyCode)")
         
         var handledAtLeastOnce = false
         
