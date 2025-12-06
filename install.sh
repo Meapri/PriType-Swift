@@ -23,8 +23,15 @@ cp "$BUILD_DIR/PriType" "$MACOS_DIR/PriTypeV2"
 echo "Copying Info.plist..."
 cp Info.plist "$CONTENTS_DIR/"
 
-# Optional: Icon
-cp icon.png "$RESOURCES_DIR/" 2>/dev/null || echo "No icon found, skipping."
+# Copy menu bar icon
+# Copy Resources directory (localization, etc)
+cp -R Resources/* "$RESOURCES_DIR/" 2>/dev/null || true
+
+# Copy App Icon
+cp "AppIcon.icns" "$RESOURCES_DIR/" 2>/dev/null || echo "No AppIcon.icns found"
+
+# Copy menu bar icon
+cp "icon.tiff" "$RESOURCES_DIR/" 2>/dev/null || echo "No icon.tiff found, skipping."
 
 echo "Installing to $INSTALL_DIR..."
 mkdir -p "$INSTALL_DIR"

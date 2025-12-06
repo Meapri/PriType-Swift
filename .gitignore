@@ -1,0 +1,8 @@
+.build/
+.DS_Store
+*.xcodeproj/
+PriType.iconset/
+Assets.xcassets/
+test_icon*.pdf
+icon_*.png
+candidate_icon.png

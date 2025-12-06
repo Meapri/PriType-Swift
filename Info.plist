@@ -11,7 +11,13 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>PriTypeV2</string>
+	<string>PriType</string>
+	<key>CFBundleDisplayName</key>
+	<string>PriType</string>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
+    <key>CFBundleIconName</key>
+    <string>AppIcon</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -29,7 +35,7 @@
 		<string>Hang</string>
 	</array>
     <key>tsInputMethodIconFileKey</key>
-    <string>icon.png</string>
+    <string>icon.tiff</string>
     <key>ComponentInputModeDict</key>
     <dict>
         <key>tsInputModeListKey</key>
