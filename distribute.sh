@@ -54,7 +54,7 @@ if [ "$NOTARIZE" = "true" ]; then
     xcrun stapler staple "$APP_BUNDLE"
     
     echo "Done! You can now verify standard Gatekeeper acceptance:"
-    spctl --assess --type execute --verbose --ignore-cacheno-cache "$APP_BUNDLE"
+    spctl --assess --type execute --verbose --ignore-cache "$APP_BUNDLE"
     
     # Re-zip stapled app
     ditto -c -k --keepParent "$APP_BUNDLE" "PriType_Notarized.zip"
