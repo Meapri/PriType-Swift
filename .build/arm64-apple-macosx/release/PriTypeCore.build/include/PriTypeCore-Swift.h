@@ -303,14 +303,12 @@ typedef unsigned int swift_uint4  __attribute__((__ext_vector_type__(4)));
 #if defined(__OBJC__)
 
 @class NSEvent;
-@class NSMenu;
 @class IMKServer;
 SWIFT_CLASS_NAMED("PriTypeInputController")
 @interface PriTypeInputController : IMKInputController
 - (BOOL)handleEvent:(NSEvent * _Null_unspecified)event client:(id _Null_unspecified)sender SWIFT_WARN_UNUSED_RESULT;
 - (void)deactivateServer:(id _Null_unspecified)sender;
 - (void)commitComposition:(id _Null_unspecified)sender;
-- (NSMenu * _Null_unspecified)menu SWIFT_WARN_UNUSED_RESULT;
 - (null_unspecified instancetype)initWithServer:(IMKServer * _Null_unspecified)server delegate:(id _Null_unspecified)delegate client:(id _Null_unspecified)inputClient OBJC_DESIGNATED_INITIALIZER;
 - (nonnull instancetype)init OBJC_DESIGNATED_INITIALIZER;
 @end

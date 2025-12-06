@@ -20,13 +20,6 @@ public class HangulComposer {
         log("HangulComposer init")
     }
     
-    /// 쌍자음 결합 활성화 여부 (ㄱ+ㄱ=ㄲ 등)
-    /// false이면 ㄱ 연타 시 ㄱㄱ으로 개별 입력됨
-    public var enableDoubleConsonantCombination: Bool {
-        get { context.enableDoubleConsonantCombination }
-        set { context.enableDoubleConsonantCombination = newValue }
-    }
-    
     private func log(_ msg: String) {
         let logMsg = "\(Date()): \(msg)\n"
         if let data = logMsg.data(using: .utf8) {
@@ -54,6 +47,20 @@ public class HangulComposer {
         
         guard let characters = event.characters, !characters.isEmpty else {
             return false
+        }
+        
+        // Caps Lock 처리: Caps Lock이 켜져 있고 Shift를 안 눌렀으면 소문자로 변환
+        // 이렇게 해야 한글 모드에서 Caps Lock이 쌍자음으로 잘못 인식되는 것을 방지
+        let isCapsLockOn = event.modifierFlags.contains(.capsLock)
+        let isShiftPressed = event.modifierFlags.contains(.shift)
+        
+        let inputCharacters: String
+        if isCapsLockOn && !isShiftPressed {
+            // Caps Lock만 켜진 경우: 소문자로 변환하여 일반 자음으로 처리
+            inputCharacters = characters.lowercased()
+        } else {
+            // Shift 키가 눌렸거나 Caps Lock이 꺼진 경우: 원본 사용
+            inputCharacters = characters
         }
         
         let keyCode = event.keyCode
@@ -125,11 +132,11 @@ public class HangulComposer {
         // We define "typing keys" as Printable ASCII usually.
         // For simplicity, let's process everything that has characters.
         
-        log("Handle key: \(characters) code: \(keyCode)")
+        log("Handle key: \(inputCharacters) code: \(keyCode)")
         
         var handledAtLeastOnce = false
         
-        for char in characters.unicodeScalars {
+        for char in inputCharacters.unicodeScalars {
             let charCode = Int(char.value)
             
             // Check if standard typing range (approx)
