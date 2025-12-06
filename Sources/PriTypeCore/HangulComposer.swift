@@ -188,7 +188,7 @@ public class HangulComposer {
         // If there is committed text, insert it first
         if !commit.isEmpty {
             let commitStr = String(commit.compactMap { UnicodeScalar($0) }.map { Character($0) })
-            delegate.insertText(commitStr)
+            delegate.insertText(commitStr.precomposedStringWithCanonicalMapping)
         }
         
         // Update preedit text
@@ -221,7 +221,7 @@ public class HangulComposer {
         let commitStr = String(flushed.compactMap { UnicodeScalar($0) }.map { Character($0) })
         
         if !commitStr.isEmpty {
-             delegate.insertText(commitStr)
+             delegate.insertText(commitStr.precomposedStringWithCanonicalMapping)
         }
         // Clear mark
         delegate.setMarkedText("")

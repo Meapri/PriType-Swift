@@ -33,6 +33,15 @@ cp "AppIcon.icns" "$RESOURCES_DIR/" 2>/dev/null || echo "No AppIcon.icns found"
 # Copy menu bar icon
 cp "icon.tiff" "$RESOURCES_DIR/" 2>/dev/null || echo "No icon.tiff found, skipping."
 
+# Code Signing
+if [ -n "$SIGNING_IDENTITY" ]; then
+    echo "Signing with identity: $SIGNING_IDENTITY"
+    codesign --force --options runtime --entitlements "PriType.entitlements" --sign "$SIGNING_IDENTITY" "$APP_BUNDLE"
+    echo "Signing complete."
+else
+    echo "No SIGNING_IDENTITY set. Skipping signing (Ad-hoc signing may apply automatically locally)."
+fi
+
 echo "Installing to $INSTALL_DIR..."
 mkdir -p "$INSTALL_DIR"
 rm -rf "$INSTALL_DIR/PriType.app"
