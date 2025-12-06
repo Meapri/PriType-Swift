@@ -23,6 +23,7 @@ cp -R Resources/* build_dist/Contents/Resources/ || true
 cp "AppIcon.icns" build_dist/Contents/Resources/ 2>/dev/null || true
 cp "icon.tiff" build_dist/Contents/Resources/ 2>/dev/null || true
 
+
 # Rename to .app
 rm -rf "$APP_BUNDLE"
 mv build_dist "$APP_BUNDLE"
