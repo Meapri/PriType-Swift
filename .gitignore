@@ -6,3 +6,5 @@ Assets.xcassets/
 test_icon*.pdf
 icon_*.png
 candidate_icon.png
+.DS_Store
+*.zip
