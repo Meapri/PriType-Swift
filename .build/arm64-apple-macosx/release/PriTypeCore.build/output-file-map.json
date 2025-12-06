@@ -33,5 +33,11 @@
     "swiftmodule": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/PriTypeInputController~partial.swiftmodule",
     "swift-dependencies": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/PriTypeInputController.swiftdeps",
     "diagnostics": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/PriTypeInputController.dia"
+  },
+  "/Users/naen/Git/PriType-Swift/Sources/PriTypeCore/PriTypeSettings.swift": {
+    "object": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/PriTypeSettings.swift.o",
+    "swiftmodule": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/PriTypeSettings~partial.swiftmodule",
+    "swift-dependencies": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/PriTypeSettings.swiftdeps",
+    "diagnostics": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/PriTypeSettings.dia"
   }
 }

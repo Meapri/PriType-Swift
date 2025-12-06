@@ -308,6 +308,7 @@ SWIFT_CLASS_NAMED("PriTypeInputController")
 @interface PriTypeInputController : IMKInputController
 - (BOOL)handleEvent:(NSEvent * _Null_unspecified)event client:(id _Null_unspecified)sender SWIFT_WARN_UNUSED_RESULT;
 - (void)deactivateServer:(id _Null_unspecified)sender;
+- (void)commitComposition:(id _Null_unspecified)sender;
 - (null_unspecified instancetype)initWithServer:(IMKServer * _Null_unspecified)server delegate:(id _Null_unspecified)delegate client:(id _Null_unspecified)inputClient OBJC_DESIGNATED_INITIALIZER;
 - (nonnull instancetype)init OBJC_DESIGNATED_INITIALIZER;
 @end

@@ -4,6 +4,18 @@
     "object": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriType.build/PriType.o",
     "swift-dependencies": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriType.build/master.swiftdeps"
   },
+  "/Users/naen/Git/PriType-Swift/Sources/PriType/SettingsView.swift": {
+    "object": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriType.build/SettingsView.swift.o",
+    "swiftmodule": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriType.build/SettingsView~partial.swiftmodule",
+    "swift-dependencies": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriType.build/SettingsView.swiftdeps",
+    "diagnostics": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriType.build/SettingsView.dia"
+  },
+  "/Users/naen/Git/PriType-Swift/Sources/PriType/SettingsWindowController.swift": {
+    "object": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriType.build/SettingsWindowController.swift.o",
+    "swiftmodule": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriType.build/SettingsWindowController~partial.swiftmodule",
+    "swift-dependencies": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriType.build/SettingsWindowController.swiftdeps",
+    "diagnostics": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriType.build/SettingsWindowController.dia"
+  },
   "/Users/naen/Git/PriType-Swift/Sources/PriType/main.swift": {
     "object": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriType.build/main.swift.o",
     "swiftmodule": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriType.build/main~partial.swiftmodule",

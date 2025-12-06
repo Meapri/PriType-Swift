@@ -180,6 +180,14 @@
       "inputs" : [
         {
           "kind" : "file",
+          "name" : "/Users/naen/Git/PriType-Swift/Sources/PriType/SettingsView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/naen/Git/PriType-Swift/Sources/PriType/SettingsWindowController.swift"
+        },
+        {
+          "kind" : "file",
           "name" : "/Users/naen/Git/PriType-Swift/Sources/PriType/main.swift"
         },
         {
@@ -203,6 +211,8 @@
       "moduleName" : "PriType",
       "moduleOutputPath" : "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/Modules/PriType.swiftmodule",
       "objects" : [
+        "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriType.build/SettingsView.swift.o",
+        "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriType.build/SettingsWindowController.swift.o",
         "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriType.build/main.swift.o"
       ],
       "otherArguments" : [
@@ -250,6 +260,14 @@
       "outputs" : [
         {
           "kind" : "file",
+          "name" : "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriType.build/SettingsView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriType.build/SettingsWindowController.swift.o"
+        },
+        {
+          "kind" : "file",
           "name" : "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriType.build/main.swift.o"
         },
         {
@@ -259,6 +277,8 @@
       ],
       "prepareForIndexing" : false,
       "sources" : [
+        "/Users/naen/Git/PriType-Swift/Sources/PriType/SettingsView.swift",
+        "/Users/naen/Git/PriType-Swift/Sources/PriType/SettingsWindowController.swift",
         "/Users/naen/Git/PriType-Swift/Sources/PriType/main.swift"
       ],
       "tempsPath" : "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriType.build",
@@ -291,6 +311,10 @@
         },
         {
           "kind" : "file",
+          "name" : "/Users/naen/Git/PriType-Swift/Sources/PriTypeCore/PriTypeSettings.swift"
+        },
+        {
+          "kind" : "file",
           "name" : "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/swift-version--1AB21518FC5DEDBE.txt"
         },
         {
@@ -310,7 +334,8 @@
         "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/JamoMapper.swift.o",
         "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/KeyCode.swift.o",
         "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/PriTypeConfig.swift.o",
-        "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/PriTypeInputController.swift.o"
+        "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/PriTypeInputController.swift.o",
+        "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/PriTypeSettings.swift.o"
       ],
       "otherArguments" : [
         "-target",
@@ -377,6 +402,10 @@
         },
         {
           "kind" : "file",
+          "name" : "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/PriTypeSettings.swift.o"
+        },
+        {
+          "kind" : "file",
           "name" : "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/Modules/PriTypeCore.swiftmodule"
         }
       ],
@@ -386,7 +415,8 @@
         "/Users/naen/Git/PriType-Swift/Sources/PriTypeCore/JamoMapper.swift",
         "/Users/naen/Git/PriType-Swift/Sources/PriTypeCore/KeyCode.swift",
         "/Users/naen/Git/PriType-Swift/Sources/PriTypeCore/PriTypeConfig.swift",
-        "/Users/naen/Git/PriType-Swift/Sources/PriTypeCore/PriTypeInputController.swift"
+        "/Users/naen/Git/PriType-Swift/Sources/PriTypeCore/PriTypeInputController.swift",
+        "/Users/naen/Git/PriType-Swift/Sources/PriTypeCore/PriTypeSettings.swift"
       ],
       "tempsPath" : "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build",
       "wholeModuleOptimization" : true
@@ -552,6 +582,8 @@
       "-package-name",
       "pritype_swift",
       "-c",
+      "/Users/naen/Git/PriType-Swift/Sources/PriType/SettingsView.swift",
+      "/Users/naen/Git/PriType-Swift/Sources/PriType/SettingsWindowController.swift",
       "/Users/naen/Git/PriType-Swift/Sources/PriType/main.swift",
       "-I",
       "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/Modules",
@@ -609,6 +641,7 @@
       "/Users/naen/Git/PriType-Swift/Sources/PriTypeCore/KeyCode.swift",
       "/Users/naen/Git/PriType-Swift/Sources/PriTypeCore/PriTypeConfig.swift",
       "/Users/naen/Git/PriType-Swift/Sources/PriTypeCore/PriTypeInputController.swift",
+      "/Users/naen/Git/PriType-Swift/Sources/PriTypeCore/PriTypeSettings.swift",
       "-I",
       "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/Modules",
       "-target",
@@ -785,6 +818,14 @@
         },
         {
           "kind" : "file",
+          "name" : "/Users/naen/Git/PriType-Swift/Sources/PriType/SettingsView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/naen/Git/PriType-Swift/Sources/PriType/SettingsWindowController.swift"
+        },
+        {
+          "kind" : "file",
           "name" : "/Users/naen/Git/PriType-Swift/Sources/PriType/main.swift"
         }
       ],
@@ -831,6 +872,14 @@
         },
         {
           "kind" : "file",
+          "name" : "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriType.build/SettingsView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriType.build/SettingsWindowController.swift.o"
+        },
+        {
+          "kind" : "file",
           "name" : "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriType.build/main.swift.o"
         },
         {
@@ -852,6 +901,10 @@
         {
           "kind" : "file",
           "name" : "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/PriTypeInputController.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/PriTypeSettings.swift.o"
         }
       ],
       "outputFilePath" : "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriType.product/Objects.LinkFileList"
@@ -882,6 +935,10 @@
         {
           "kind" : "file",
           "name" : "/Users/naen/Git/PriType-Swift/Sources/PriTypeCore/PriTypeInputController.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/naen/Git/PriType-Swift/Sources/PriTypeCore/PriTypeSettings.swift"
         }
       ],
       "outputFilePath" : "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/sources"
@@ -958,6 +1015,10 @@
         {
           "kind" : "file",
           "name" : "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/PriTypeInputController.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/PriTypeSettings.swift.o"
         },
         {
           "kind" : "file",

@@ -20,6 +20,13 @@ public class HangulComposer {
         log("HangulComposer init")
     }
     
+    /// 쌍자음 결합 활성화 여부 (ㄱ+ㄱ=ㄲ 등)
+    /// false이면 ㄱ 연타 시 ㄱㄱ으로 개별 입력됨
+    public var enableDoubleConsonantCombination: Bool {
+        get { context.enableDoubleConsonantCombination }
+        set { context.enableDoubleConsonantCombination = newValue }
+    }
+    
     private func log(_ msg: String) {
         let logMsg = "\(Date()): \(msg)\n"
         if let data = logMsg.data(using: .utf8) {
