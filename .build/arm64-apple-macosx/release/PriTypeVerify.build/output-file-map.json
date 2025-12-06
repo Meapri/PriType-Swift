@@ -1,0 +1,13 @@
+{
+  "": {
+    "dependencies": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeVerify.build/PriTypeVerify.d",
+    "object": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeVerify.build/PriTypeVerify.o",
+    "swift-dependencies": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeVerify.build/master.swiftdeps"
+  },
+  "/Users/naen/Git/PriType-Swift/Sources/PriTypeVerify/main.swift": {
+    "object": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeVerify.build/main.swift.o",
+    "swiftmodule": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeVerify.build/main~partial.swiftmodule",
+    "swift-dependencies": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeVerify.build/main.swiftdeps",
+    "diagnostics": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeVerify.build/main.dia"
+  }
+}

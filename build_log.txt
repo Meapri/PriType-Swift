@@ -1,0 +1,69 @@
+Building for debugging...
+[0/5] Write swift-version--1AB21518FC5DEDBE.txt
+error: emit-module command failed with exit code 1 (use -v to see invocation)
+[2/7] Emitting module PriTypeCore
+/Users/naen/Git/PriType-Swift/Sources/PriTypeCore/HangulComposer.swift:16:59: [1;31merror: [1;39mextra argument 'keyboard' in call[0;0m
+ [0;36m14 |[0;0m        let ctx = HangulInputContext()
+ [0;36m15 |[0;0m        // Force 2-set layout (han2)
+ [0;36m16 |[0;0m        if let config = HangulInputConfiguration(keyboard: "han2") {
+    [0;36m|[0;0m                                                           `- [1;31merror: [1;39mextra argument 'keyboard' in call[0;0m
+ [0;36m17 |[0;0m            ctx.configure(config)
+ [0;36m18 |[0;0m            log("Configured context with han2")
+[3/7] Compiling PriTypeCore HangulComposer.swift
+/Users/naen/Git/PriType-Swift/Sources/PriTypeCore/HangulComposer.swift:16:59: [1;31merror: [1;39mextra argument 'keyboard' in call[0;0m
+ [0;36m14 |[0;0m        let ctx = HangulInputContext()
+ [0;36m15 |[0;0m        // Force 2-set layout (han2)
+ [0;36m16 |[0;0m        if let config = HangulInputConfiguration(keyboard: "han2") {
+    [0;36m|[0;0m                                                           `- [1;31merror: [1;39mextra argument 'keyboard' in call[0;0m
+ [0;36m17 |[0;0m            ctx.configure(config)
+ [0;36m18 |[0;0m            log("Configured context with han2")
+
+/Users/naen/Git/PriType-Swift/Sources/PriTypeCore/HangulComposer.swift:72:16: [1;33mwarning: [1;39m'context' is deprecated: Intentionally using synchronous context[0;0m [#]8;;https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration\DeprecatedDeclaration]8;;\]
+ [0;36m70 |[0;0m             
+ [0;36m71 |[0;0m             // Pass to LibHangul
+ [0;36m72 |[0;0m             if context.process(keyCode) {
+    [0;36m|[0;0m                `- [1;33mwarning: [1;39m'context' is deprecated: Intentionally using synchronous context[0;0m [#]8;;https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration\DeprecatedDeclaration]8;;\]
+ [0;36m73 |[0;0m                 log("Process success")
+ [0;36m74 |[0;0m                 // Handled and composition updated
+
+/Users/naen/Git/PriType-Swift/Sources/PriTypeCore/HangulComposer.swift:80:21: [1;33mwarning: [1;39m'context' is deprecated: Intentionally using synchronous context[0;0m [#]8;;https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration\DeprecatedDeclaration]8;;\]
+ [0;36m78 |[0;0m                 log("Process failed")
+ [0;36m79 |[0;0m                 // Not handled by Hangul engine (e.g., syllable boundary or invalid key)
+ [0;36m80 |[0;0m                 if !context.isEmpty() {
+    [0;36m|[0;0m                     `- [1;33mwarning: [1;39m'context' is deprecated: Intentionally using synchronous context[0;0m [#]8;;https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration\DeprecatedDeclaration]8;;\]
+ [0;36m81 |[0;0m                     log("Context not empty, trying retry logic")
+ [0;36m82 |[0;0m                     // Commit current composition
+
+/Users/naen/Git/PriType-Swift/Sources/PriTypeCore/HangulComposer.swift:86:24: [1;33mwarning: [1;39m'context' is deprecated: Intentionally using synchronous context[0;0m [#]8;;https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration\DeprecatedDeclaration]8;;\]
+ [0;36m84 |[0;0m                     
+ [0;36m85 |[0;0m                     // RETRY processing with empty context
+ [0;36m86 |[0;0m                     if context.process(keyCode) {
+    [0;36m|[0;0m                        `- [1;33mwarning: [1;39m'context' is deprecated: Intentionally using synchronous context[0;0m [#]8;;https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration\DeprecatedDeclaration]8;;\]
+ [0;36m87 |[0;0m                         log("Retry success")
+ [0;36m88 |[0;0m                         updateComposition(delegate: delegate)
+
+/Users/naen/Git/PriType-Swift/Sources/PriTypeCore/HangulComposer.swift:102:23: [1;33mwarning: [1;39m'context' is deprecated: Intentionally using synchronous context[0;0m [#]8;;https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration\DeprecatedDeclaration]8;;\]
+[0;36m100 |[0;0m     
+[0;36m101 |[0;0m     private func updateComposition(delegate: HangulComposerDelegate) {
+[0;36m102 |[0;0m         let preedit = context.getPreeditString()
+    [0;36m|[0;0m                       `- [1;33mwarning: [1;39m'context' is deprecated: Intentionally using synchronous context[0;0m [#]8;;https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration\DeprecatedDeclaration]8;;\]
+[0;36m103 |[0;0m         let commit = context.getCommitString()
+[0;36m104 |[0;0m         
+
+/Users/naen/Git/PriType-Swift/Sources/PriTypeCore/HangulComposer.swift:103:22: [1;33mwarning: [1;39m'context' is deprecated: Intentionally using synchronous context[0;0m [#]8;;https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration\DeprecatedDeclaration]8;;\]
+[0;36m101 |[0;0m     private func updateComposition(delegate: HangulComposerDelegate) {
+[0;36m102 |[0;0m         let preedit = context.getPreeditString()
+[0;36m103 |[0;0m         let commit = context.getCommitString()
+    [0;36m|[0;0m                      `- [1;33mwarning: [1;39m'context' is deprecated: Intentionally using synchronous context[0;0m [#]8;;https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration\DeprecatedDeclaration]8;;\]
+[0;36m104 |[0;0m         
+[0;36m105 |[0;0m         // If there is committed text, insert it first
+
+/Users/naen/Git/PriType-Swift/Sources/PriTypeCore/HangulComposer.swift:139:23: [1;33mwarning: [1;39m'context' is deprecated: Intentionally using synchronous context[0;0m [#]8;;https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration\DeprecatedDeclaration]8;;\]
+[0;36m137 |[0;0m     private func commitComposition(delegate: HangulComposerDelegate) {
+[0;36m138 |[0;0m         // Flush context
+[0;36m139 |[0;0m         let flushed = context.flush()
+    [0;36m|[0;0m                       `- [1;33mwarning: [1;39m'context' is deprecated: Intentionally using synchronous context[0;0m [#]8;;https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration\DeprecatedDeclaration]8;;\]
+[0;36m140 |[0;0m         let commitStr = String(flushed.compactMap { UnicodeScalar($0) }.map { Character($0) })
+[0;36m141 |[0;0m         
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>

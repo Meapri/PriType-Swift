@@ -1,0 +1,15 @@
+{
+  "originHash" : "8aeb8a14aa1597fb9a67a6939ce2ea8988823def16de0ff7f65dd770eadd5a11",
+  "pins" : [
+    {
+      "identity" : "libhangul-swift",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/Meapri/libhangul-swift",
+      "state" : {
+        "branch" : "main",
+        "revision" : "3d2222d8c8cccc95ae42b8e185bb2280a6f1bee4"
+      }
+    }
+  ],
+  "version" : 3
+}

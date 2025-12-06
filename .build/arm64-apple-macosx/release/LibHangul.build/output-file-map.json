@@ -1,0 +1,55 @@
+{
+  "": {
+    "dependencies": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/LibHangul.build/LibHangul.d",
+    "object": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/LibHangul.build/LibHangul.o",
+    "swift-dependencies": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/LibHangul.build/master.swiftdeps"
+  },
+  "/Users/naen/Git/PriType-Swift/.build/checkouts/libhangul-swift/Sources/LibHangul/Examples.swift": {
+    "object": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/LibHangul.build/Examples.swift.o",
+    "swiftmodule": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/LibHangul.build/Examples~partial.swiftmodule",
+    "swift-dependencies": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/LibHangul.build/Examples.swiftdeps",
+    "diagnostics": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/LibHangul.build/Examples.dia"
+  },
+  "/Users/naen/Git/PriType-Swift/.build/checkouts/libhangul-swift/Sources/LibHangul/HangulBuffer.swift": {
+    "object": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/LibHangul.build/HangulBuffer.swift.o",
+    "swiftmodule": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/LibHangul.build/HangulBuffer~partial.swiftmodule",
+    "swift-dependencies": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/LibHangul.build/HangulBuffer.swiftdeps",
+    "diagnostics": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/LibHangul.build/HangulBuffer.dia"
+  },
+  "/Users/naen/Git/PriType-Swift/.build/checkouts/libhangul-swift/Sources/LibHangul/HangulCharacter.swift": {
+    "object": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/LibHangul.build/HangulCharacter.swift.o",
+    "swiftmodule": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/LibHangul.build/HangulCharacter~partial.swiftmodule",
+    "swift-dependencies": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/LibHangul.build/HangulCharacter.swiftdeps",
+    "diagnostics": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/LibHangul.build/HangulCharacter.dia"
+  },
+  "/Users/naen/Git/PriType-Swift/.build/checkouts/libhangul-swift/Sources/LibHangul/HangulInputContext.swift": {
+    "object": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/LibHangul.build/HangulInputContext.swift.o",
+    "swiftmodule": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/LibHangul.build/HangulInputContext~partial.swiftmodule",
+    "swift-dependencies": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/LibHangul.build/HangulInputContext.swiftdeps",
+    "diagnostics": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/LibHangul.build/HangulInputContext.dia"
+  },
+  "/Users/naen/Git/PriType-Swift/.build/checkouts/libhangul-swift/Sources/LibHangul/HangulKeyboard.swift": {
+    "object": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/LibHangul.build/HangulKeyboard.swift.o",
+    "swiftmodule": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/LibHangul.build/HangulKeyboard~partial.swiftmodule",
+    "swift-dependencies": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/LibHangul.build/HangulKeyboard.swiftdeps",
+    "diagnostics": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/LibHangul.build/HangulKeyboard.dia"
+  },
+  "/Users/naen/Git/PriType-Swift/.build/checkouts/libhangul-swift/Sources/LibHangul/Hanja.swift": {
+    "object": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/LibHangul.build/Hanja.swift.o",
+    "swiftmodule": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/LibHangul.build/Hanja~partial.swiftmodule",
+    "swift-dependencies": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/LibHangul.build/Hanja.swiftdeps",
+    "diagnostics": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/LibHangul.build/Hanja.dia"
+  },
+  "/Users/naen/Git/PriType-Swift/.build/checkouts/libhangul-swift/Sources/LibHangul/LibHangul.swift": {
+    "object": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/LibHangul.build/LibHangul.swift.o",
+    "swiftmodule": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/LibHangul.build/LibHangul~partial.swiftmodule",
+    "swift-dependencies": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/LibHangul.build/LibHangul.swiftdeps",
+    "diagnostics": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/LibHangul.build/LibHangul.dia"
+  },
+  "/Users/naen/Git/PriType-Swift/.build/checkouts/libhangul-swift/Sources/LibHangul/ThreadSafeHangulInputContext.swift": {
+    "object": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/LibHangul.build/ThreadSafeHangulInputContext.swift.o",
+    "swiftmodule": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/LibHangul.build/ThreadSafeHangulInputContext~partial.swiftmodule",
+    "swift-dependencies": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/LibHangul.build/ThreadSafeHangulInputContext.swiftdeps",
+    "diagnostics": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/LibHangul.build/ThreadSafeHangulInputContext.dia"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "object" : {
+    "artifacts" : [
+
+    ],
+    "dependencies" : [
+      {
+        "basedOn" : null,
+        "packageRef" : {
+          "identity" : "libhangul-swift",
+          "kind" : "remoteSourceControl",
+          "location" : "https://github.com/Meapri/libhangul-swift",
+          "name" : "LibHangul"
+        },
+        "state" : {
+          "checkoutState" : {
+            "branch" : "main",
+            "revision" : "3d2222d8c8cccc95ae42b8e185bb2280a6f1bee4"
+          },
+          "name" : "sourceControlCheckout"
+        },
+        "subpath" : "libhangul-swift"
+      }
+    ],
+    "prebuilts" : [
+
+    ]
+  },
+  "version" : 7
+}

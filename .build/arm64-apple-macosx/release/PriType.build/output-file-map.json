@@ -1,0 +1,13 @@
+{
+  "": {
+    "dependencies": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriType.build/PriType.d",
+    "object": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriType.build/PriType.o",
+    "swift-dependencies": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriType.build/master.swiftdeps"
+  },
+  "/Users/naen/Git/PriType-Swift/Sources/PriType/main.swift": {
+    "object": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriType.build/main.swift.o",
+    "swiftmodule": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriType.build/main~partial.swiftmodule",
+    "swift-dependencies": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriType.build/main.swiftdeps",
+    "diagnostics": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriType.build/main.dia"
+  }
+}

@@ -1,0 +1,3 @@
+module LibHangul {
+    header "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/debug/LibHangul.build/include/LibHangul-Swift.h"
+}

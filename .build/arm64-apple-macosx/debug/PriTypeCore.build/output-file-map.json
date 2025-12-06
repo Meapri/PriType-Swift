@@ -1,0 +1,40 @@
+{
+  "": {
+    "swift-dependencies": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/debug/PriTypeCore.build/master.swiftdeps"
+  },
+  "/Users/naen/Git/PriType-Swift/Sources/PriTypeCore/HangulComposer.swift": {
+    "dependencies": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/debug/PriTypeCore.build/HangulComposer.d",
+    "object": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/debug/PriTypeCore.build/HangulComposer.swift.o",
+    "swiftmodule": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/debug/PriTypeCore.build/HangulComposer~partial.swiftmodule",
+    "swift-dependencies": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/debug/PriTypeCore.build/HangulComposer.swiftdeps",
+    "diagnostics": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/debug/PriTypeCore.build/HangulComposer.dia"
+  },
+  "/Users/naen/Git/PriType-Swift/Sources/PriTypeCore/JamoMapper.swift": {
+    "dependencies": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/debug/PriTypeCore.build/JamoMapper.d",
+    "object": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/debug/PriTypeCore.build/JamoMapper.swift.o",
+    "swiftmodule": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/debug/PriTypeCore.build/JamoMapper~partial.swiftmodule",
+    "swift-dependencies": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/debug/PriTypeCore.build/JamoMapper.swiftdeps",
+    "diagnostics": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/debug/PriTypeCore.build/JamoMapper.dia"
+  },
+  "/Users/naen/Git/PriType-Swift/Sources/PriTypeCore/KeyCode.swift": {
+    "dependencies": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/debug/PriTypeCore.build/KeyCode.d",
+    "object": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/debug/PriTypeCore.build/KeyCode.swift.o",
+    "swiftmodule": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/debug/PriTypeCore.build/KeyCode~partial.swiftmodule",
+    "swift-dependencies": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/debug/PriTypeCore.build/KeyCode.swiftdeps",
+    "diagnostics": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/debug/PriTypeCore.build/KeyCode.dia"
+  },
+  "/Users/naen/Git/PriType-Swift/Sources/PriTypeCore/PriTypeConfig.swift": {
+    "dependencies": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/debug/PriTypeCore.build/PriTypeConfig.d",
+    "object": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/debug/PriTypeCore.build/PriTypeConfig.swift.o",
+    "swiftmodule": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/debug/PriTypeCore.build/PriTypeConfig~partial.swiftmodule",
+    "swift-dependencies": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/debug/PriTypeCore.build/PriTypeConfig.swiftdeps",
+    "diagnostics": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/debug/PriTypeCore.build/PriTypeConfig.dia"
+  },
+  "/Users/naen/Git/PriType-Swift/Sources/PriTypeCore/PriTypeInputController.swift": {
+    "dependencies": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/debug/PriTypeCore.build/PriTypeInputController.d",
+    "object": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/debug/PriTypeCore.build/PriTypeInputController.swift.o",
+    "swiftmodule": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/debug/PriTypeCore.build/PriTypeInputController~partial.swiftmodule",
+    "swift-dependencies": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/debug/PriTypeCore.build/PriTypeInputController.swiftdeps",
+    "diagnostics": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/debug/PriTypeCore.build/PriTypeInputController.dia"
+  }
+}
