@@ -56,7 +56,7 @@ public class HangulComposer {
         }
         
         // Control+Space: Language toggle (keyCode 49 = Space)
-        if event.keyCode == 49 && event.modifierFlags.contains(.control) {
+        if event.keyCode == KeyCode.space && event.modifierFlags.contains(.control) {
             DebugLogger.log("Control+Space -> Toggle mode")
             
             // Commit any composition before switching (preserve text)

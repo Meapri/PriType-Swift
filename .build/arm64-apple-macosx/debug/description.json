@@ -275,6 +275,14 @@
       "inputs" : [
         {
           "kind" : "file",
+          "name" : "/Users/naen/Git/PriType-Swift/Sources/PriTypeCore/DebugLogger.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/naen/Git/PriType-Swift/Sources/PriTypeCore/EventTapManager.swift"
+        },
+        {
+          "kind" : "file",
           "name" : "/Users/naen/Git/PriType-Swift/Sources/PriTypeCore/HangulComposer.swift"
         },
         {
@@ -310,6 +318,8 @@
       "moduleName" : "PriTypeCore",
       "moduleOutputPath" : "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/debug/Modules/PriTypeCore.swiftmodule",
       "objects" : [
+        "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/debug/PriTypeCore.build/DebugLogger.swift.o",
+        "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/debug/PriTypeCore.build/EventTapManager.swift.o",
         "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/debug/PriTypeCore.build/HangulComposer.swift.o",
         "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/debug/PriTypeCore.build/JamoMapper.swift.o",
         "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/debug/PriTypeCore.build/KeyCode.swift.o",
@@ -363,6 +373,14 @@
       "outputs" : [
         {
           "kind" : "file",
+          "name" : "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/debug/PriTypeCore.build/DebugLogger.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/debug/PriTypeCore.build/EventTapManager.swift.o"
+        },
+        {
+          "kind" : "file",
           "name" : "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/debug/PriTypeCore.build/HangulComposer.swift.o"
         },
         {
@@ -388,6 +406,8 @@
       ],
       "prepareForIndexing" : false,
       "sources" : [
+        "/Users/naen/Git/PriType-Swift/Sources/PriTypeCore/DebugLogger.swift",
+        "/Users/naen/Git/PriType-Swift/Sources/PriTypeCore/EventTapManager.swift",
         "/Users/naen/Git/PriType-Swift/Sources/PriTypeCore/HangulComposer.swift",
         "/Users/naen/Git/PriType-Swift/Sources/PriTypeCore/JamoMapper.swift",
         "/Users/naen/Git/PriType-Swift/Sources/PriTypeCore/KeyCode.swift",
@@ -616,6 +636,8 @@
       "-package-name",
       "pritype_swift",
       "-c",
+      "/Users/naen/Git/PriType-Swift/Sources/PriTypeCore/DebugLogger.swift",
+      "/Users/naen/Git/PriType-Swift/Sources/PriTypeCore/EventTapManager.swift",
       "/Users/naen/Git/PriType-Swift/Sources/PriTypeCore/HangulComposer.swift",
       "/Users/naen/Git/PriType-Swift/Sources/PriTypeCore/JamoMapper.swift",
       "/Users/naen/Git/PriType-Swift/Sources/PriTypeCore/KeyCode.swift",
@@ -865,6 +887,14 @@
         },
         {
           "kind" : "file",
+          "name" : "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/debug/PriTypeCore.build/DebugLogger.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/debug/PriTypeCore.build/EventTapManager.swift.o"
+        },
+        {
+          "kind" : "file",
           "name" : "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/debug/PriTypeCore.build/HangulComposer.swift.o"
         },
         {
@@ -892,6 +922,14 @@
         {
           "kind" : "virtual",
           "name" : "<sources-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/naen/Git/PriType-Swift/Sources/PriTypeCore/DebugLogger.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/naen/Git/PriType-Swift/Sources/PriTypeCore/EventTapManager.swift"
         },
         {
           "kind" : "file",
@@ -982,6 +1020,14 @@
         {
           "kind" : "file",
           "name" : "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/debug/LibHangul.build/ThreadSafeHangulInputContext.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/debug/PriTypeCore.build/DebugLogger.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/debug/PriTypeCore.build/EventTapManager.swift.o"
         },
         {
           "kind" : "file",

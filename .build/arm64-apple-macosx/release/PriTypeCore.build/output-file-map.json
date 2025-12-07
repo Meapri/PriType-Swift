@@ -10,6 +10,12 @@
     "swift-dependencies": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/DebugLogger.swiftdeps",
     "diagnostics": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/DebugLogger.dia"
   },
+  "/Users/naen/Git/PriType-Swift/Sources/PriTypeCore/EventTapManager.swift": {
+    "object": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/EventTapManager.swift.o",
+    "swiftmodule": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/EventTapManager~partial.swiftmodule",
+    "swift-dependencies": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/EventTapManager.swiftdeps",
+    "diagnostics": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/EventTapManager.dia"
+  },
   "/Users/naen/Git/PriType-Swift/Sources/PriTypeCore/HangulComposer.swift": {
     "object": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/HangulComposer.swift.o",
     "swiftmodule": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/HangulComposer~partial.swiftmodule",

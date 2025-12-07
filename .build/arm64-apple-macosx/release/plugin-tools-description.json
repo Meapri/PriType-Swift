@@ -94,6 +94,7 @@
         "-emit-objc-header",
         "-emit-objc-header-path",
         "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/LibHangul.build/include/LibHangul-Swift.h",
+        "-color-diagnostics",
         "-swift-version",
         "6",
         "-enable-experimental-feature",
@@ -223,6 +224,7 @@
         "-entry-point-function-name",
         "-Xfrontend",
         "PriType_main",
+        "-color-diagnostics",
         "-swift-version",
         "6",
         "-I",
@@ -275,6 +277,10 @@
         },
         {
           "kind" : "file",
+          "name" : "/Users/naen/Git/PriType-Swift/Sources/PriTypeCore/EventTapManager.swift"
+        },
+        {
+          "kind" : "file",
           "name" : "/Users/naen/Git/PriType-Swift/Sources/PriTypeCore/HangulComposer.swift"
         },
         {
@@ -311,6 +317,7 @@
       "moduleOutputPath" : "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/Modules/PriTypeCore.swiftmodule",
       "objects" : [
         "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/DebugLogger.swift.o",
+        "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/EventTapManager.swift.o",
         "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/HangulComposer.swift.o",
         "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/JamoMapper.swift.o",
         "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/KeyCode.swift.o",
@@ -335,6 +342,7 @@
         "-emit-objc-header",
         "-emit-objc-header-path",
         "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/include/PriTypeCore-Swift.h",
+        "-color-diagnostics",
         "-swift-version",
         "6",
         "-I",
@@ -366,6 +374,10 @@
         },
         {
           "kind" : "file",
+          "name" : "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/EventTapManager.swift.o"
+        },
+        {
+          "kind" : "file",
           "name" : "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/HangulComposer.swift.o"
         },
         {
@@ -392,6 +404,7 @@
       "prepareForIndexing" : false,
       "sources" : [
         "/Users/naen/Git/PriType-Swift/Sources/PriTypeCore/DebugLogger.swift",
+        "/Users/naen/Git/PriType-Swift/Sources/PriTypeCore/EventTapManager.swift",
         "/Users/naen/Git/PriType-Swift/Sources/PriTypeCore/HangulComposer.swift",
         "/Users/naen/Git/PriType-Swift/Sources/PriTypeCore/JamoMapper.swift",
         "/Users/naen/Git/PriType-Swift/Sources/PriTypeCore/KeyCode.swift",
@@ -447,6 +460,7 @@
         "-entry-point-function-name",
         "-Xfrontend",
         "PriTypeVerify_main",
+        "-color-diagnostics",
         "-swift-version",
         "6",
         "-I",
@@ -527,6 +541,7 @@
       "-emit-objc-header",
       "-emit-objc-header-path",
       "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/LibHangul.build/include/LibHangul-Swift.h",
+      "-color-diagnostics",
       "-swift-version",
       "6",
       "-enable-experimental-feature",
@@ -582,6 +597,7 @@
       "-entry-point-function-name",
       "-Xfrontend",
       "PriType_main",
+      "-color-diagnostics",
       "-swift-version",
       "6",
       "-I",
@@ -615,6 +631,7 @@
       "pritype_swift",
       "-c",
       "/Users/naen/Git/PriType-Swift/Sources/PriTypeCore/DebugLogger.swift",
+      "/Users/naen/Git/PriType-Swift/Sources/PriTypeCore/EventTapManager.swift",
       "/Users/naen/Git/PriType-Swift/Sources/PriTypeCore/HangulComposer.swift",
       "/Users/naen/Git/PriType-Swift/Sources/PriTypeCore/JamoMapper.swift",
       "/Users/naen/Git/PriType-Swift/Sources/PriTypeCore/KeyCode.swift",
@@ -639,6 +656,7 @@
       "-emit-objc-header",
       "-emit-objc-header-path",
       "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/include/PriTypeCore-Swift.h",
+      "-color-diagnostics",
       "-swift-version",
       "6",
       "-I",
@@ -691,6 +709,7 @@
       "-entry-point-function-name",
       "-Xfrontend",
       "PriTypeVerify_main",
+      "-color-diagnostics",
       "-swift-version",
       "6",
       "-I",
@@ -850,6 +869,10 @@
         },
         {
           "kind" : "file",
+          "name" : "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/EventTapManager.swift.o"
+        },
+        {
+          "kind" : "file",
           "name" : "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/HangulComposer.swift.o"
         },
         {
@@ -881,6 +904,10 @@
         {
           "kind" : "file",
           "name" : "/Users/naen/Git/PriType-Swift/Sources/PriTypeCore/DebugLogger.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/naen/Git/PriType-Swift/Sources/PriTypeCore/EventTapManager.swift"
         },
         {
           "kind" : "file",
@@ -961,6 +988,10 @@
         {
           "kind" : "file",
           "name" : "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/DebugLogger.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/EventTapManager.swift.o"
         },
         {
           "kind" : "file",

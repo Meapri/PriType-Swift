@@ -9,7 +9,7 @@ class Application {
         DebugLogger.log("Application main() started")
         DebugLogger.log("Configuration: ConnectionName=\(kConnectionName)")
         
-        let server = IMKServer(name: kConnectionName, bundleIdentifier: Bundle.main.bundleIdentifier)
+        _ = IMKServer(name: kConnectionName, bundleIdentifier: Bundle.main.bundleIdentifier)
         DebugLogger.log("IMKServer initialized")
         
         // Setup Right Command toggle

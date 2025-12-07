@@ -306,6 +306,8 @@ typedef unsigned int swift_uint4  __attribute__((__ext_vector_type__(4)));
 @class IMKServer;
 SWIFT_CLASS_NAMED("PriTypeInputController")
 @interface PriTypeInputController : IMKInputController
+- (void)activateServer:(id _Null_unspecified)sender;
+- (NSUInteger)recognizedEvents:(id _Null_unspecified)sender SWIFT_WARN_UNUSED_RESULT;
 - (BOOL)handleEvent:(NSEvent * _Null_unspecified)event client:(id _Null_unspecified)sender SWIFT_WARN_UNUSED_RESULT;
 - (void)deactivateServer:(id _Null_unspecified)sender;
 - (void)commitComposition:(id _Null_unspecified)sender;
