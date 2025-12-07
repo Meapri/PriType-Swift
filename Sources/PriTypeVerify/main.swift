@@ -8,6 +8,7 @@ class MockDelegate: HangulComposerDelegate {
     
     func insertText(_ text: String) {
         insertedText = text
+        markedText = "" // System behavior: insertion replaces marked text
         print("Inserted: '\(text)'")
     }
     
@@ -185,6 +186,48 @@ func verify() {
          print("WARNING: '!' result unexpected: Inserted='\(delegate.insertedText)', Marked='\(delegate.markedText)'")
     }
 
+    // Test 8: Modifier Pass-Through (Cleaned Up)
+    // flagsChanged is no longer handled - we only pass through keyDown with modifiers
+    // This test verifies modifiers don't interfere with composition
+    
+    print("Test 8: Modifier Pass-Through")
+    
+    // Reset state
+    commit(delegate: delegate, composer: composer)
+    delegate.insertedText = ""
+    delegate.markedText = ""
+    
+    // 1. Type 'r' to create composition
+    _ = composer.handle(NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [], timestamp: 0, windowNumber: 0, context: nil, characters: "r", charactersIgnoringModifiers: "r", isARepeat: false, keyCode: 15)!, delegate: delegate)
+    
+    if delegate.markedText == "ㄱ" || delegate.markedText == "\u{3131}" || delegate.markedText == "\u{1100}" {
+        print("Setup PASS: Marked 'ㄱ'")
+    } else {
+        print("Setup FAIL: Expected 'ㄱ', got '\(delegate.markedText)'")
+        exit(1)
+    }
+    
+    // 2. Simulate Cmd+S (keyDown with modifier) - should return false (pass to system)
+    print("Simulating Cmd+S...")
+    let eventCmdS = NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [.command], timestamp: 0, windowNumber: 0, context: nil, characters: "s", charactersIgnoringModifiers: "s", isARepeat: false, keyCode: 1)
+    
+    let handledCmd = composer.handle(eventCmdS!, delegate: delegate)
+    
+    if handledCmd == false {
+        print("PASS: Returned false (passed to system)")
+    } else {
+        print("FAIL: Returned true (consumed event)")
+        exit(1)
+    }
+    
+    // Composition should still be there (not committed on modifier keyDown)
+    if delegate.markedText == "ㄱ" || delegate.markedText == "\u{3131}" || delegate.markedText == "\u{1100}" {
+        print("PASS: Composition preserved after modifier key")
+    } else {
+        print("FAIL: Composition lost after modifier key")
+        exit(1)
+    }
+    
     print("All tests passed!")
 }
 

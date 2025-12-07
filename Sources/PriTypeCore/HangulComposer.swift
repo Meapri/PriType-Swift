@@ -26,9 +26,10 @@ public class HangulComposer {
             return false
         }
         
-        // Handle modifiers (Command, Control, Option)
-        // If these are pressed, we generally want to let the system handle shortcuts.
-        if event.modifierFlags.contains(.command) || event.modifierFlags.contains(.control) || event.modifierFlags.contains(.option) {
+        // Pass through if modifiers (Command, Control, Option) are present
+        // This ensures system shortcuts work correctly without interference
+        let significantModifiers: NSEvent.ModifierFlags = [.command, .control, .option]
+        if !event.modifierFlags.intersection(significantModifiers).isEmpty {
              return false
         }
         
@@ -120,10 +121,29 @@ public class HangulComposer {
         
         DebugLogger.log("Handle key: \(inputCharacters) code: \(keyCode)")
         
+        // Filter: If input contains non-printable characters (e.g., function keys, arrows)
+        // Return false to pass to system. Function keys often have charCode > 63000.
+        // Printable ASCII is 32-126. We also allow extended for international.
+        // However, we must NOT process function key codes at all.
+        if let firstScalar = inputCharacters.unicodeScalars.first {
+            let firstCharCode = Int(firstScalar.value)
+            // Function keys and special keys have very high char codes (> 63000)
+            // or are control characters (< 32, except for special handling)
+            if firstCharCode >= 63000 || (firstCharCode < 32 && firstCharCode != 9 && firstCharCode != 10 && firstCharCode != 13) {
+                DebugLogger.log("Non-printable key detected, passing to system")
+                return false
+            }
+        }
+        
         var handledAtLeastOnce = false
         
         for char in inputCharacters.unicodeScalars {
             let charCode = Int(char.value)
+            
+            // Skip non-printable characters in the loop as well
+            if charCode >= 63000 || (charCode < 32 && charCode != 9 && charCode != 10 && charCode != 13) {
+                continue
+            }
             
             // Check if standard typing range (approx)
             // ASCII 33-126 are printable. 
@@ -154,10 +174,16 @@ public class HangulComposer {
                      updateComposition(delegate: delegate)
                 } else {
                      // Still failed. It's an unprocessable char (e.g. maybe symbol not in map).
-                     // CONSUME IT ANYWAY and insert raw char to avoid "leakage" reordering.
-                     DebugLogger.log("Retry failed, inserting raw char")
-                     delegate.insertText(String(char))
-                     handledAtLeastOnce = true
+                     // ONLY insert if it's a printable character (32-126 or extended)
+                     if charCode >= 32 && charCode < 127 {
+                         DebugLogger.log("Retry failed, inserting printable char")
+                         delegate.insertText(String(char))
+                         handledAtLeastOnce = true
+                     } else {
+                         // Non-printable, skip insertion but still mark as handled
+                         // to avoid leakage to system
+                         DebugLogger.log("Retry failed, skipping non-printable char")
+                     }
                 }
             }
         }
@@ -208,9 +234,12 @@ public class HangulComposer {
         
         if !commitStr.isEmpty {
              delegate.insertText(commitStr.precomposedStringWithCanonicalMapping)
+        } else {
+             // Only clear mark if we didn't insert anything (e.g. cancelling empty state or explicit reset)
+             // If we inserted text, the marked text is replaced by inserted text, so explicit clear is redundant
+             // and causes visual flickering or ghost states in some apps.
+             delegate.setMarkedText("")
         }
-        // Clear mark
-        delegate.setMarkedText("")
     }
 
     private func cancelComposition(delegate: HangulComposerDelegate) {
