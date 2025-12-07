@@ -6,7 +6,16 @@ public protocol HangulComposerDelegate: AnyObject {
     func setMarkedText(_ text: String)
 }
 
+/// Input mode for the composer
+public enum InputMode {
+    case korean
+    case english
+}
+
 public class HangulComposer {
+    
+    // Current input mode (Korean or English)
+    public private(set) var inputMode: InputMode = .korean
     
     // Initialize with direct HangulInputContext (synchronous)
     @available(*, deprecated, message: "Intentionally using synchronous context")
@@ -26,6 +35,29 @@ public class HangulComposer {
             return false
         }
         
+        // Control+Space: Language toggle (keyCode 49 = Space)
+        if event.keyCode == 49 && event.modifierFlags.contains(.control) {
+            DebugLogger.log("Control+Space -> Toggle mode")
+            
+            // Commit any composition before switching (preserve text)
+            if !context.isEmpty() {
+                commitComposition(delegate: delegate)
+                DebugLogger.log("Composition committed before mode switch")
+            }
+            
+            // Toggle mode
+            inputMode = (inputMode == .korean) ? .english : .korean
+            DebugLogger.log("Mode switched to: \(inputMode)")
+            
+            return true  // Consume the event
+        }
+        
+        // English mode: pass all keys to system
+        if inputMode == .english {
+            DebugLogger.log("English mode -> Pass through")
+            return false
+        }
+        
         // Pass through if modifiers (Command, Control, Option) are present
         // This ensures system shortcuts work correctly without interference
         let significantModifiers: NSEvent.ModifierFlags = [.command, .control, .option]
@@ -37,20 +69,10 @@ public class HangulComposer {
             return false
         }
         
-        // Caps Lock Handling: If Caps Lock is on, commit composition and pass through as English
-        if event.modifierFlags.contains(.capsLock) {
-            DebugLogger.log("Caps Lock ON -> Commit and Pass through")
-            // If there is any composition, flush it first
-            if !context.isEmpty() {
-                 commitComposition(delegate: delegate)
-            }
-            // Return false to let the system handle this event (which will use the physical keymap i.e. English uppercase)
-            return false
-        }
-        
         let inputCharacters = characters
         
         let keyCode = event.keyCode
+
         
         // 1. Check for Special Keys
         // Return / Enter
@@ -232,13 +254,12 @@ public class HangulComposer {
         let flushed = context.flush()
         let commitStr = String(flushed.compactMap { UnicodeScalar($0) }.map { Character($0) })
         
+        DebugLogger.log("commitComposition: flushed=\(flushed), str='\(commitStr)'")
+        
         if !commitStr.isEmpty {
-             delegate.insertText(commitStr.precomposedStringWithCanonicalMapping)
-        } else {
-             // Only clear mark if we didn't insert anything (e.g. cancelling empty state or explicit reset)
-             // If we inserted text, the marked text is replaced by inserted text, so explicit clear is redundant
-             // and causes visual flickering or ghost states in some apps.
-             delegate.setMarkedText("")
+            // insertText replaces the marked text automatically
+            delegate.insertText(commitStr.precomposedStringWithCanonicalMapping)
+            DebugLogger.log("commitComposition: inserted '\(commitStr)'")
         }
     }
 

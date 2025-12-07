@@ -42,8 +42,20 @@ public class PriTypeInputController: IMKInputController {
         }
     }
     
+    // Tell IMK which events we want to receive in handle()
+    // By default, only keyDown events are delivered. We need flagsChanged for Caps Lock detection.
+    override public func recognizedEvents(_ sender: Any!) -> Int {
+        let keyDown = NSEvent.EventTypeMask.keyDown.rawValue
+        let flagsChanged = NSEvent.EventTypeMask.flagsChanged.rawValue
+        return Int(keyDown | flagsChanged)
+    }
+    
     override public func handle(_ event: NSEvent!, client sender: Any!) -> Bool {
         guard let event = event, let client = sender as? IMKTextInput else { return false }
+        
+        // Debug: Log all incoming events to diagnose Caps Lock issue
+        DebugLogger.log("InputController.handle() event type: \(event.type.rawValue) keyCode: \(event.keyCode)")
+        
         lastClient = client
         let adapter = ClientAdapter(client: client)
         return composer.handle(event, delegate: adapter)
