@@ -36,19 +36,18 @@ public class HangulComposer {
             return false
         }
         
-        // Caps Lock 처리: Caps Lock이 켜져 있고 Shift를 안 눌렀으면 소문자로 변환
-        // 이렇게 해야 한글 모드에서 Caps Lock이 쌍자음으로 잘못 인식되는 것을 방지
-        let isCapsLockOn = event.modifierFlags.contains(.capsLock)
-        let isShiftPressed = event.modifierFlags.contains(.shift)
-        
-        let inputCharacters: String
-        if isCapsLockOn && !isShiftPressed {
-            // Caps Lock만 켜진 경우: 소문자로 변환하여 일반 자음으로 처리
-            inputCharacters = characters.lowercased()
-        } else {
-            // Shift 키가 눌렸거나 Caps Lock이 꺼진 경우: 원본 사용
-            inputCharacters = characters
+        // Caps Lock Handling: If Caps Lock is on, commit composition and pass through as English
+        if event.modifierFlags.contains(.capsLock) {
+            DebugLogger.log("Caps Lock ON -> Commit and Pass through")
+            // If there is any composition, flush it first
+            if !context.isEmpty() {
+                 commitComposition(delegate: delegate)
+            }
+            // Return false to let the system handle this event (which will use the physical keymap i.e. English uppercase)
+            return false
         }
+        
+        let inputCharacters = characters
         
         let keyCode = event.keyCode
         
