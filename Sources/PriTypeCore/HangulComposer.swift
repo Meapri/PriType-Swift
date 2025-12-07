@@ -17,6 +17,9 @@ public class HangulComposer {
     // Current input mode (Korean or English)
     public private(set) var inputMode: InputMode = .korean
     
+    // Track last delegate for external toggle calls
+    private weak var lastDelegate: (any HangulComposerDelegate)?
+    
     // Initialize with direct HangulInputContext (synchronous)
     @available(*, deprecated, message: "Intentionally using synchronous context")
     private lazy var context: HangulInputContext = {
@@ -29,7 +32,24 @@ public class HangulComposer {
         DebugLogger.log("HangulComposer init")
     }
     
+    /// Toggle input mode externally (called by EventTapManager)
+    public func toggleInputMode() {
+        DebugLogger.log("toggleInputMode called externally")
+        
+        // Commit any composition before switching
+        if let delegate = lastDelegate, !context.isEmpty() {
+            commitComposition(delegate: delegate)
+            DebugLogger.log("Composition committed before mode switch")
+        }
+        
+        inputMode = (inputMode == .korean) ? .english : .korean
+        DebugLogger.log("Mode switched to: \(inputMode)")
+    }
+    
     public func handle(_ event: NSEvent, delegate: HangulComposerDelegate) -> Bool {
+        // Track delegate for external toggle calls
+        self.lastDelegate = delegate
+        
         // Only handle key down events
         if event.type != .keyDown {
             return false

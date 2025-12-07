@@ -5,9 +5,18 @@ import LibHangul
 @objc(PriTypeInputController)
 public class PriTypeInputController: IMKInputController {
     
-    private let composer = HangulComposer()
+    // Shared composer for EventTapManager access
+    nonisolated(unsafe) public static let sharedComposer = HangulComposer()
+    private var composer: HangulComposer { Self.sharedComposer }
+    
+    // Keep last active controller for toggle access
+    nonisolated(unsafe) public static weak var sharedController: PriTypeInputController?
+    
     // Strong reference to prevent client being released during rapid switching
     private var lastClient: IMKTextInput?
+    
+    // Keep adapter alive for external toggle calls
+    private var lastAdapter: ClientAdapter?
     
     // Adapter class to bridge IMKTextInput calls to HangulComposerDelegate
     private class ClientAdapter: HangulComposerDelegate {
@@ -39,7 +48,10 @@ public class PriTypeInputController: IMKInputController {
         // 클라이언트 저장
         if let client = sender as? IMKTextInput {
             lastClient = client
+            lastAdapter = ClientAdapter(client: client)
         }
+        // Set as active controller for toggle access
+        Self.sharedController = self
     }
     
     // Tell IMK which events we want to receive in handle()
@@ -57,8 +69,8 @@ public class PriTypeInputController: IMKInputController {
         DebugLogger.log("InputController.handle() event type: \(event.type.rawValue) keyCode: \(event.keyCode)")
         
         lastClient = client
-        let adapter = ClientAdapter(client: client)
-        return composer.handle(event, delegate: adapter)
+        lastAdapter = ClientAdapter(client: client)
+        return composer.handle(event, delegate: lastAdapter!)
     }
     
     // 입력기 전환 시 조합 중인 텍스트 커밋
