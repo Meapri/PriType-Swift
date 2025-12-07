@@ -7,7 +7,7 @@ public protocol HangulComposerDelegate: AnyObject {
 }
 
 /// Input mode for the composer
-public enum InputMode {
+public enum InputMode: Sendable {
     case korean
     case english
 }
@@ -43,6 +43,7 @@ public class HangulComposer {
         }
         
         inputMode = (inputMode == .korean) ? .english : .korean
+        StatusBarManager.shared.setMode(inputMode)
         DebugLogger.log("Mode switched to: \(inputMode)")
     }
     
@@ -67,6 +68,7 @@ public class HangulComposer {
             
             // Toggle mode
             inputMode = (inputMode == .korean) ? .english : .korean
+            StatusBarManager.shared.setMode(inputMode)
             DebugLogger.log("Mode switched to: \(inputMode)")
             
             return true  // Consume the event

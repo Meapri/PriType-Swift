@@ -12,6 +12,11 @@ class Application {
         _ = IMKServer(name: kConnectionName, bundleIdentifier: Bundle.main.bundleIdentifier)
         DebugLogger.log("IMKServer initialized")
         
+        // Setup status bar indicator
+        DispatchQueue.main.async {
+            StatusBarManager.shared.setup()
+        }
+        
         // Setup Right Command toggle
         setupEventTap()
         
