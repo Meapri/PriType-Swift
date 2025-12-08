@@ -93,10 +93,21 @@ public class PriTypeInputController: IMKInputController {
         // Debug: Log all incoming events to diagnose Caps Lock issue
         DebugLogger.log("InputController.handle() event type: \(event.type.rawValue) keyCode: \(event.keyCode)")
         
+        // Efficient Secure Input Detection
+        // If the client doesn't report a valid selection range (NSNotFound),
+        // it likely means it's a password field or doesn't support IM text manipulation.
+        // In this case, we pass the event through to let the system handle raw input.
+        if client.selectedRange().location == NSNotFound {
+            DebugLogger.log("Invalid selection range (Secure Input?), passing through")
+            return false
+        }      
+        
         lastClient = client
         lastAdapter = ClientAdapter(client: client)
+        
         return composer.handle(event, delegate: lastAdapter!)
-    }
+    }        
+
     
 
     
