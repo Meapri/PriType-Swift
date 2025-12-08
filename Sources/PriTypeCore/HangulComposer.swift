@@ -22,7 +22,7 @@ public class HangulComposer {
     
     // Initialize with direct HangulInputContext (synchronous)
     @available(*, deprecated, message: "Intentionally using synchronous context")
-    private lazy var context: HangulInputContext = {
+    private var context: HangulInputContext = {
        let ctx = HangulInputContext(keyboard: PriTypeConfig.defaultKeyboardId)
        DebugLogger.log("Configured context with 2-set (id: '\(PriTypeConfig.defaultKeyboardId)')")
        return ctx
@@ -30,6 +30,18 @@ public class HangulComposer {
     
     public init() {
         DebugLogger.log("HangulComposer init")
+    }
+    
+    /// Update keyboard layout dynamically (e.g. from Settings)
+    public func updateKeyboardLayout(id: String) {
+        DebugLogger.log("HangulComposer: Updating keyboard layout to '\(id)'")
+        // Commit existing text before switching to avoid corruption
+        if let delegate = lastDelegate, !context.isEmpty() {
+            commitComposition(delegate: delegate)
+        }
+        
+        // Re-initialize context with new keyboard ID
+        context = HangulInputContext(keyboard: id)
     }
     
     /// Toggle input mode externally (called by EventTapManager)
@@ -81,27 +93,21 @@ public class HangulComposer {
             return false
         }
         
-        // Caps Lock handling for Korean mode
-        let capsLockOn = event.modifierFlags.contains(.capsLock)
-        
-        // If Caps Lock toggle mode is enabled, ignore capsLock for this check
-        // (toggle is handled by IOKitManager, just continue Korean input)
-        if capsLockOn && !ConfigurationManager.shared.capsLockAsToggle {
-            // Default: Caps Lock = uppercase English
-            // Commit composition ONLY if there is one (efficient - no commit if empty)
-            if !context.isEmpty() {
-                commitComposition(delegate: delegate)
-                DebugLogger.log("Caps Lock: Committed composition")
-            }
-            // Pass through for uppercase English
-            return false
-        }
-        
         // Pass through if modifiers (Command, Control, Option) are present
         // This ensures system shortcuts work correctly without interference
         let significantModifiers: NSEvent.ModifierFlags = [.command, .control, .option]
         if !event.modifierFlags.intersection(significantModifiers).isEmpty {
              return false
+        }
+        
+        // Critical Fix: Caps Lock Passthrough
+        // If Caps Lock is ON, we should NOT process input as Hangul.
+        // Instead, commit any existing composition and let the system handle raw input (Uppercase English).
+        if event.modifierFlags.contains(.capsLock) {
+            if !context.isEmpty() {
+                commitComposition(delegate: delegate)
+            }
+            return false
         }
         
         guard let characters = event.characters, !characters.isEmpty else {

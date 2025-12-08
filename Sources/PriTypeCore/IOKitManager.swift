@@ -137,10 +137,10 @@ public final class IOKitManager {
                 rightCommandIsDown = false
                 anyOtherKeyPressed = false
             }
-        } else if rightCommandIsDown && pressed && usage > 0 && usage < 0xE0 && usage != capsLockUsage {
+        } else if rightCommandIsDown && pressed && usage > 0 && usage < 0xE0 {
             // Non-modifier key pressed while Right Command is down
             anyOtherKeyPressed = true
-            DebugLogger.log("IOKitManager: Other key pressed (usage: \(usage))")
+            DebugLogger.log("IOKitManager: Key pressed while Right Command is down (combo)")
         }
     }
 }

@@ -10,7 +10,7 @@
           "identity" : "libhangul-swift",
           "kind" : "remoteSourceControl",
           "location" : "https://github.com/Meapri/libhangul-swift",
-          "name" : "LibHangul"
+          "name" : "libhangul-swift"
         },
         "state" : {
           "checkoutState" : {

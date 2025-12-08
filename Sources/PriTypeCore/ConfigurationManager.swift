@@ -37,7 +37,11 @@ public class ConfigurationManager: @unchecked Sendable {
             defaults.string(forKey: Keys.keyboardId) ?? "2"
         }
         set {
-            defaults.set(newValue, forKey: Keys.keyboardId)
+            if keyboardId != newValue {
+                defaults.set(newValue, forKey: Keys.keyboardId)
+                // Notify observers (e.g. InputController) to update the engine
+                NotificationCenter.default.post(name: Notification.Name("PriTypeKeyboardLayoutChanged"), object: nil)
+            }
         }
     }
     

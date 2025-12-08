@@ -52,6 +52,31 @@ public class PriTypeInputController: IMKInputController {
         }
         // Set as active controller for toggle access
         Self.sharedController = self
+        
+        // Ensure composer has correct layout (in case it changed while inactive)
+        let currentLayoutId = ConfigurationManager.shared.keyboardId
+        composer.updateKeyboardLayout(id: currentLayoutId)
+        
+        // Observe layout changes
+        NotificationCenter.default.addObserver(self, selector: #selector(handleLayoutChange), name: Notification.Name("PriTypeKeyboardLayoutChanged"), object: nil)
+    }
+    
+    override public func deactivateServer(_ sender: Any!) {
+        // 반드시 조합 중인 내용을 커밋
+        if let client = sender as? IMKTextInput ?? lastClient {
+            let adapter = ClientAdapter(client: client)
+            composer.forceCommit(delegate: adapter)
+        }
+        super.deactivateServer(sender)
+        // 클라이언트 참조 해제
+        lastClient = nil
+        NotificationCenter.default.removeObserver(self, name: Notification.Name("PriTypeKeyboardLayoutChanged"), object: nil)
+    }
+    
+    @objc private func handleLayoutChange() {
+        let newId = ConfigurationManager.shared.keyboardId
+        DebugLogger.log("PriTypeInputController: Layout changed to \(newId), updating composer")
+        composer.updateKeyboardLayout(id: newId)
     }
     
     // Tell IMK which events we want to receive in handle()
@@ -73,17 +98,7 @@ public class PriTypeInputController: IMKInputController {
         return composer.handle(event, delegate: lastAdapter!)
     }
     
-    // 입력기 전환 시 조합 중인 텍스트 커밋
-    override public func deactivateServer(_ sender: Any!) {
-        // 반드시 조합 중인 내용을 커밋
-        if let client = sender as? IMKTextInput ?? lastClient {
-            let adapter = ClientAdapter(client: client)
-            composer.forceCommit(delegate: adapter)
-        }
-        super.deactivateServer(sender)
-        // 클라이언트 참조 해제
-        lastClient = nil
-    }
+
     
     // 마우스 클릭 등으로 조합 영역 외부 클릭 시 조합 커밋
     override public func commitComposition(_ sender: Any!) {
@@ -92,5 +107,43 @@ public class PriTypeInputController: IMKInputController {
             composer.forceCommit(delegate: adapter)
         }
         super.commitComposition(sender)
+    }
+    
+    // MARK: - Input Method Menu
+    
+    /// Returns custom menu for the input method (shown in system input source menu)
+    override public func menu() -> NSMenu! {
+        let menu = NSMenu()
+        
+        // Settings
+        let settingsItem = NSMenuItem(title: "PriType 설정...", action: #selector(openSettings(_:)), keyEquivalent: ",")
+        settingsItem.target = self
+        menu.addItem(settingsItem)
+        
+        menu.addItem(NSMenuItem.separator())
+        
+        // About
+        let aboutItem = NSMenuItem(title: "PriType 정보", action: #selector(showAbout(_:)), keyEquivalent: "")
+        aboutItem.target = self
+        menu.addItem(aboutItem)
+        
+        return menu
+    }
+    
+    @objc private func openSettings(_ sender: Any?) {
+        DebugLogger.log("Opening settings")
+        DispatchQueue.main.async {
+            SettingsWindowController.shared.showSettings()
+        }
+    }
+    
+    @MainActor
+    @objc private func showAbout(_ sender: Any?) {
+        DebugLogger.log("Showing about")
+        let alert = NSAlert()
+        alert.messageText = "PriType"
+        alert.informativeText = "macOS용 한글 입력기\n\n버전: 1.0\n© 2025"
+        alert.alertStyle = .informational
+        alert.runModal()
     }
 }

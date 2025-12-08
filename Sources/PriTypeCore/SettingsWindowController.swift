@@ -26,11 +26,17 @@ public class SettingsWindowController: NSObject, @unchecked Sendable {
         // Create hosting controller
         let hostingController = NSHostingController(rootView: settingsView)
         
-        // Create window
+        // Create window with "liquid" style (full size content, transparent titlebar)
         let newWindow = NSWindow(contentViewController: hostingController)
         newWindow.title = "PriType 설정"
-        newWindow.styleMask = [.titled, .closable, .miniaturizable]
-        newWindow.setContentSize(NSSize(width: 400, height: 300))
+        newWindow.styleMask = [.titled, .closable, .miniaturizable, .fullSizeContentView]
+        newWindow.titlebarAppearsTransparent = true
+        newWindow.titleVisibility = .hidden
+        newWindow.isMovableByWindowBackground = true
+        newWindow.backgroundColor = .clear
+        
+        // Set proper size to avoid truncation
+        newWindow.setContentSize(NSSize(width: 400, height: 450))
         newWindow.center()
         newWindow.delegate = self
         
@@ -53,11 +59,34 @@ extension SettingsWindowController: NSWindowDelegate {
     }
 }
 
+// MARK: - Visual Effect View (Glassmorphism)
+
+struct VisualEffectView: NSViewRepresentable {
+    let material: NSVisualEffectView.Material
+    let blendingMode: NSVisualEffectView.BlendingMode
+    
+    func makeNSView(context: Context) -> NSVisualEffectView {
+        let visualEffectView = NSVisualEffectView()
+        visualEffectView.material = material
+        visualEffectView.blendingMode = blendingMode
+        visualEffectView.state = .active
+        return visualEffectView
+    }
+    
+    func updateNSView(_ nsView: NSVisualEffectView, context: Context) {
+        nsView.material = material
+        nsView.blendingMode = blendingMode
+    }
+}
+
+// MARK: - SwiftUI Settings View
+
 // MARK: - SwiftUI Settings View
 
 struct SettingsView: View {
     @State private var selectedKeyboard = ConfigurationManager.shared.keyboardId
     @State private var selectedToggleKey = ConfigurationManager.shared.toggleKey
+    @State private var hoverZone: String? = nil
     
     private let keyboardOptions = [
         ("2", "두벌식 표준"),
@@ -67,62 +96,192 @@ struct SettingsView: View {
     ]
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            Text("PriType 설정")
-                .font(.title)
-                .fontWeight(.bold)
+        ZStack {
+            // Base Layer: Deep Liquid Glass
+            VisualEffectView(material: .headerView, blendingMode: .behindWindow)
+                .edgesIgnoringSafeArea(.all)
             
-            Divider()
+            // Chromatic Liquid Gradient (Subtle background shift)
+            RadialGradient(
+                gradient: Gradient(colors: [Color.blue.opacity(0.15), Color.purple.opacity(0.1), Color.clear]),
+                center: .topLeading,
+                startRadius: 0,
+                endRadius: 600
+            )
+            .edgesIgnoringSafeArea(.all)
             
-            // Keyboard Layout
-            VStack(alignment: .leading, spacing: 8) {
-                Text("자판 배열")
-                    .font(.headline)
+            VStack(alignment: .leading, spacing: 30) {
+                // Liquid Header
+                HStack {
+                    Text("PriType")
+                        .font(.system(size: 34, weight: .heavy, design: .rounded))
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [.white, .white.opacity(0.7)],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
+                    Text("Settings")
+                        .font(.system(size: 34, weight: .thin, design: .rounded))
+                        .foregroundColor(.white.opacity(0.5))
+                    Spacer()
+                }
+                .padding(.top, 25)
+                .padding(.horizontal, 5)
                 
-                Picker("", selection: $selectedKeyboard) {
-                    ForEach(keyboardOptions, id: \.0) { option in
-                        Text(option.1).tag(option.0)
+                // Content Stack (Floating Glass Tiles)
+                VStack(alignment: .leading, spacing: 20) {
+                    
+                    // Keyboard Layout Tile
+                    GlassTile(title: "자판 배열") {
+                        VStack(spacing: 8) {
+                            ForEach(keyboardOptions, id: \.0) { option in
+                                LiquidSelectionRow(
+                                    title: option.1,
+                                    isSelected: selectedKeyboard == option.0,
+                                    action: { selectedKeyboard = option.0 }
+                                )
+                            }
+                        }
+                    }
+                    .onChange(of: selectedKeyboard) { newValue in
+                        ConfigurationManager.shared.keyboardId = newValue
+                    }
+                    
+                    // Toggle Key Tile
+                    GlassTile(title: "한영 전환 키") {
+                        VStack(spacing: 8) {
+                            ForEach(ToggleKey.allCases, id: \.self) { key in
+                                LiquidSelectionRow(
+                                    title: key.displayName,
+                                    isSelected: selectedToggleKey == key,
+                                    action: { selectedToggleKey = key }
+                                )
+                            }
+                        }
+                    }
+                    .onChange(of: selectedToggleKey) { newValue in
+                        ConfigurationManager.shared.toggleKey = newValue
                     }
                 }
-                .pickerStyle(.radioGroup)
-                .onChange(of: selectedKeyboard) { newValue in
-                    ConfigurationManager.shared.keyboardId = newValue
-                }
-            }
-            
-            Divider()
-            
-            // Toggle Key
-            VStack(alignment: .leading, spacing: 8) {
-                Text("한영 전환 키")
-                    .font(.headline)
                 
-                Picker("", selection: $selectedToggleKey) {
-                    ForEach(ToggleKey.allCases, id: \.self) { key in
-                        Text(key.displayName).tag(key)
-                    }
-                }
-                .pickerStyle(.radioGroup)
-                .onChange(of: selectedToggleKey) { newValue in
-                    ConfigurationManager.shared.toggleKey = newValue
-                }
+                Spacer()
                 
-                Text("변경 후 입력기를 재시작하면 적용됩니다.")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                // Footer
+                HStack {
+                    Image(systemName: "drop.fill") // Liquid icon
+                        .font(.caption)
+                    Text("Designed for macOS 26")
+                        .font(.caption2)
+                        .fontWeight(.semibold)
+                    Spacer()
+                    Text("v1.0 Liquid")
+                        .font(.caption2)
+                }
+                .foregroundColor(.white.opacity(0.3))
+                .padding(.horizontal, 10)
+                .padding(.bottom, 20)
             }
+            .padding(30)
+        }
+        .frame(width: 420, height: 620)
+        .preferredColorScheme(.dark)
+    }
+}
+
+// MARK: - Liquid Design Components
+
+struct GlassTile<Content: View>: View {
+    let title: String
+    let content: Content
+    
+    init(title: String, @ViewBuilder content: () -> Content) {
+        self.title = title
+        self.content = content()
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 15) {
+            Text(title)
+                .font(.system(size: 15, weight: .semibold, design: .rounded))
+                .foregroundColor(.white.opacity(0.6))
+                .padding(.leading, 5)
+            
+            VStack {
+                content
+            }
+            .padding(12)
+            .background(
+                ZStack {
+                    Color.white.opacity(0.03)
+                    VisualEffectView(material: .sidebar, blendingMode: .withinWindow)
+                        .opacity(0.3)
+                }
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous)) // Squircle
+            .overlay(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .strokeBorder(
+                        LinearGradient(
+                            colors: [.white.opacity(0.2), .white.opacity(0.05)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 1
+                    )
+            )
+            .shadow(color: Color.black.opacity(0.2), radius: 10, x: 0, y: 5)
+        }
+    }
+}
+
+struct LiquidSelectionRow: View {
+    let title: String
+    let isSelected: Bool
+    let action: () -> Void
+    @State private var isHovering = false
+    
+    var body: some View {
+        HStack {
+            Text(title)
+                .font(.system(size: 15, weight: .medium, design: .rounded)) // Fixed weight to prevent flickering
+                .foregroundColor(isSelected ? .white : .white.opacity(0.7))
             
             Spacer()
             
-            // Version info
-            HStack {
-                Spacer()
-                Text("PriType v2.0")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+            if isSelected {
+                Image(systemName: "checkmark")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundColor(.white)
+                    .shadow(color: .white.opacity(0.5), radius: 5)
             }
         }
-        .padding(20)
-        .frame(minWidth: 350, minHeight: 350)
+        .padding(.vertical, 12)
+        .padding(.horizontal, 16)
+        .background(
+            ZStack {
+                if isSelected {
+                    // Selected: Liquid Blue Glow
+                    Color.blue.opacity(0.3)
+                    VisualEffectView(material: .selection, blendingMode: .withinWindow)
+                } else if isHovering {
+                    // Hover: Shallow Water
+                    Color.white.opacity(0.05)
+                }
+            }
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .scaleEffect(isHovering && !isSelected ? 1.02 : 1.0)
+        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isHovering)
+        .animation(.spring(response: 0.4, dampingFraction: 0.8), value: isSelected)
+        .onTapGesture {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                action()
+            }
+        }
+        .onHover { hover in
+            isHovering = hover
+        }
     }
 }

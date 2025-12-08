@@ -83,12 +83,13 @@ public final class StatusBarManager: NSObject, @unchecked Sendable {
         DispatchQueue.main.async {
             let alert = NSAlert()
             alert.messageText = "PriType"
-            alert.informativeText = "macOS용 한글 입력기\n\n버전: 2.0\n© 2025"
+            alert.informativeText = "macOS용 한글 입력기\n\n버전: 1.0\n© 2025"
             alert.alertStyle = .informational
             alert.runModal()
         }
     }
     
+    @MainActor
     @objc private func quitApp() {
         DebugLogger.log("StatusBarManager: Quitting")
         NSApp.terminate(nil)
@@ -96,8 +97,16 @@ public final class StatusBarManager: NSObject, @unchecked Sendable {
     
     // MARK: - Mode Update
     
+    private var lastMode: InputMode?
+    
     /// Update the status bar to show current mode
     public func setMode(_ mode: InputMode) {
+        // Prevent flickering by avoiding redundant updates
+        if lastMode == mode {
+            return
+        }
+        lastMode = mode
+        
         let modeValue = mode
         Task { @MainActor in
             guard let button = self.statusItem?.button else { return }

@@ -4,23 +4,29 @@
     "object": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/PriTypeCore.o",
     "swift-dependencies": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/master.swiftdeps"
   },
+  "/Users/naen/Git/PriType-Swift/Sources/PriTypeCore/ConfigurationManager.swift": {
+    "object": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/ConfigurationManager.swift.o",
+    "swiftmodule": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/ConfigurationManager~partial.swiftmodule",
+    "swift-dependencies": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/ConfigurationManager.swiftdeps",
+    "diagnostics": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/ConfigurationManager.dia"
+  },
   "/Users/naen/Git/PriType-Swift/Sources/PriTypeCore/DebugLogger.swift": {
     "object": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/DebugLogger.swift.o",
     "swiftmodule": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/DebugLogger~partial.swiftmodule",
     "swift-dependencies": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/DebugLogger.swiftdeps",
     "diagnostics": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/DebugLogger.dia"
   },
-  "/Users/naen/Git/PriType-Swift/Sources/PriTypeCore/EventTapManager.swift": {
-    "object": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/EventTapManager.swift.o",
-    "swiftmodule": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/EventTapManager~partial.swiftmodule",
-    "swift-dependencies": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/EventTapManager.swiftdeps",
-    "diagnostics": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/EventTapManager.dia"
-  },
   "/Users/naen/Git/PriType-Swift/Sources/PriTypeCore/HangulComposer.swift": {
     "object": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/HangulComposer.swift.o",
     "swiftmodule": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/HangulComposer~partial.swiftmodule",
     "swift-dependencies": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/HangulComposer.swiftdeps",
     "diagnostics": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/HangulComposer.dia"
+  },
+  "/Users/naen/Git/PriType-Swift/Sources/PriTypeCore/IOKitManager.swift": {
+    "object": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/IOKitManager.swift.o",
+    "swiftmodule": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/IOKitManager~partial.swiftmodule",
+    "swift-dependencies": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/IOKitManager.swiftdeps",
+    "diagnostics": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/IOKitManager.dia"
   },
   "/Users/naen/Git/PriType-Swift/Sources/PriTypeCore/JamoMapper.swift": {
     "object": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/JamoMapper.swift.o",
@@ -45,5 +51,23 @@
     "swiftmodule": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/PriTypeInputController~partial.swiftmodule",
     "swift-dependencies": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/PriTypeInputController.swiftdeps",
     "diagnostics": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/PriTypeInputController.dia"
+  },
+  "/Users/naen/Git/PriType-Swift/Sources/PriTypeCore/RightCommandSuppressor.swift": {
+    "object": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/RightCommandSuppressor.swift.o",
+    "swiftmodule": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/RightCommandSuppressor~partial.swiftmodule",
+    "swift-dependencies": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/RightCommandSuppressor.swiftdeps",
+    "diagnostics": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/RightCommandSuppressor.dia"
+  },
+  "/Users/naen/Git/PriType-Swift/Sources/PriTypeCore/SettingsWindowController.swift": {
+    "object": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/SettingsWindowController.swift.o",
+    "swiftmodule": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/SettingsWindowController~partial.swiftmodule",
+    "swift-dependencies": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/SettingsWindowController.swiftdeps",
+    "diagnostics": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/SettingsWindowController.dia"
+  },
+  "/Users/naen/Git/PriType-Swift/Sources/PriTypeCore/StatusBarManager.swift": {
+    "object": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/StatusBarManager.swift.o",
+    "swiftmodule": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/StatusBarManager~partial.swiftmodule",
+    "swift-dependencies": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/StatusBarManager.swiftdeps",
+    "diagnostics": "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/StatusBarManager.dia"
   }
 }

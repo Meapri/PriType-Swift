@@ -24,7 +24,7 @@
 	<string>1.0</string>
 	<key>CFBundleVersion</key>
 	<string>1</string>
-	<key>LSBackgroundOnly</key>
+	<key>LSUIElement</key>
 	<true/>
 	<key>InputMethodConnectionName</key>
 	<string>PriType_InputString_v2</string>
