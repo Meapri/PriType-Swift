@@ -27,20 +27,71 @@ public final class StatusBarManager: NSObject, @unchecked Sendable {
         statusItem?.isVisible = true
         
         if let button = statusItem?.button {
-            // Use attributed string for better text centering
-            let style = NSMutableParagraphStyle()
-            style.alignment = .center
-            
+            // Use AppleSDGothicNeo-Medium font
+            let font = NSFont(name: "AppleSDGothicNeo-Medium", size: 14) ?? NSFont.systemFont(ofSize: 14)
             let attributes: [NSAttributedString.Key: Any] = [
-                .font: NSFont.systemFont(ofSize: 14, weight: .medium),
-                .paragraphStyle: style
+                .font: font,
+                .baselineOffset: -1  // Korean "가"
             ]
-            
             button.attributedTitle = NSAttributedString(string: "가", attributes: attributes)
             button.imagePosition = .noImage
         }
         
-        DebugLogger.log("StatusBarManager: Created status item")
+        // Setup context menu
+        setupMenu()
+        
+        DebugLogger.log("StatusBarManager: Created status item with menu")
+    }
+    
+    @MainActor
+    private func setupMenu() {
+        let menu = NSMenu()
+        
+        // Settings
+        let settingsItem = NSMenuItem(title: "PriType 설정...", action: #selector(openSettings), keyEquivalent: ",")
+        settingsItem.target = self
+        menu.addItem(settingsItem)
+        
+        menu.addItem(NSMenuItem.separator())
+        
+        // About
+        let aboutItem = NSMenuItem(title: "PriType 정보", action: #selector(showAbout), keyEquivalent: "")
+        aboutItem.target = self
+        menu.addItem(aboutItem)
+        
+        menu.addItem(NSMenuItem.separator())
+        
+        // Quit
+        let quitItem = NSMenuItem(title: "PriType 종료", action: #selector(quitApp), keyEquivalent: "q")
+        quitItem.target = self
+        menu.addItem(quitItem)
+        
+        statusItem?.menu = menu
+    }
+    
+    // MARK: - Menu Actions
+    
+    @objc private func openSettings() {
+        DebugLogger.log("StatusBarManager: Opening settings")
+        DispatchQueue.main.async {
+            SettingsWindowController.shared.showSettings()
+        }
+    }
+    
+    @objc private func showAbout() {
+        DebugLogger.log("StatusBarManager: Showing about")
+        DispatchQueue.main.async {
+            let alert = NSAlert()
+            alert.messageText = "PriType"
+            alert.informativeText = "macOS용 한글 입력기\n\n버전: 2.0\n© 2025"
+            alert.alertStyle = .informational
+            alert.runModal()
+        }
+    }
+    
+    @objc private func quitApp() {
+        DebugLogger.log("StatusBarManager: Quitting")
+        NSApp.terminate(nil)
     }
     
     // MARK: - Mode Update
@@ -51,16 +102,15 @@ public final class StatusBarManager: NSObject, @unchecked Sendable {
         Task { @MainActor in
             guard let button = self.statusItem?.button else { return }
             
-            let text = (modeValue == .korean) ? "가" : "A"
-            
-            let style = NSMutableParagraphStyle()
-            style.alignment = .center
-            
+            let isKorean = (modeValue == .korean)
+            let text = isKorean ? "가" : "A"
+            let font = NSFont(name: "AppleSDGothicNeo-Medium", size: 14) ?? NSFont.systemFont(ofSize: 14)
+            // Different baseline offset for Korean vs English
+            let baselineOffset: CGFloat = -1  // Same for both Korean and English
             let attributes: [NSAttributedString.Key: Any] = [
-                .font: NSFont.systemFont(ofSize: 14, weight: .medium),
-                .paragraphStyle: style
+                .font: font,
+                .baselineOffset: baselineOffset
             ]
-            
             button.attributedTitle = NSAttributedString(string: text, attributes: attributes)
             
             DebugLogger.log("StatusBarManager: Mode set to \(modeValue)")

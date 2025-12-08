@@ -56,8 +56,9 @@ public class HangulComposer {
             return false
         }
         
-        // Control+Space: Language toggle (keyCode 49 = Space)
-        if event.keyCode == KeyCode.space && event.modifierFlags.contains(.control) {
+        // Control+Space: Language toggle (only if enabled in settings)
+        if event.keyCode == KeyCode.space && event.modifierFlags.contains(.control) 
+            && ConfigurationManager.shared.controlSpaceAsToggle {
             DebugLogger.log("Control+Space -> Toggle mode")
             
             // Commit any composition before switching (preserve text)
@@ -77,6 +78,22 @@ public class HangulComposer {
         // English mode: pass all keys to system
         if inputMode == .english {
             DebugLogger.log("English mode -> Pass through")
+            return false
+        }
+        
+        // Caps Lock handling for Korean mode
+        let capsLockOn = event.modifierFlags.contains(.capsLock)
+        
+        // If Caps Lock toggle mode is enabled, ignore capsLock for this check
+        // (toggle is handled by IOKitManager, just continue Korean input)
+        if capsLockOn && !ConfigurationManager.shared.capsLockAsToggle {
+            // Default: Caps Lock = uppercase English
+            // Commit composition ONLY if there is one (efficient - no commit if empty)
+            if !context.isEmpty() {
+                commitComposition(delegate: delegate)
+                DebugLogger.log("Caps Lock: Committed composition")
+            }
+            // Pass through for uppercase English
             return false
         }
         
