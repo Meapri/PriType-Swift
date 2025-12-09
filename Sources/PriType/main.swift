@@ -52,17 +52,26 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             PriTypeInputController.sharedComposer.toggleInputMode()
         }
         
-        // Start CGEventTap (handles Control+Space, Right Command, Caps Lock)
-        RightCommandSuppressor.shared.start()
+        // Track if CGEventTap started successfully
+        let eventTapStarted = RightCommandSuppressor.shared.start()
         
-        // Start IOKit monitoring as backup for hardware-level detection
-        IOKitManager.shared.onRightCommandToggle = {
-            // Only trigger if not handled by CGEventTap
-            DebugLogger.log("IOKitManager toggle (backup)")
+        // IOKit backup: Only activate actual toggle if CGEventTap failed
+        if eventTapStarted {
+            DebugLogger.log("Primary: CGEventTap started successfully")
+            // IOKit runs in passive mode - just for monitoring/debugging
+            IOKitManager.shared.onRightCommandToggle = nil
+        } else {
+            DebugLogger.log("Primary: CGEventTap FAILED - IOKit taking over as primary")
+            // IOKit takes over as primary toggle handler
+            IOKitManager.shared.onRightCommandToggle = {
+                PriTypeInputController.sharedComposer.toggleInputMode()
+            }
         }
+        
+        // Always start IOKit for hardware-level monitoring
         IOKitManager.shared.start()
         
-        DebugLogger.log("Toggle key monitoring started (CGEventTap + IOKit backup)")
+        DebugLogger.log("Toggle key monitoring initialized")
     }
 }
 

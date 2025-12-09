@@ -36,15 +36,17 @@ public final class RightCommandSuppressor {
     // MARK: - Start/Stop
     
     /// Start monitoring toggle keys
-    public func start() {
+    /// - Returns: `true` if CGEventTap was created successfully, `false` otherwise
+    @discardableResult
+    public func start() -> Bool {
         guard eventTap == nil else {
             DebugLogger.log("RightCommandSuppressor: Already running")
-            return
+            return true
         }
         
         guard IOKitManager.hasAccessibilityPermission() else {
             DebugLogger.log("RightCommandSuppressor: No Accessibility permission")
-            return
+            return false
         }
         
         // Monitor flagsChanged AND keyDown events
@@ -66,7 +68,7 @@ public final class RightCommandSuppressor {
         
         guard let eventTap = eventTap else {
             DebugLogger.log("RightCommandSuppressor: Failed to create event tap")
-            return
+            return false
         }
         
         // Add to run loop
@@ -75,6 +77,7 @@ public final class RightCommandSuppressor {
         CGEvent.tapEnable(tap: eventTap, enable: true)
         
         DebugLogger.log("RightCommandSuppressor: Started (monitoring Right Command + Control+Space)")
+        return true
     }
     
     /// Stop monitoring

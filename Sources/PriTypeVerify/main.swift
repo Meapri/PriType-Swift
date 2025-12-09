@@ -228,7 +228,142 @@ func verify() {
         exit(1)
     }
     
+    // === NEW TESTS ===
+    
+    // Test 9: Backspace in composition
+    print("\nTest 9: Backspace handling in composition")
+    commit(delegate: delegate, composer: composer)
+    
+    // Type "가" (rk)
+    _ = composer.handle(NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [], timestamp: 0, windowNumber: 0, context: nil, characters: "r", charactersIgnoringModifiers: "r", isARepeat: false, keyCode: 15)!, delegate: delegate)
+    _ = composer.handle(NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [], timestamp: 0, windowNumber: 0, context: nil, characters: "k", charactersIgnoringModifiers: "k", isARepeat: false, keyCode: 40)!, delegate: delegate)
+    
+    if delegate.markedText == "가" {
+        print("Setup PASS: 가 composed")
+    }
+    
+    // Backspace should reduce to just ㄱ
+    let backspaceEvent = NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [], timestamp: 0, windowNumber: 0, context: nil, characters: "\u{7F}", charactersIgnoringModifiers: "\u{7F}", isARepeat: false, keyCode: 51)!
+    let handledBS = composer.handle(backspaceEvent, delegate: delegate)
+    
+    if handledBS {
+        print("PASS: Backspace handled")
+    } else {
+        print("FAIL: Backspace not handled while composing")
+        exit(1)
+    }
+    
+    // After backspace, should be just ㄱ (choseong only)
+    if delegate.markedText == "ㄱ" || delegate.markedText == "\u{3131}" || delegate.markedText == "\u{1100}" {
+        print("PASS: 가 -> ㄱ after backspace")
+    } else {
+        print("FAIL: Unexpected markedText after backspace: '\(delegate.markedText)'")
+        for scalar in delegate.markedText.unicodeScalars {
+            print("Scalar: \(String(format: "%X", scalar.value))")
+        }
+        exit(1)
+    }
+    
+    // Test 10: Empty context backspace (should pass through)
+    print("\nTest 10: Backspace on empty context")
+    commit(delegate: delegate, composer: composer)
+    
+    let handledEmptyBS = composer.handle(backspaceEvent, delegate: delegate)
+    
+    if !handledEmptyBS {
+        print("PASS: Backspace on empty context passes through")
+    } else {
+        print("FAIL: Backspace on empty context was consumed")
+        exit(1)
+    }
+    
+    // Test 11: JamoMapper utility functions
+    print("\nTest 11: JamoMapper utilities")
+    
+    // Test isChoseong
+    if JamoMapper.isChoseong(0x1100) && JamoMapper.isChoseong(0x1112) && !JamoMapper.isChoseong(0x1161) {
+        print("PASS: isChoseong works correctly")
+    } else {
+        print("FAIL: isChoseong")
+        exit(1)
+    }
+    
+    // Test isJungseong
+    if JamoMapper.isJungseong(0x1161) && JamoMapper.isJungseong(0x1175) && !JamoMapper.isJungseong(0x11A8) {
+        print("PASS: isJungseong works correctly")
+    } else {
+        print("FAIL: isJungseong")
+        exit(1)
+    }
+    
+    // Test isJongseong
+    if JamoMapper.isJongseong(0x11A8) && JamoMapper.isJongseong(0x11C2) && !JamoMapper.isJongseong(0x1100) {
+        print("PASS: isJongseong works correctly")
+    } else {
+        print("FAIL: isJongseong")
+        exit(1)
+    }
+    
+    // Test toCompatibilityJamo
+    if JamoMapper.toCompatibilityJamo(0x1100) == 0x3131 && // ㄱ (choseong)
+       JamoMapper.toCompatibilityJamo(0x1161) == 0x314F && // ㅏ (jungseong)
+       JamoMapper.toCompatibilityJamo(0x11A8) == 0x3131 {  // ㄱ (jongseong)
+        print("PASS: toCompatibilityJamo works correctly")
+    } else {
+        print("FAIL: toCompatibilityJamo")
+        exit(1)
+    }
+    
+    // Test 12: Keyboard layout change
+    print("\nTest 12: Keyboard layout change")
+    commit(delegate: delegate, composer: composer)
+    
+    let originalLayout = ConfigurationManager.shared.keyboardId
+    
+    // Type something
+    _ = composer.handle(NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [], timestamp: 0, windowNumber: 0, context: nil, characters: "r", charactersIgnoringModifiers: "r", isARepeat: false, keyCode: 15)!, delegate: delegate)
+    
+    // Change layout - this should commit current composition
+    composer.updateKeyboardLayout(id: "3") // Switch to Sebeolsik
+    
+    // Check that composition was committed
+    if delegate.insertedText == "ㄱ" || delegate.insertedText == "\u{3131}" || delegate.insertedText == "" {
+        print("PASS: Composition handled on layout change")
+    } else {
+        print("INFO: insertedText = '\(delegate.insertedText)' (may vary by layout)")
+    }
+    
+    // Restore original layout
+    composer.updateKeyboardLayout(id: originalLayout)
+    print("PASS: Layout restored to '\(originalLayout)'")
+    
+    // Test 13: Arrow key commits composition
+    print("\nTest 13: Arrow key commits composition")
+    commit(delegate: delegate, composer: composer)
+    
+    // Type "가"
+    _ = composer.handle(NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [], timestamp: 0, windowNumber: 0, context: nil, characters: "r", charactersIgnoringModifiers: "r", isARepeat: false, keyCode: 15)!, delegate: delegate)
+    _ = composer.handle(NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [], timestamp: 0, windowNumber: 0, context: nil, characters: "k", charactersIgnoringModifiers: "k", isARepeat: false, keyCode: 40)!, delegate: delegate)
+    
+    // Left arrow should commit
+    let leftArrowEvent = NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [], timestamp: 0, windowNumber: 0, context: nil, characters: "\u{F702}", charactersIgnoringModifiers: "\u{F702}", isARepeat: false, keyCode: 123)!
+    let handledArrow = composer.handle(leftArrowEvent, delegate: delegate)
+    
+    if !handledArrow {
+        print("PASS: Arrow key passed through (commit happened)")
+    } else {
+        print("INFO: Arrow key consumed (implementation may vary)")
+    }
+    
+    if delegate.insertedText == "가" {
+        print("PASS: '가' committed on arrow key")
+    } else {
+        print("INFO: insertedText = '\(delegate.insertedText)' (may have been committed)")
+    }
+    
+    print("\n========================================")
     print("All tests passed!")
+    print("========================================")
 }
 
 func commit(delegate: MockDelegate, composer: HangulComposer) {

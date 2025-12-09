@@ -1,26 +1,85 @@
 import Cocoa
 import LibHangul
 
+// MARK: - Protocols
+
+/// Protocol for receiving text composition events from `HangulComposer`
+///
+/// Implement this protocol to receive callbacks when the composer needs to
+/// insert finalized text or update the in-progress composition (marked text).
+///
+/// ## Example Implementation
+/// ```swift
+/// class MyDelegate: HangulComposerDelegate {
+///     func insertText(_ text: String) {
+///         textView.insertText(text)
+///     }
+///     func setMarkedText(_ text: String) {
+///         textView.setMarkedText(text)
+///     }
+/// }
+/// ```
 public protocol HangulComposerDelegate: AnyObject {
+    /// Called when finalized text should be inserted
+    /// - Parameter text: The text to insert (already composed Hangul syllables)
     func insertText(_ text: String)
+    
+    /// Called when the in-progress composition text should be displayed
+    /// - Parameter text: The preedit text (incomplete Hangul being composed)
     func setMarkedText(_ text: String)
 }
 
-/// Input mode for the composer
+// MARK: - Types
+
+/// Input mode for the Hangul composer
+///
+/// The composer can operate in two modes:
+/// - `korean`: Processes keystrokes as Hangul input
+/// - `english`: Passes keystrokes through unchanged
 public enum InputMode: Sendable {
+    /// Korean input mode - keystrokes are processed as Hangul
     case korean
+    /// English input mode - keystrokes pass through to system
     case english
 }
 
+// MARK: - HangulComposer
+
+/// Core Hangul composition engine that wraps libhangul
+///
+/// `HangulComposer` handles the complete lifecycle of Hangul text input:
+/// - Converting keystrokes to Hangul syllables
+/// - Managing preedit (composition in progress) state
+/// - Committing finalized text
+/// - Switching between Korean and English modes
+///
+/// ## Overview
+/// The composer uses `libhangul`'s `HangulInputContext` internally to perform
+/// the actual character composition according to Korean keyboard layouts.
+///
+/// ## Usage
+/// ```swift
+/// let composer = HangulComposer()
+/// let handled = composer.handle(keyEvent, delegate: myDelegate)
+/// ```
+///
+/// ## Thread Safety
+/// This class is not thread-safe. All calls should be made from the main thread.
 public class HangulComposer {
     
-    // Current input mode (Korean or English)
+    // MARK: - Public Properties
+    
+    /// The current input mode (Korean or English)
+    ///
+    /// When in `.english` mode, all keystrokes are passed through unchanged.
     public private(set) var inputMode: InputMode = .korean
     
-    // Track last delegate for external toggle calls
+    // MARK: - Private Properties
+    
+    /// Track last delegate for external toggle calls
     private weak var lastDelegate: (any HangulComposerDelegate)?
     
-    // Initialize with direct HangulInputContext (synchronous)
+    /// The libhangul context for character composition
     @available(*, deprecated, message: "Intentionally using synchronous context")
     private var context: HangulInputContext = {
        let ctx = HangulInputContext(keyboard: PriTypeConfig.defaultKeyboardId)
@@ -28,11 +87,21 @@ public class HangulComposer {
        return ctx
     }()
     
+    // MARK: - Initialization
+    
+    /// Creates a new HangulComposer with default settings
     public init() {
         DebugLogger.log("HangulComposer init")
     }
     
-    /// Update keyboard layout dynamically (e.g. from Settings)
+    // MARK: - Public Methods
+    
+    /// Update the keyboard layout dynamically
+    ///
+    /// This method commits any in-progress composition before switching layouts
+    /// to prevent text corruption.
+    ///
+    /// - Parameter id: The keyboard layout identifier (e.g., "2" for 두벌식, "3" for 세벌식)
     public func updateKeyboardLayout(id: String) {
         DebugLogger.log("HangulComposer: Updating keyboard layout to '\(id)'")
         // Commit existing text before switching to avoid corruption
@@ -44,7 +113,14 @@ public class HangulComposer {
         context = HangulInputContext(keyboard: id)
     }
     
-    /// Toggle input mode externally (called by EventTapManager)
+    /// Toggle between Korean and English input modes
+    ///
+    /// This method:
+    /// 1. Commits any in-progress composition
+    /// 2. Switches the mode
+    /// 3. Updates the status bar indicator
+    ///
+    /// Called externally by `RightCommandSuppressor` or `IOKitManager`.
     public func toggleInputMode() {
         DebugLogger.log("toggleInputMode called externally")
         
@@ -59,9 +135,20 @@ public class HangulComposer {
         DebugLogger.log("Mode switched to: \(inputMode)")
     }
     
+    /// Handle a keyboard event
+    ///
+    /// This is the main entry point for processing keyboard input. The method
+    /// determines whether to process the event as Hangul input, pass it through
+    /// to the system, or handle it as a special key (Return, Space, etc.).
+    ///
+    /// - Parameters:
+    ///   - event: The `NSEvent` to process (must be `.keyDown`)
+    ///   - delegate: The delegate to receive composition callbacks
+    /// - Returns: `true` if the event was consumed, `false` if it should be passed to the system
     public func handle(_ event: NSEvent, delegate: HangulComposerDelegate) -> Bool {
         // Track delegate for external toggle calls
         self.lastDelegate = delegate
+
         
         // Only handle key down events
         if event.type != .keyDown {
@@ -280,8 +367,8 @@ public class HangulComposer {
                  let stdMapped = HangulCharacter.jamoToCJamo(val)
                  if stdMapped != val { return UnicodeScalar(stdMapped) ?? scalar }
                  
-                 // 2. Custom helper for Jongseong (U+11A8 ~ U+11C2)
-                 if let compat = JamoMapper.mapJongseongToCompat(val) {
+                 // 2. Use unified JamoMapper for all Jamo types
+                 if let compat = JamoMapper.toCompatibilityJamo(val) {
                      return UnicodeScalar(compat) ?? scalar
                  }
                  
@@ -313,11 +400,22 @@ public class HangulComposer {
         delegate.setMarkedText("")
     }
     
-    /// 입력기 전환 등의 상황에서 조합 중인 내용을 강제로 커밋
+    /// Force commit any in-progress composition
+    ///
+    /// Called when the input method is about to be deactivated or when
+    /// text needs to be finalized immediately (e.g., before window switch).
+    ///
+    /// - Parameter delegate: The delegate to receive the committed text
     public func forceCommit(delegate: HangulComposerDelegate) {
         commitComposition(delegate: delegate)
     }
     
+    /// Reset the composition state
+    ///
+    /// Clears any in-progress composition without committing it.
+    /// Use this when composition should be discarded (e.g., after Escape key).
+    ///
+    /// - Parameter delegate: The delegate to receive the cleared marked text
     public func reset(delegate: HangulComposerDelegate) {
         context.reset()
         delegate.setMarkedText("")
