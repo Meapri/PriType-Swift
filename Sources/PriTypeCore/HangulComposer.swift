@@ -87,6 +87,14 @@ public class HangulComposer {
        return ctx
     }()
     
+    // MARK: - Auto-Capitalize State
+    
+    /// Track if next letter should be capitalized (after sentence-ending punctuation)
+    private var shouldCapitalizeNext: Bool = true
+    
+    /// Track last character for double-space detection
+    private var lastCharacterWasSpace: Bool = false
+    
     // MARK: - Initialization
     
     /// Creates a new HangulComposer with default settings
@@ -174,11 +182,51 @@ public class HangulComposer {
             return true  // Consume the event
         }
         
-        // English mode: pass through to system
-        // macOS handles auto-capitalize, double-space period, etc. via System Settings > Keyboard > Text
+        // English mode: handle auto-capitalize and double-space period
         if inputMode == .english {
-            DebugLogger.log("English mode -> Pass through")
-            return false
+            DebugLogger.log("English mode")
+            
+            guard let chars = event.characters, chars.count == 1, let char = chars.first else {
+                return false
+            }
+            
+            // Double-space period: space + space -> ". "
+            if char == " " {
+                if lastCharacterWasSpace {
+                    // Delete the previous space and insert ". "
+                    // We need to send backspace + ". "
+                    delegate.insertText("\u{8}. ")  // Backspace + period + space
+                    lastCharacterWasSpace = false
+                    shouldCapitalizeNext = true
+                    DebugLogger.log("Double-space -> period")
+                    return true
+                } else {
+                    lastCharacterWasSpace = true
+                    return false  // Let system handle the space
+                }
+            }
+            
+            // Reset space tracking for non-space characters
+            lastCharacterWasSpace = false
+            
+            // Auto-capitalize first letter after sentence end
+            if char.isLetter && shouldCapitalizeNext {
+                let uppercased = String(char).uppercased()
+                delegate.insertText(uppercased)
+                shouldCapitalizeNext = false
+                DebugLogger.log("Auto-capitalized: \(char) -> \(uppercased)")
+                return true
+            }
+            
+            // Track sentence-ending punctuation
+            if char == "." || char == "!" || char == "?" {
+                shouldCapitalizeNext = true
+            } else if char.isLetter {
+                shouldCapitalizeNext = false
+            }
+            // Whitespace and other characters don't change capitalize state
+            
+            return false  // Pass through to system
         }
         
         // Pass through if modifiers (Command, Control, Option) are present
