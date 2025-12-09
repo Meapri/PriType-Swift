@@ -87,6 +87,8 @@ struct SettingsView: View {
     @State private var selectedKeyboard = ConfigurationManager.shared.keyboardId
     @State private var selectedToggleKey = ConfigurationManager.shared.toggleKey
     @State private var hoverZone: String? = nil
+    @State private var isABCEnabled = InputSourceManager.shared.isABCEnabled() || InputSourceManager.shared.isUSEnabled()
+    @State private var showDisableAlert = false
     
     private let keyboardOptions = [
         ("2", "두벌식 표준"),
@@ -164,6 +166,43 @@ struct SettingsView: View {
                     .onChange(of: selectedToggleKey) { newValue in
                         ConfigurationManager.shared.toggleKey = newValue
                     }
+                    
+                    // Input Source Management Tile
+                    GlassTile(title: "입력 소스 관리") {
+                        VStack(spacing: 12) {
+                            // ABC Keyboard Toggle
+                            HStack {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("기본 영어 입력기 (ABC)")
+                                        .font(.system(size: 14, weight: .medium, design: .rounded))
+                                        .foregroundColor(.white)
+                                    Text(isABCEnabled ? "활성화됨" : "비활성화됨")
+                                        .font(.system(size: 11, design: .rounded))
+                                        .foregroundColor(isABCEnabled ? .green.opacity(0.8) : .orange.opacity(0.8))
+                                }
+                                
+                                Spacer()
+                                
+                                Toggle("", isOn: $isABCEnabled)
+                                    .toggleStyle(.switch)
+                                    .labelsHidden()
+                                    .scaleEffect(0.8)
+                            }
+                            .padding(.vertical, 4)
+                            
+                            // Info Text
+                            HStack(spacing: 6) {
+                                Image(systemName: "info.circle")
+                                    .font(.system(size: 11))
+                                Text("비활성화하면 PriType만 사용됩니다")
+                                    .font(.system(size: 11, design: .rounded))
+                            }
+                            .foregroundColor(.white.opacity(0.5))
+                        }
+                    }
+                    .onChange(of: isABCEnabled) { newValue in
+                        handleABCToggle(enabled: newValue)
+                    }
                 }
                 
                 Spacer()
@@ -185,8 +224,32 @@ struct SettingsView: View {
             }
             .padding(30)
         }
-        .frame(width: 420, height: 620)
+        .frame(width: 420, height: 700)
         .preferredColorScheme(.dark)
+        .alert("ABC 입력기 비활성화", isPresented: $showDisableAlert) {
+            Button("취소", role: .cancel) {
+                isABCEnabled = true
+            }
+            Button("비활성화", role: .destructive) {
+                _ = InputSourceManager.shared.disableABC()
+                // Also try to disable US
+                _ = InputSourceManager.shared.disableUS()
+            }
+        } message: {
+            Text("기본 영어 입력기를 비활성화하면 PriType 영어 모드만 사용됩니다.\n\n계속하시겠습니까?")
+        }
+    }
+    
+    // MARK: - Private Methods
+    
+    private func handleABCToggle(enabled: Bool) {
+        if enabled {
+            // Re-enable ABC
+            _ = InputSourceManager.shared.enableABC()
+        } else {
+            // Show confirmation alert before disabling
+            showDisableAlert = true
+        }
     }
 }
 
