@@ -106,6 +106,10 @@ public class HangulComposer {
     /// Track if last character was a space (for double-space detection & pending space)
     private var lastCharacterWasSpace: Bool = false
     
+    /// Timestamp of the last space key press (for double-space timing check)
+    private var lastSpaceTime: CFAbsoluteTime = 0
+    private let doubleSpaceThreshold: TimeInterval = 0.45 // Standard double-tap speed
+    
     // Note: Other state variables (sentenceEndedBeforeSpace, shouldCapitalizeNext, etc.) 
     // have been removed in favor of robust context-based detection.
     
@@ -255,8 +259,12 @@ public class HangulComposer {
             
             // Handle space key
             if char == " " {
-                // Double-space period: Only if enabled and we just typed a space
-                if ConfigurationManager.shared.doubleSpacePeriodEnabled && lastCharacterWasSpace {
+                let now = CFAbsoluteTimeGetCurrent()
+                let isDoubleTap = (now - lastSpaceTime) < doubleSpaceThreshold
+                lastSpaceTime = now
+                
+                // Double-space period: Only if enabled, just typed space, AND fast enough
+                if ConfigurationManager.shared.doubleSpacePeriodEnabled && lastCharacterWasSpace && isDoubleTap {
                     // Check context to confirm valid double-space condition
                     // We need to look back: [WordChar] [Space] [Cursor]
                     // Since the first space was already committed, the cursor is AFTER the space.
@@ -345,8 +353,12 @@ public class HangulComposer {
         
         // Space
         if keyCode == KeyCode.space {
-            // Double-space period: Only if enabled and we just typed a space
-            if ConfigurationManager.shared.doubleSpacePeriodEnabled && lastCharacterWasSpace {
+            let now = CFAbsoluteTimeGetCurrent()
+            let isDoubleTap = (now - lastSpaceTime) < doubleSpaceThreshold
+            lastSpaceTime = now
+            
+            // Double-space period: Only if enabled, just typed space, AND fast enough
+            if ConfigurationManager.shared.doubleSpacePeriodEnabled && lastCharacterWasSpace && isDoubleTap {
                 // Check context to confirm valid double-space condition in Korean mode
                 // Need to look back: [WordChar/Hangul] [Space] [Cursor]
                 if let context = delegate.textBeforeCursor(length: 2),
