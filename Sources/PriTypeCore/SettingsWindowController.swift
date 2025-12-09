@@ -87,8 +87,9 @@ struct SettingsView: View {
     @State private var selectedKeyboard = ConfigurationManager.shared.keyboardId
     @State private var selectedToggleKey = ConfigurationManager.shared.toggleKey
     @State private var hoverZone: String? = nil
-    @State private var isABCEnabled = InputSourceManager.shared.isABCEnabled() || InputSourceManager.shared.isUSEnabled()
+    @State private var isABCEnabled = InputSourceManager.shared.isABCEnabledInPlist()
     @State private var showDisableAlert = false
+    @State private var showRestartAlert = false
     
     private let keyboardOptions = [
         ("2", "두벌식 표준"),
@@ -231,12 +232,21 @@ struct SettingsView: View {
                 isABCEnabled = true
             }
             Button("비활성화", role: .destructive) {
-                _ = InputSourceManager.shared.disableABC()
-                // Also try to disable US
-                _ = InputSourceManager.shared.disableUS()
+                let success = InputSourceManager.shared.disableABC()
+                if success {
+                    showRestartAlert = true
+                } else {
+                    // Failed, revert toggle
+                    isABCEnabled = true
+                }
             }
         } message: {
             Text("기본 영어 입력기를 비활성화하면 PriType 영어 모드만 사용됩니다.\n\n계속하시겠습니까?")
+        }
+        .alert("재시작 필요", isPresented: $showRestartAlert) {
+            Button("확인", role: .cancel) {}
+        } message: {
+            Text("변경 사항을 적용하려면 로그아웃 후 다시 로그인하거나 Mac을 재시작해 주세요.")
         }
     }
     
@@ -245,7 +255,10 @@ struct SettingsView: View {
     private func handleABCToggle(enabled: Bool) {
         if enabled {
             // Re-enable ABC
-            _ = InputSourceManager.shared.enableABC()
+            let success = InputSourceManager.shared.enableABC()
+            if success {
+                showRestartAlert = true
+            }
         } else {
             // Show confirmation alert before disabling
             showDisableAlert = true
