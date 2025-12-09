@@ -87,13 +87,21 @@ public class HangulComposer {
        return ctx
     }()
     
-    // MARK: - Auto-Capitalize State
+    // MARK: - Auto-Capitalize & Double-Space State (macOS-aligned)
     
-    /// Track if next letter should be capitalized (after sentence-ending punctuation)
-    private var shouldCapitalizeNext: Bool = true
+    /// Track if last non-space char was sentence-ending punctuation (. ! ?)
+    /// Capitalization happens when: punctuation -> space -> letter
+    private var sentenceEndedBeforeSpace: Bool = false
     
-    /// Track last character for double-space detection
+    /// Track if we should capitalize next letter (after punctuation + space)
+    private var shouldCapitalizeNext: Bool = true  // Start of input = capitalize
+    
+    /// Track if last character was a space (for double-space detection)
     private var lastCharacterWasSpace: Bool = false
+    
+    /// Track if character before last space was a letter/number (for double-space condition)
+    /// macOS only converts double-space to period after letters, not after punctuation
+    private var charBeforeSpaceWasWord: Bool = false
     
     // MARK: - Initialization
     
@@ -182,7 +190,7 @@ public class HangulComposer {
             return true  // Consume the event
         }
         
-        // English mode: handle auto-capitalize and double-space period
+        // English mode: handle auto-capitalize and double-space period (macOS-aligned)
         if inputMode == .english {
             DebugLogger.log("English mode")
             
@@ -190,41 +198,63 @@ public class HangulComposer {
                 return false
             }
             
-            // Double-space period: space + space -> ". "
+            // Handle space key
             if char == " " {
-                if lastCharacterWasSpace {
+                // Double-space period: Only after letter/number, not after punctuation
+                if lastCharacterWasSpace && charBeforeSpaceWasWord {
                     // Delete the previous space and insert ". "
-                    // We need to send backspace + ". "
-                    delegate.insertText("\u{8}. ")  // Backspace + period + space
+                    delegate.insertText("\u{8}. ")
                     lastCharacterWasSpace = false
+                    charBeforeSpaceWasWord = false
+                    sentenceEndedBeforeSpace = true  // Period was just added
                     shouldCapitalizeNext = true
-                    DebugLogger.log("Double-space -> period")
+                    DebugLogger.log("Double-space -> period (macOS style)")
                     return true
-                } else {
-                    lastCharacterWasSpace = true
-                    return false  // Let system handle the space
                 }
+                
+                // First space after sentence-ending punctuation -> enable capitalize
+                if sentenceEndedBeforeSpace {
+                    shouldCapitalizeNext = true
+                }
+                
+                // Track space state
+                lastCharacterWasSpace = true
+                // charBeforeSpaceWasWord was already set by previous char
+                return false  // Let system handle the space
             }
             
-            // Reset space tracking for non-space characters
+            // Non-space character handling
             lastCharacterWasSpace = false
             
-            // Auto-capitalize first letter after sentence end
+            // Auto-capitalize: Only after punctuation + space sequence
             if char.isLetter && shouldCapitalizeNext {
                 let uppercased = String(char).uppercased()
                 delegate.insertText(uppercased)
                 shouldCapitalizeNext = false
+                sentenceEndedBeforeSpace = false
+                charBeforeSpaceWasWord = true  // Letter was typed
                 DebugLogger.log("Auto-capitalized: \(char) -> \(uppercased)")
                 return true
             }
             
-            // Track sentence-ending punctuation
-            if char == "." || char == "!" || char == "?" {
-                shouldCapitalizeNext = true
-            } else if char.isLetter {
+            // Track character type for next space
+            if char.isLetter || char.isNumber {
+                charBeforeSpaceWasWord = true
+                sentenceEndedBeforeSpace = false
                 shouldCapitalizeNext = false
+            } else if char == "." || char == "!" || char == "?" {
+                charBeforeSpaceWasWord = false  // Don't double-space after punctuation
+                sentenceEndedBeforeSpace = true
+                // shouldCapitalizeNext will be set when space is pressed
+            } else if char == "\n" {
+                // Newline: capitalize next
+                shouldCapitalizeNext = true
+                sentenceEndedBeforeSpace = false
+                charBeforeSpaceWasWord = false
+            } else {
+                // Other characters (comma, etc.)
+                charBeforeSpaceWasWord = false
             }
-            // Whitespace and other characters don't change capitalize state
             
             return false  // Pass through to system
         }
@@ -275,19 +305,23 @@ public class HangulComposer {
         
         // Space
         if keyCode == KeyCode.space {
-            // Double-space period detection (works in both Korean and English modes)
-            if lastCharacterWasSpace {
-                DebugLogger.log("Double-space -> period (Korean mode)")
+            // Double-space period detection (macOS-aligned: only after word characters)
+            if lastCharacterWasSpace && charBeforeSpaceWasWord {
+                DebugLogger.log("Double-space -> period (Korean mode, macOS style)")
                 commitComposition(delegate: delegate)
                 // Delete previous space and insert ". "
                 delegate.insertText("\u{8}. ")
                 lastCharacterWasSpace = false
+                charBeforeSpaceWasWord = false
                 shouldCapitalizeNext = true
                 return true
             }
             
             DebugLogger.log("Space -> flush and space")
             commitComposition(delegate: delegate)
+            
+            // Track for double-space: Korean text counts as "word" for double-space
+            charBeforeSpaceWasWord = true  // Korean characters = word
             lastCharacterWasSpace = true
             // Let system handle space insertion
             return false
@@ -295,6 +329,7 @@ public class HangulComposer {
         
         // Reset space tracking for non-space keys
         lastCharacterWasSpace = false
+        charBeforeSpaceWasWord = true  // Korean input = word characters
         
         // 방향키 - 조합 커밋 후 시스템에 전달
         if keyCode == KeyCode.leftArrow || keyCode == KeyCode.rightArrow ||
