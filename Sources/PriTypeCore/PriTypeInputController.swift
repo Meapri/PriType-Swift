@@ -40,6 +40,22 @@ public class PriTypeInputController: IMKInputController {
             let attributed = NSAttributedString(string: text, attributes: attributes)
             client.setMarkedText(attributed, selectionRange: NSRange(location: text.count, length: 0), replacementRange: NSRange(location: NSNotFound, length: NSNotFound))
         }
+        
+        func textBeforeCursor(length: Int) -> String? {
+            // Get the selection range (cursor position)
+            let selRange = client.selectedRange()
+            guard selRange.location != NSNotFound else { return nil }
+            
+            // Calculate range to read
+            let location = max(0, selRange.location - length)
+            let actualLength = selRange.location - location
+            guard actualLength > 0 else {
+                return nil // Start of document, treat as empty context
+            }
+            
+            let charRange = NSRange(location: location, length: actualLength)
+            return client.attributedSubstring(from: charRange)?.string
+        }
     }
     
     // 입력기가 활성화될 때 호출 - 새 세션 시작

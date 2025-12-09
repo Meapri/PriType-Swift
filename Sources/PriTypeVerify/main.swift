@@ -5,16 +5,42 @@ import PriTypeCore
 class MockDelegate: HangulComposerDelegate {
     var markedText: String = ""
     var insertedText: String = ""
+    var fullText: String = "" // Simulates the document content
     
     func insertText(_ text: String) {
         insertedText = text
         markedText = "" // System behavior: insertion replaces marked text
+        
+        // Handle backspace char
+        if text == "\u{8}" {
+            if !fullText.isEmpty { fullText.removeLast() }
+        } else if text.contains("\u{8}") {
+             // Basic handling for mixed backspace
+             for char in text {
+                 if char == "\u{8}" {
+                     if !fullText.isEmpty { fullText.removeLast() }
+                 } else {
+                     fullText.append(char)
+                 }
+             }
+        } else {
+            fullText.append(text)
+        }
+        
         print("Inserted: '\(text)'")
     }
     
     func setMarkedText(_ text: String) {
         markedText = text
         print("Marked: '\(text)'")
+    }
+    
+    func textBeforeCursor(length: Int) -> String? {
+        if fullText.isEmpty { return nil }
+        let count = fullText.count
+        let start = max(0, count - length)
+        let startIndex = fullText.index(fullText.startIndex, offsetBy: start)
+        return String(fullText[startIndex...])
     }
 }
 

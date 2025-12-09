@@ -27,6 +27,11 @@ public protocol HangulComposerDelegate: AnyObject {
     /// Called when the in-progress composition text should be displayed
     /// - Parameter text: The preedit text (incomplete Hangul being composed)
     func setMarkedText(_ text: String)
+    
+    /// Returns the text immediately before the current cursor position
+    /// - Parameter length: Maximum length of text to retrieve
+    /// - Returns: The text before cursor, or nil if unavailable
+    func textBeforeCursor(length: Int) -> String?
 }
 
 // MARK: - Types
@@ -89,19 +94,62 @@ public class HangulComposer {
     
     // MARK: - Auto-Capitalize & Double-Space State (macOS-aligned)
     
-    /// Track if last non-space char was sentence-ending punctuation (. ! ?)
-    /// Capitalization happens when: punctuation -> space -> letter
-    private var sentenceEndedBeforeSpace: Bool = false
+    // MARK: - Auto-Capitalize & Double-Space State
     
-    /// Track if we should capitalize next letter (after punctuation + space)
-    private var shouldCapitalizeNext: Bool = true  // Start of input = capitalize
-    
-    /// Track if last character was a space (for double-space detection)
+    /// Track if last character was a space (for double-space detection & pending space)
     private var lastCharacterWasSpace: Bool = false
     
-    /// Track if character before last space was a letter/number (for double-space condition)
-    /// macOS only converts double-space to period after letters, not after punctuation
-    private var charBeforeSpaceWasWord: Bool = false
+    // Note: Other state variables (sentenceEndedBeforeSpace, shouldCapitalizeNext, etc.) 
+    // have been removed in favor of robust context-based detection.
+    
+    // MARK: - Helpers
+    
+    /// Determines if the next character should be auto-capitalized based on document context.
+    /// Checks for: Start of document, Newline, or Sentence ending (. ! ?) followed by space.
+    private func shouldAutoCapitalize(delegate: HangulComposerDelegate) -> Bool {
+        // Read enough context (e.g. 5 chars) to detect patterns like ". " or "? "
+        guard let text = delegate.textBeforeCursor(length: 5) else {
+            return true  // Start of document -> Capitalize
+        }
+        
+        if text.isEmpty { return true }
+        
+        // 1. Check for Newline (immediate capitalization)
+        if let last = text.last {
+            if last == "\n" || last == "\r" { return true }
+        }
+        
+        // 2. Check for Sentence Ending Pattern
+        // The pattern we look for is: [Punctuation] [Space(s)] [Cursor]
+        // If the immediate preceding char is NOT a space, we are in the middle of a word -> No Cap.
+        // Exception: If we are at the very start of a line/doc (already handled above).
+        
+        guard let lastChar = text.last, lastChar.isWhitespace else {
+            return false // Cursor is right after a non-space char (e.g. "Hello." or "Word") -> No Cap
+        }
+        
+        // Find the last non-whitespace character
+        let trimmed = text.trimmingCharacters(in: .whitespaces)
+        if let lastNonSpace = trimmed.last {
+            if lastNonSpace == "." || lastNonSpace == "!" || lastNonSpace == "?" {
+                return true
+            }
+        }
+        
+        return false
+    }
+    
+    /// Checks if a character is a Hangul syllable or Jamo
+    private func isHangul(_ char: Character) -> Bool {
+        guard let scalar = char.unicodeScalars.first else { return false }
+        let val = scalar.value
+        // Hangul Syllables: AC00-D7A3
+        // Hangul Compatibility Jamo: 3130-318F
+        // Hangul Jamo: 1100-11FF
+        return (val >= 0xAC00 && val <= 0xD7A3) ||
+               (val >= 0x3130 && val <= 0x318F) ||
+               (val >= 0x1100 && val <= 0x11FF)
+    }
     
     // MARK: - Initialization
     
@@ -200,71 +248,60 @@ public class HangulComposer {
             
             // Handle space key
             if char == " " {
-                // Double-space period: Only if enabled and after word character
-                if ConfigurationManager.shared.doubleSpacePeriodEnabled &&
-                   lastCharacterWasSpace && charBeforeSpaceWasWord {
-                    // Previous space was marked (pending), now replace with ". "
-                    delegate.setMarkedText("")   // Clear the pending space
-                    delegate.insertText(". ")    // Insert period + space
-                    lastCharacterWasSpace = false
-                    charBeforeSpaceWasWord = false
-                    sentenceEndedBeforeSpace = true
-                    shouldCapitalizeNext = true
-                    DebugLogger.log("Double-space -> period")
-                    return true
-                }
-                
-                // First space after sentence-ending punctuation -> enable capitalize
-                if sentenceEndedBeforeSpace {
-                    shouldCapitalizeNext = true
+                // Double-space period: Only if enabled and we just typed a space
+                // AND the character before that space was a word character (no punctuation)
+                if ConfigurationManager.shared.doubleSpacePeriodEnabled && lastCharacterWasSpace {
+                    // Check context to confirm valid double-space condition
+                    // We need to look back: [WordChar] [Space] [Cursor]
+                    if let context = delegate.textBeforeCursor(length: 2),
+                       context.hasSuffix(" ") {
+                        let preSpaceChar = context.dropLast().last
+                        if let lastChar = preSpaceChar, (lastChar.isLetter || lastChar.isNumber) {
+                            // Valid double-space condition!
+                            // Replace previous space with ". "
+                            delegate.setMarkedText("")   // Clear pending space
+                            delegate.insertText(". ")    // Insert period + space
+                            lastCharacterWasSpace = false
+                            DebugLogger.log("Double-space -> period (Context validated)")
+                            return true
+                        }
+                    }
                 }
                 
                 // If double-space is enabled, hold the space as marked text
-                if ConfigurationManager.shared.doubleSpacePeriodEnabled && charBeforeSpaceWasWord {
-                    delegate.setMarkedText(" ")  // Show space as pending
-                    lastCharacterWasSpace = true
-                    return true  // We handled it
+                if ConfigurationManager.shared.doubleSpacePeriodEnabled {
+                    // Check if we should hold this space (only if following a word)
+                    if let context = delegate.textBeforeCursor(length: 1),
+                       let lastChar = context.last,
+                       (lastChar.isLetter || lastChar.isNumber) {
+                        delegate.setMarkedText(" ")  // Show space as pending
+                        lastCharacterWasSpace = true
+                        return true
+                    }
                 }
                 
-                // Otherwise just track and let system handle
+                // Normal space handling
                 lastCharacterWasSpace = true
                 return false
             }
             
             // Non-space character handling
-            // If there was a pending space (marked text), commit it first
+            
+            // Commit pending space if exists
             if lastCharacterWasSpace {
-                delegate.setMarkedText("")    // Clear marked space
-                delegate.insertText(" ")      // Commit the space
+                delegate.setMarkedText("")
+                delegate.insertText(" ")
             }
             lastCharacterWasSpace = false
             
-            // Auto-capitalize: Only if enabled and after punctuation + space
-            if ConfigurationManager.shared.autoCapitalizeEnabled &&
-               char.isLetter && shouldCapitalizeNext {
-                let uppercased = String(char).uppercased()
-                delegate.insertText(uppercased)
-                shouldCapitalizeNext = false
-                sentenceEndedBeforeSpace = false
-                charBeforeSpaceWasWord = true
-                DebugLogger.log("Auto-capitalized: \(char) -> \(uppercased)")
-                return true
-            }
-            
-            // Track character type for next space
-            if char.isLetter || char.isNumber {
-                charBeforeSpaceWasWord = true
-                sentenceEndedBeforeSpace = false
-                shouldCapitalizeNext = false
-            } else if char == "." || char == "!" || char == "?" {
-                charBeforeSpaceWasWord = false
-                sentenceEndedBeforeSpace = true
-            } else if char == "\n" {
-                shouldCapitalizeNext = true
-                sentenceEndedBeforeSpace = false
-                charBeforeSpaceWasWord = false
-            } else {
-                charBeforeSpaceWasWord = false
+            // Auto-capitalize: Only if enabled
+            if ConfigurationManager.shared.autoCapitalizeEnabled && char.isLetter {
+                if shouldAutoCapitalize(delegate: delegate) {
+                    let uppercased = String(char).uppercased()
+                    delegate.insertText(uppercased)
+                    DebugLogger.log("Auto-capitalized: \(char) -> \(uppercased)")
+                    return true
+                }
             }
             
             return false  // Pass through to system
@@ -279,6 +316,7 @@ public class HangulComposer {
         
         // Critical Fix: Caps Lock Passthrough
         // If Caps Lock is ON, we should NOT process input as Hangul.
+
         // Instead, commit any existing composition and let the system handle raw input (Uppercase English).
         if event.modifierFlags.contains(.capsLock) {
             if !context.isEmpty() {
@@ -316,30 +354,46 @@ public class HangulComposer {
         
         // Space
         if keyCode == KeyCode.space {
-            // Double-space period detection (macOS-aligned: only after word characters)
-            if ConfigurationManager.shared.doubleSpacePeriodEnabled &&
-               lastCharacterWasSpace && charBeforeSpaceWasWord {
-                DebugLogger.log("Double-space -> period (Korean mode)")
-                // Previous space was marked, now replace with ". "
-                delegate.setMarkedText("")    // Clear pending space
-                delegate.insertText(". ")     // Insert period + space
-                lastCharacterWasSpace = false
-                charBeforeSpaceWasWord = false
-                shouldCapitalizeNext = true
-                return true
+            // Double-space period: Only if enabled and we just typed a space
+            if ConfigurationManager.shared.doubleSpacePeriodEnabled && lastCharacterWasSpace {
+                // Check context to confirm valid double-space condition in Korean mode
+                // Need to look back: [WordChar/Hangul] [Space] [Cursor]
+                if let context = delegate.textBeforeCursor(length: 2),
+                   context.hasSuffix(" ") {
+                    let preSpaceChar = context.dropLast().last
+                    if let lastChar = preSpaceChar,
+                       (lastChar.isLetter || lastChar.isNumber || isHangul(lastChar)) {
+                        // Valid double-space condition!
+                        // Previous space was marked, now replace with ". "
+                        delegate.setMarkedText("")    // Clear pending space
+                        delegate.insertText(". ")     // Insert period + space
+                        lastCharacterWasSpace = false
+                        DebugLogger.log("Double-space -> period (Korean mode, Context validated)")
+                        return true
+                    }
+                }
             }
             
             DebugLogger.log("Space -> flush and space")
             commitComposition(delegate: delegate)
             
-            // Track for double-space: Korean text counts as "word"
-            charBeforeSpaceWasWord = true
-            
             // If double-space is enabled, hold space as marked text
+            // In Korean mode, we assume any committed hangul allows double-space
             if ConfigurationManager.shared.doubleSpacePeriodEnabled {
-                delegate.setMarkedText(" ")
-                lastCharacterWasSpace = true
-                return true
+                // Check if we should hold this space (only if following a word)
+                // Since we just committed (or context is there), check context
+                // Note: commitComposition updates the client, so textBeforeCursor should see it.
+                // However, IMKTextInput update might be async or delayed.
+                // For simplicity/robustness, we can assume if we just committed Hangul, it's valid.
+                // But safer to check context or just always pending-space in Korean mode?
+                // Better to be consistent. Let's check context.
+                if let context = delegate.textBeforeCursor(length: 1),
+                   let lastChar = context.last,
+                   (lastChar.isLetter || lastChar.isNumber || isHangul(lastChar)) {
+                        delegate.setMarkedText(" ")
+                        lastCharacterWasSpace = true
+                        return true
+                   }
             }
             
             lastCharacterWasSpace = true
@@ -354,7 +408,6 @@ public class HangulComposer {
         
         // Reset space tracking for non-space keys
         lastCharacterWasSpace = false
-        charBeforeSpaceWasWord = true  // Korean input = word characters
         
         // 방향키 - 조합 커밋 후 시스템에 전달
         if keyCode == KeyCode.leftArrow || keyCode == KeyCode.rightArrow ||
