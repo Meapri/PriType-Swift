@@ -32,6 +32,13 @@ public protocol HangulComposerDelegate: AnyObject {
     /// - Parameter length: Maximum length of text to retrieve
     /// - Returns: The text before cursor, or nil if unavailable
     func textBeforeCursor(length: Int) -> String?
+    
+    /// Replaces text before the cursor with new text
+    ///Used for features like double-space period where we modify existing text
+    /// - Parameters:
+    ///   - length: Number of characters to replace (counting backwards from cursor)
+    ///   - text: The new text to insert
+    func replaceTextBeforeCursor(length: Int, with text: String)
 }
 
 // MARK: - Types
@@ -249,49 +256,33 @@ public class HangulComposer {
             // Handle space key
             if char == " " {
                 // Double-space period: Only if enabled and we just typed a space
-                // AND the character before that space was a word character (no punctuation)
                 if ConfigurationManager.shared.doubleSpacePeriodEnabled && lastCharacterWasSpace {
                     // Check context to confirm valid double-space condition
                     // We need to look back: [WordChar] [Space] [Cursor]
+                    // Since the first space was already committed, the cursor is AFTER the space.
+                    // So textBeforeCursor(1) should be " ".
+                    // textBeforeCursor(2) should be "X " (X is word char).
+                    
                     if let context = delegate.textBeforeCursor(length: 2),
                        context.hasSuffix(" ") {
                         let preSpaceChar = context.dropLast().last
                         if let lastChar = preSpaceChar, (lastChar.isLetter || lastChar.isNumber) {
                             // Valid double-space condition!
-                            // Replace previous space with ". "
-                            delegate.setMarkedText("")   // Clear pending space
-                            delegate.insertText(". ")    // Insert period + space
+                            // Replace previous space (length 1) with ". "
+                            delegate.replaceTextBeforeCursor(length: 1, with: ". ")
                             lastCharacterWasSpace = false
-                            DebugLogger.log("Double-space -> period (Context validated)")
+                            DebugLogger.log("Double-space -> period (Context validated, Replaced)")
                             return true
                         }
                     }
                 }
                 
-                // If double-space is enabled, hold the space as marked text
-                if ConfigurationManager.shared.doubleSpacePeriodEnabled {
-                    // Check if we should hold this space (only if following a word)
-                    if let context = delegate.textBeforeCursor(length: 1),
-                       let lastChar = context.last,
-                       (lastChar.isLetter || lastChar.isNumber) {
-                        delegate.setMarkedText(" ")  // Show space as pending
-                        lastCharacterWasSpace = true
-                        return true
-                    }
-                }
-                
-                // Normal space handling
+                // Normal space handling - immediate commit (let system handle it)
                 lastCharacterWasSpace = true
                 return false
             }
             
             // Non-space character handling
-            
-            // Commit pending space if exists
-            if lastCharacterWasSpace {
-                delegate.setMarkedText("")
-                delegate.insertText(" ")
-            }
             lastCharacterWasSpace = false
             
             // Auto-capitalize: Only if enabled
@@ -364,11 +355,10 @@ public class HangulComposer {
                     if let lastChar = preSpaceChar,
                        (lastChar.isLetter || lastChar.isNumber || isHangul(lastChar)) {
                         // Valid double-space condition!
-                        // Previous space was marked, now replace with ". "
-                        delegate.setMarkedText("")    // Clear pending space
-                        delegate.insertText(". ")     // Insert period + space
+                        // Replace previous space (length 1) with ". "
+                        delegate.replaceTextBeforeCursor(length: 1, with: ". ")
                         lastCharacterWasSpace = false
-                        DebugLogger.log("Double-space -> period (Korean mode, Context validated)")
+                        DebugLogger.log("Double-space -> period (Korean mode, Context validated, Replaced)")
                         return true
                     }
                 }
@@ -377,36 +367,12 @@ public class HangulComposer {
             DebugLogger.log("Space -> flush and space")
             commitComposition(delegate: delegate)
             
-            // If double-space is enabled, hold space as marked text
-            // In Korean mode, we assume any committed hangul allows double-space
-            if ConfigurationManager.shared.doubleSpacePeriodEnabled {
-                // Check if we should hold this space (only if following a word)
-                // Since we just committed (or context is there), check context
-                // Note: commitComposition updates the client, so textBeforeCursor should see it.
-                // However, IMKTextInput update might be async or delayed.
-                // For simplicity/robustness, we can assume if we just committed Hangul, it's valid.
-                // But safer to check context or just always pending-space in Korean mode?
-                // Better to be consistent. Let's check context.
-                if let context = delegate.textBeforeCursor(length: 1),
-                   let lastChar = context.last,
-                   (lastChar.isLetter || lastChar.isNumber || isHangul(lastChar)) {
-                        delegate.setMarkedText(" ")
-                        lastCharacterWasSpace = true
-                        return true
-                   }
-            }
-            
+            // Pending space logic removed - Immediate commit
             lastCharacterWasSpace = true
-            return false
+            return false // Let system handle space insertion
         }
         
-        // Non-space: commit pending space if exists
-        if lastCharacterWasSpace {
-            delegate.setMarkedText("")
-            delegate.insertText(" ")
-        }
-        
-        // Reset space tracking for non-space keys
+        // Non-space: No pending space to commit (already committed)
         lastCharacterWasSpace = false
         
         // 방향키 - 조합 커밋 후 시스템에 전달

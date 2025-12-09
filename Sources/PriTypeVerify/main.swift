@@ -42,6 +42,14 @@ class MockDelegate: HangulComposerDelegate {
         let startIndex = fullText.index(fullText.startIndex, offsetBy: start)
         return String(fullText[startIndex...])
     }
+    
+    func replaceTextBeforeCursor(length: Int, with text: String) {
+        if fullText.count >= length {
+            fullText.removeLast(length)
+            fullText.append(text)
+            print("Replaced last \(length) chars with '\(text)'")
+        }
+    }
 }
 
 func verify() {

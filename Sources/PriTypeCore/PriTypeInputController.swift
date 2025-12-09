@@ -56,6 +56,16 @@ public class PriTypeInputController: IMKInputController {
             let charRange = NSRange(location: location, length: actualLength)
             return client.attributedSubstring(from: charRange)?.string
         }
+        
+        func replaceTextBeforeCursor(length: Int, with text: String) {
+            let selRange = client.selectedRange()
+            guard selRange.location != NSNotFound && selRange.location >= length else {
+                return 
+            }
+            
+            let replacementRange = NSRange(location: selRange.location - length, length: length)
+            client.insertText(text, replacementRange: replacementRange)
+        }
     }
     
     // 입력기가 활성화될 때 호출 - 새 세션 시작
