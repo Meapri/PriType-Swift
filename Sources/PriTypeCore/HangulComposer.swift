@@ -87,6 +87,9 @@ public class HangulComposer {
        return ctx
     }()
     
+    /// Track if we're at the start of a sentence (for auto-capitalize)
+    private var isAtSentenceStart: Bool = true
+    
     // MARK: - Initialization
     
     /// Creates a new HangulComposer with default settings
@@ -174,10 +177,40 @@ public class HangulComposer {
             return true  // Consume the event
         }
         
-        // English mode: pass all keys to system
+        // English mode: handle auto-capitalize or pass through
         if inputMode == .english {
-            DebugLogger.log("English mode -> Pass through")
-            return false
+            DebugLogger.log("English mode")
+            
+            // Check if we should auto-capitalize
+            if ConfigurationManager.shared.autoCapitalizeEnglish,
+               let chars = event.characters,
+               chars.count == 1,
+               let char = chars.first,
+               char.isLetter && char.isLowercase {
+                
+                if isAtSentenceStart {
+                    // Capitalize the first letter
+                    let uppercased = String(char).uppercased()
+                    delegate.insertText(uppercased)
+                    isAtSentenceStart = false
+                    DebugLogger.log("Auto-capitalized: \(char) -> \(uppercased)")
+                    return true  // We handled it
+                }
+            }
+            
+            // Update sentence start tracking based on typed character
+            if let chars = event.characters, chars.count == 1, let char = chars.first {
+                // Check for sentence-ending punctuation
+                if char == "." || char == "!" || char == "?" || char == "\n" {
+                    isAtSentenceStart = true
+                } else if !char.isWhitespace {
+                    // Non-whitespace character that isn't punctuation
+                    isAtSentenceStart = false
+                }
+                // Whitespace doesn't change sentence start state
+            }
+            
+            return false  // Pass through to system
         }
         
         // Pass through if modifiers (Command, Control, Option) are present
