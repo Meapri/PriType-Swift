@@ -81,34 +81,76 @@ public final class InputSourceManager: @unchecked Sendable {
     public func addABCToPlist() -> Bool {
         // Check if already exists
         if isABCEnabledInPlist() {
+            #if DEBUG
+            DebugLogger.log("InputSourceManager: ABC already exists")
+            #endif
             return true
         }
         
-        // Add ABC entry using PlistBuddy
-        let commands = [
-            "/usr/libexec/PlistBuddy -c 'Add :AppleEnabledInputSources: dict' \(Self.hiToolboxPlist)",
-            "/usr/libexec/PlistBuddy -c 'Add :AppleEnabledInputSources:0:InputSourceKind string \"Keyboard Layout\"' \(Self.hiToolboxPlist)",
-            "/usr/libexec/PlistBuddy -c 'Add :AppleEnabledInputSources:0:KeyboardLayout\\ ID integer 252' \(Self.hiToolboxPlist)",
-            "/usr/libexec/PlistBuddy -c 'Add :AppleEnabledInputSources:0:KeyboardLayout\\ Name string ABC' \(Self.hiToolboxPlist)"
-        ]
+        // First, count current entries to get the next index
+        let countCmd = "/usr/libexec/PlistBuddy -c 'Print :AppleEnabledInputSources' \(Self.hiToolboxPlist) 2>/dev/null | grep -c 'Dict'"
+        let pipe = Pipe()
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/bin/bash")
+        process.arguments = ["-c", countCmd]
+        process.standardOutput = pipe
+        process.standardError = FileHandle.nullDevice
         
-        for cmd in commands {
-            let result = runShellCommand(cmd)
-            if result != 0 {
-                #if DEBUG
-                DebugLogger.log("InputSourceManager: Failed to add ABC, cmd failed: \(cmd)")
-                #endif
-                return false
+        var nextIndex = 0
+        do {
+            try process.run()
+            process.waitUntilExit()
+            let data = pipe.fileHandleForReading.readDataToEndOfFile()
+            if let output = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines),
+               let count = Int(output) {
+                nextIndex = count
             }
+        } catch {
+            // Default to appending at index 0 if count fails
+        }
+        
+        // Add ABC entry using PlistBuddy - add dict first, then set its properties
+        let plistPath = Self.hiToolboxPlist
+        
+        // Use a single compound command to ensure atomicity
+        let addCmd = """
+            /usr/libexec/PlistBuddy \
+            -c 'Add :AppleEnabledInputSources:\(nextIndex) dict' \
+            -c 'Set :AppleEnabledInputSources:\(nextIndex):InputSourceKind "Keyboard Layout"' \
+            -c 'Set :AppleEnabledInputSources:\(nextIndex):KeyboardLayout\\ ID 252' \
+            -c 'Set :AppleEnabledInputSources:\(nextIndex):KeyboardLayout\\ Name ABC' \
+            \(plistPath)
+            """
+        
+        let result = runShellCommand(addCmd)
+        
+        if result != 0 {
+            #if DEBUG
+            DebugLogger.log("InputSourceManager: Failed to add ABC with compound command, trying alternative")
+            #endif
+            
+            // Try alternative: use individual commands
+            _ = runShellCommand("/usr/libexec/PlistBuddy -c 'Add :AppleEnabledInputSources:\(nextIndex) dict' \(plistPath)")
+            _ = runShellCommand("/usr/libexec/PlistBuddy -c 'Add :AppleEnabledInputSources:\(nextIndex):InputSourceKind string \"Keyboard Layout\"' \(plistPath)")
+            _ = runShellCommand("/usr/libexec/PlistBuddy -c 'Add :AppleEnabledInputSources:\(nextIndex):KeyboardLayout\\ ID integer 252' \(plistPath)")
+            _ = runShellCommand("/usr/libexec/PlistBuddy -c 'Add :AppleEnabledInputSources:\(nextIndex):KeyboardLayout\\ Name string ABC' \(plistPath)")
         }
         
         // Kill cfprefsd to force reload
         _ = runShellCommand("killall cfprefsd 2>/dev/null || true")
         
+        // Verify it was added
+        let success = isABCEnabledInPlist()
+        
         #if DEBUG
-        DebugLogger.log("InputSourceManager: Added ABC successfully")
+        if success {
+            DebugLogger.log("InputSourceManager: Added ABC at index \(nextIndex) successfully")
+        } else {
+            DebugLogger.log("InputSourceManager: Failed to verify ABC was added")
+        }
         #endif
-        return true
+        
+        return success
     }
     
     // MARK: - Convenience Methods
