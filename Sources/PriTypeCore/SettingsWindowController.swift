@@ -36,7 +36,7 @@ public class SettingsWindowController: NSObject, @unchecked Sendable {
         newWindow.backgroundColor = .clear
         
         // Set proper size to avoid truncation
-        newWindow.setContentSize(NSSize(width: 400, height: 450))
+        newWindow.setContentSize(NSSize(width: 400, height: 680))
         newWindow.center()
         newWindow.delegate = self
         
@@ -81,8 +81,6 @@ struct VisualEffectView: NSViewRepresentable {
 
 // MARK: - SwiftUI Settings View
 
-// MARK: - SwiftUI Settings View
-
 struct SettingsView: View {
     @State private var selectedKeyboard = ConfigurationManager.shared.keyboardId
     @State private var selectedToggleKey = ConfigurationManager.shared.toggleKey
@@ -115,8 +113,8 @@ struct SettingsView: View {
             )
             .edgesIgnoringSafeArea(.all)
             
-            VStack(alignment: .leading, spacing: 30) {
-                // Liquid Header
+            VStack(alignment: .leading, spacing: 20) {
+                // Liquid Header (Fixed)
                 HStack {
                     Text("PriType")
                         .font(.system(size: 34, weight: .heavy, design: .rounded))
@@ -132,126 +130,127 @@ struct SettingsView: View {
                         .foregroundColor(.white.opacity(0.5))
                     Spacer()
                 }
-                .padding(.top, 25)
+                .padding(.top, 10)
                 .padding(.horizontal, 5)
                 
-                // Content Stack (Floating Glass Tiles)
-                VStack(alignment: .leading, spacing: 20) {
-                    
-                    // Keyboard Layout Tile
-                    GlassTile(title: "자판 배열") {
-                        VStack(spacing: 8) {
-                            ForEach(keyboardOptions, id: \.0) { option in
-                                LiquidSelectionRow(
-                                    title: option.1,
-                                    isSelected: selectedKeyboard == option.0,
-                                    action: { selectedKeyboard = option.0 }
-                                )
+                // Scrollable Content Stack
+                ScrollView(.vertical, showsIndicators: false) {
+                    VStack(alignment: .leading, spacing: 20) {
+                        
+                        // Keyboard Layout Tile
+                        GlassTile(title: "자판 배열") {
+                            VStack(spacing: 8) {
+                                ForEach(keyboardOptions, id: \.0) { option in
+                                    LiquidSelectionRow(
+                                        title: option.1,
+                                        isSelected: selectedKeyboard == option.0,
+                                        action: { selectedKeyboard = option.0 }
+                                    )
+                                }
                             }
                         }
-                    }
-                    .onChange(of: selectedKeyboard) { newValue in
-                        ConfigurationManager.shared.keyboardId = newValue
-                    }
-                    
-                    // Toggle Key Tile
-                    GlassTile(title: "한영 전환 키") {
-                        VStack(spacing: 8) {
-                            ForEach(ToggleKey.allCases, id: \.self) { key in
-                                LiquidSelectionRow(
-                                    title: key.displayName,
-                                    isSelected: selectedToggleKey == key,
-                                    action: { selectedToggleKey = key }
-                                )
+                        .onChange(of: selectedKeyboard) { newValue in
+                            ConfigurationManager.shared.keyboardId = newValue
+                        }
+                        
+                        // Toggle Key Tile
+                        GlassTile(title: "한영 전환 키") {
+                            VStack(spacing: 8) {
+                                ForEach(ToggleKey.allCases, id: \.self) { key in
+                                    LiquidSelectionRow(
+                                        title: key.displayName,
+                                        isSelected: selectedToggleKey == key,
+                                        action: { selectedToggleKey = key }
+                                    )
+                                }
                             }
                         }
-                    }
-                    .onChange(of: selectedToggleKey) { newValue in
-                        ConfigurationManager.shared.toggleKey = newValue
-                    }
-                    
-                    // Input Source Management Tile
-                    GlassTile(title: "입력 소스 관리") {
-                        VStack(spacing: 12) {
-                            // ABC Keyboard Toggle
-                            HStack {
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text("기본 영어 입력기 (ABC)")
-                                        .font(.system(size: 14, weight: .medium, design: .rounded))
-                                        .foregroundColor(.white)
-                                    Text(isABCEnabled ? "활성화됨" : "비활성화됨")
+                        .onChange(of: selectedToggleKey) { newValue in
+                            ConfigurationManager.shared.toggleKey = newValue
+                        }
+                        
+                        // Input Source Management Tile
+                        GlassTile(title: "입력 소스 관리") {
+                            VStack(spacing: 12) {
+                                // ABC Keyboard Toggle
+                                HStack {
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text("기본 영어 입력기 (ABC)")
+                                            .font(.system(size: 14, weight: .medium, design: .rounded))
+                                            .foregroundColor(.white)
+                                        Text(isABCEnabled ? "활성화됨" : "비활성화됨")
+                                            .font(.system(size: 11, design: .rounded))
+                                            .foregroundColor(isABCEnabled ? .green.opacity(0.8) : .orange.opacity(0.8))
+                                    }
+                                    
+                                    Spacer()
+                                    
+                                    Toggle("", isOn: $isABCEnabled)
+                                        .toggleStyle(.switch)
+                                        .labelsHidden()
+                                        .scaleEffect(0.8)
+                                }
+                                .padding(.vertical, 4)
+                                
+                                // Info Text
+                                HStack(spacing: 6) {
+                                    Image(systemName: "info.circle")
+                                        .font(.system(size: 11))
+                                    Text("비활성화하면 PriType만 사용됩니다")
                                         .font(.system(size: 11, design: .rounded))
-                                        .foregroundColor(isABCEnabled ? .green.opacity(0.8) : .orange.opacity(0.8))
                                 }
-                                
-                                Spacer()
-                                
-                                Toggle("", isOn: $isABCEnabled)
-                                    .toggleStyle(.switch)
-                                    .labelsHidden()
-                                    .scaleEffect(0.8)
-                            }
-                            .padding(.vertical, 4)
-                            
-                            // Info Text
-                            HStack(spacing: 6) {
-                                Image(systemName: "info.circle")
-                                    .font(.system(size: 11))
-                                Text("비활성화하면 PriType만 사용됩니다")
-                                    .font(.system(size: 11, design: .rounded))
-                            }
-                            .foregroundColor(.white.opacity(0.5))
-                        }
-                    }
-                    .onChange(of: isABCEnabled) { newValue in
-                        handleABCToggle(enabled: newValue)
-                    }
-                    
-                    // Text Input Options Tile
-                    GlassTile(title: "텍스트 입력") {
-                        VStack(spacing: 12) {
-                            // Auto-Capitalize Toggle
-                            HStack {
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text("자동으로 문장을 대문자로 시작")
-                                        .font(.system(size: 13, weight: .medium, design: .rounded))
-                                        .foregroundColor(.white)
-                                }
-                                Spacer()
-                                Toggle("", isOn: $autoCapitalizeEnabled)
-                                    .toggleStyle(.switch)
-                                    .labelsHidden()
-                                    .scaleEffect(0.8)
-                            }
-                            
-                            Divider().background(Color.white.opacity(0.1))
-                            
-                            // Double-Space Period Toggle
-                            HStack {
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text("스페이스를 두 번 눌러 마침표 추가")
-                                        .font(.system(size: 13, weight: .medium, design: .rounded))
-                                        .foregroundColor(.white)
-                                }
-                                Spacer()
-                                Toggle("", isOn: $doubleSpacePeriodEnabled)
-                                    .toggleStyle(.switch)
-                                    .labelsHidden()
-                                    .scaleEffect(0.8)
+                                .foregroundColor(.white.opacity(0.5))
                             }
                         }
+                        .onChange(of: isABCEnabled) { newValue in
+                            handleABCToggle(enabled: newValue)
+                        }
+                        
+                        // Text Input Options Tile
+                        GlassTile(title: "텍스트 입력") {
+                            VStack(spacing: 12) {
+                                // Auto-Capitalize Toggle
+                                HStack {
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("자동으로 문장을 대문자로 시작")
+                                            .font(.system(size: 13, weight: .medium, design: .rounded))
+                                            .foregroundColor(.white)
+                                    }
+                                    Spacer()
+                                    Toggle("", isOn: $autoCapitalizeEnabled)
+                                        .toggleStyle(.switch)
+                                        .labelsHidden()
+                                        .scaleEffect(0.8)
+                                }
+                                
+                                Divider().background(Color.white.opacity(0.1))
+                                
+                                // Double-Space Period Toggle
+                                HStack {
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("스페이스를 두 번 눌러 마침표 추가")
+                                            .font(.system(size: 13, weight: .medium, design: .rounded))
+                                            .foregroundColor(.white)
+                                    }
+                                    Spacer()
+                                    Toggle("", isOn: $doubleSpacePeriodEnabled)
+                                        .toggleStyle(.switch)
+                                        .labelsHidden()
+                                        .scaleEffect(0.8)
+                                }
+                            }
+                        }
+                        .onChange(of: autoCapitalizeEnabled) { newValue in
+                            ConfigurationManager.shared.autoCapitalizeEnabled = newValue
+                        }
+                        .onChange(of: doubleSpacePeriodEnabled) { newValue in
+                            ConfigurationManager.shared.doubleSpacePeriodEnabled = newValue
+                        }
                     }
-                    .onChange(of: autoCapitalizeEnabled) { newValue in
-                        ConfigurationManager.shared.autoCapitalizeEnabled = newValue
-                    }
-                    .onChange(of: doubleSpacePeriodEnabled) { newValue in
-                        ConfigurationManager.shared.doubleSpacePeriodEnabled = newValue
-                    }
+                    .padding(.bottom, 10) // Padding inside scrollview
                 }
                 
-                Spacer()
-                
-                // Footer
+                // Footer (Fixed)
                 HStack {
                     Image(systemName: "drop.fill") // Liquid icon
                         .font(.caption)
@@ -264,11 +263,11 @@ struct SettingsView: View {
                 }
                 .foregroundColor(.white.opacity(0.3))
                 .padding(.horizontal, 10)
-                .padding(.bottom, 20)
+                .padding(.bottom, 5)
             }
             .padding(30)
         }
-        .frame(width: 420, height: 820)
+        .frame(width: 420, height: 680)
         .preferredColorScheme(.dark)
         .alert("ABC 입력기 비활성화", isPresented: $showDisableAlert) {
             Button("취소", role: .cancel) {
