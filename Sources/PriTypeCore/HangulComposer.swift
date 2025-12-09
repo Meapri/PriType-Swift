@@ -275,13 +275,26 @@ public class HangulComposer {
         
         // Space
         if keyCode == KeyCode.space {
+            // Double-space period detection (works in both Korean and English modes)
+            if lastCharacterWasSpace {
+                DebugLogger.log("Double-space -> period (Korean mode)")
+                commitComposition(delegate: delegate)
+                // Delete previous space and insert ". "
+                delegate.insertText("\u{8}. ")
+                lastCharacterWasSpace = false
+                shouldCapitalizeNext = true
+                return true
+            }
+            
             DebugLogger.log("Space -> flush and space")
             commitComposition(delegate: delegate)
-            // Let system handle space insertion? Or strict consumption?
-            // "Windows-style": Space commits, then inserts space.
-            // If we return false, system inserts space. This is usually fine.
+            lastCharacterWasSpace = true
+            // Let system handle space insertion
             return false
         }
+        
+        // Reset space tracking for non-space keys
+        lastCharacterWasSpace = false
         
         // 방향키 - 조합 커밋 후 시스템에 전달
         if keyCode == KeyCode.leftArrow || keyCode == KeyCode.rightArrow ||
