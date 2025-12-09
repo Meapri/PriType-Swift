@@ -90,6 +90,7 @@ struct SettingsView: View {
     @State private var isABCEnabled = InputSourceManager.shared.isABCEnabledInPlist()
     @State private var showDisableAlert = false
     @State private var showRestartAlert = false
+    @State private var autoCapitalizeEnglish = ConfigurationManager.shared.autoCapitalizeEnglish
     
     private let keyboardOptions = [
         ("2", "두벌식 표준"),
@@ -204,6 +205,34 @@ struct SettingsView: View {
                     .onChange(of: isABCEnabled) { newValue in
                         handleABCToggle(enabled: newValue)
                     }
+                    
+                    // Auto-Capitalize Tile
+                    GlassTile(title: "영어 입력 옵션") {
+                        VStack(spacing: 12) {
+                            // Auto-Capitalize Toggle
+                            HStack {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("첫 글자 자동 대문자")
+                                        .font(.system(size: 14, weight: .medium, design: .rounded))
+                                        .foregroundColor(.white)
+                                    Text("문장 시작 시 자동으로 대문자")
+                                        .font(.system(size: 11, design: .rounded))
+                                        .foregroundColor(.white.opacity(0.6))
+                                }
+                                
+                                Spacer()
+                                
+                                Toggle("", isOn: $autoCapitalizeEnglish)
+                                    .toggleStyle(.switch)
+                                    .labelsHidden()
+                                    .scaleEffect(0.8)
+                            }
+                            .padding(.vertical, 4)
+                        }
+                    }
+                    .onChange(of: autoCapitalizeEnglish) { newValue in
+                        ConfigurationManager.shared.autoCapitalizeEnglish = newValue
+                    }
                 }
                 
                 Spacer()
@@ -225,7 +254,7 @@ struct SettingsView: View {
             }
             .padding(30)
         }
-        .frame(width: 420, height: 700)
+        .frame(width: 420, height: 800)
         .preferredColorScheme(.dark)
         .alert("ABC 입력기 비활성화", isPresented: $showDisableAlert) {
             Button("취소", role: .cancel) {

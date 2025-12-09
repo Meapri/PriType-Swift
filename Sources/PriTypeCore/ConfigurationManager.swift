@@ -63,6 +63,7 @@ public class ConfigurationManager: @unchecked Sendable {
     private enum Keys {
         static let keyboardId = "com.pritype.keyboardId"
         static let toggleKey = "com.pritype.toggleKey"
+        static let autoCapitalizeEnglish = "com.pritype.autoCapitalizeEnglish"
     }
     
     // MARK: - Keyboard Layout
@@ -121,5 +122,24 @@ public class ConfigurationManager: @unchecked Sendable {
     /// Use this to conditionally handle Control+Space in the composer.
     public var controlSpaceAsToggle: Bool {
         return toggleKey == .controlSpace
+    }
+    
+    // MARK: - Auto-Capitalize
+    
+    /// Whether to auto-capitalize the first letter in English mode
+    ///
+    /// When enabled, the first letter typed after a period, question mark,
+    /// exclamation mark, or at the start of input will be capitalized.
+    public var autoCapitalizeEnglish: Bool {
+        get {
+            // Default to false (disabled)
+            if defaults.object(forKey: Keys.autoCapitalizeEnglish) == nil {
+                return false
+            }
+            return defaults.bool(forKey: Keys.autoCapitalizeEnglish)
+        }
+        set {
+            defaults.set(newValue, forKey: Keys.autoCapitalizeEnglish)
+        }
     }
 }
