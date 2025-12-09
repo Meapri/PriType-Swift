@@ -200,15 +200,17 @@ public class HangulComposer {
             
             // Handle space key
             if char == " " {
-                // Double-space period: Only after letter/number, not after punctuation
-                if lastCharacterWasSpace && charBeforeSpaceWasWord {
-                    // Delete the previous space and insert ". "
-                    delegate.insertText("\u{8}. ")
+                // Double-space period: Only if enabled and after word character
+                if ConfigurationManager.shared.doubleSpacePeriodEnabled &&
+                   lastCharacterWasSpace && charBeforeSpaceWasWord {
+                    // Previous space was marked (pending), now replace with ". "
+                    delegate.setMarkedText("")   // Clear the pending space
+                    delegate.insertText(". ")    // Insert period + space
                     lastCharacterWasSpace = false
                     charBeforeSpaceWasWord = false
-                    sentenceEndedBeforeSpace = true  // Period was just added
+                    sentenceEndedBeforeSpace = true
                     shouldCapitalizeNext = true
-                    DebugLogger.log("Double-space -> period (macOS style)")
+                    DebugLogger.log("Double-space -> period")
                     return true
                 }
                 
@@ -217,22 +219,34 @@ public class HangulComposer {
                     shouldCapitalizeNext = true
                 }
                 
-                // Track space state
+                // If double-space is enabled, hold the space as marked text
+                if ConfigurationManager.shared.doubleSpacePeriodEnabled && charBeforeSpaceWasWord {
+                    delegate.setMarkedText(" ")  // Show space as pending
+                    lastCharacterWasSpace = true
+                    return true  // We handled it
+                }
+                
+                // Otherwise just track and let system handle
                 lastCharacterWasSpace = true
-                // charBeforeSpaceWasWord was already set by previous char
-                return false  // Let system handle the space
+                return false
             }
             
             // Non-space character handling
+            // If there was a pending space (marked text), commit it first
+            if lastCharacterWasSpace {
+                delegate.setMarkedText("")    // Clear marked space
+                delegate.insertText(" ")      // Commit the space
+            }
             lastCharacterWasSpace = false
             
-            // Auto-capitalize: Only after punctuation + space sequence
-            if char.isLetter && shouldCapitalizeNext {
+            // Auto-capitalize: Only if enabled and after punctuation + space
+            if ConfigurationManager.shared.autoCapitalizeEnabled &&
+               char.isLetter && shouldCapitalizeNext {
                 let uppercased = String(char).uppercased()
                 delegate.insertText(uppercased)
                 shouldCapitalizeNext = false
                 sentenceEndedBeforeSpace = false
-                charBeforeSpaceWasWord = true  // Letter was typed
+                charBeforeSpaceWasWord = true
                 DebugLogger.log("Auto-capitalized: \(char) -> \(uppercased)")
                 return true
             }
@@ -243,16 +257,13 @@ public class HangulComposer {
                 sentenceEndedBeforeSpace = false
                 shouldCapitalizeNext = false
             } else if char == "." || char == "!" || char == "?" {
-                charBeforeSpaceWasWord = false  // Don't double-space after punctuation
+                charBeforeSpaceWasWord = false
                 sentenceEndedBeforeSpace = true
-                // shouldCapitalizeNext will be set when space is pressed
             } else if char == "\n" {
-                // Newline: capitalize next
                 shouldCapitalizeNext = true
                 sentenceEndedBeforeSpace = false
                 charBeforeSpaceWasWord = false
             } else {
-                // Other characters (comma, etc.)
                 charBeforeSpaceWasWord = false
             }
             
@@ -306,11 +317,12 @@ public class HangulComposer {
         // Space
         if keyCode == KeyCode.space {
             // Double-space period detection (macOS-aligned: only after word characters)
-            if lastCharacterWasSpace && charBeforeSpaceWasWord {
-                DebugLogger.log("Double-space -> period (Korean mode, macOS style)")
-                commitComposition(delegate: delegate)
-                // Delete previous space and insert ". "
-                delegate.insertText("\u{8}. ")
+            if ConfigurationManager.shared.doubleSpacePeriodEnabled &&
+               lastCharacterWasSpace && charBeforeSpaceWasWord {
+                DebugLogger.log("Double-space -> period (Korean mode)")
+                // Previous space was marked, now replace with ". "
+                delegate.setMarkedText("")    // Clear pending space
+                delegate.insertText(". ")     // Insert period + space
                 lastCharacterWasSpace = false
                 charBeforeSpaceWasWord = false
                 shouldCapitalizeNext = true
@@ -320,11 +332,24 @@ public class HangulComposer {
             DebugLogger.log("Space -> flush and space")
             commitComposition(delegate: delegate)
             
-            // Track for double-space: Korean text counts as "word" for double-space
-            charBeforeSpaceWasWord = true  // Korean characters = word
+            // Track for double-space: Korean text counts as "word"
+            charBeforeSpaceWasWord = true
+            
+            // If double-space is enabled, hold space as marked text
+            if ConfigurationManager.shared.doubleSpacePeriodEnabled {
+                delegate.setMarkedText(" ")
+                lastCharacterWasSpace = true
+                return true
+            }
+            
             lastCharacterWasSpace = true
-            // Let system handle space insertion
             return false
+        }
+        
+        // Non-space: commit pending space if exists
+        if lastCharacterWasSpace {
+            delegate.setMarkedText("")
+            delegate.insertText(" ")
         }
         
         // Reset space tracking for non-space keys

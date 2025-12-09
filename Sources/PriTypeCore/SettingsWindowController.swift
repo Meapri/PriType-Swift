@@ -90,6 +90,8 @@ struct SettingsView: View {
     @State private var isABCEnabled = InputSourceManager.shared.isABCEnabledInPlist()
     @State private var showDisableAlert = false
     @State private var showRestartAlert = false
+    @State private var autoCapitalizeEnabled = ConfigurationManager.shared.autoCapitalizeEnabled
+    @State private var doubleSpacePeriodEnabled = ConfigurationManager.shared.doubleSpacePeriodEnabled
     
     private let keyboardOptions = [
         ("2", "두벌식 표준"),
@@ -204,6 +206,47 @@ struct SettingsView: View {
                     .onChange(of: isABCEnabled) { newValue in
                         handleABCToggle(enabled: newValue)
                     }
+                    
+                    // Text Input Options Tile
+                    GlassTile(title: "텍스트 입력") {
+                        VStack(spacing: 12) {
+                            // Auto-Capitalize Toggle
+                            HStack {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("자동으로 문장을 대문자로 시작")
+                                        .font(.system(size: 13, weight: .medium, design: .rounded))
+                                        .foregroundColor(.white)
+                                }
+                                Spacer()
+                                Toggle("", isOn: $autoCapitalizeEnabled)
+                                    .toggleStyle(.switch)
+                                    .labelsHidden()
+                                    .scaleEffect(0.8)
+                            }
+                            
+                            Divider().background(Color.white.opacity(0.1))
+                            
+                            // Double-Space Period Toggle
+                            HStack {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("스페이스를 두 번 눌러 마침표 추가")
+                                        .font(.system(size: 13, weight: .medium, design: .rounded))
+                                        .foregroundColor(.white)
+                                }
+                                Spacer()
+                                Toggle("", isOn: $doubleSpacePeriodEnabled)
+                                    .toggleStyle(.switch)
+                                    .labelsHidden()
+                                    .scaleEffect(0.8)
+                            }
+                        }
+                    }
+                    .onChange(of: autoCapitalizeEnabled) { newValue in
+                        ConfigurationManager.shared.autoCapitalizeEnabled = newValue
+                    }
+                    .onChange(of: doubleSpacePeriodEnabled) { newValue in
+                        ConfigurationManager.shared.doubleSpacePeriodEnabled = newValue
+                    }
                 }
                 
                 Spacer()
@@ -225,7 +268,7 @@ struct SettingsView: View {
             }
             .padding(30)
         }
-        .frame(width: 420, height: 700)
+        .frame(width: 420, height: 820)
         .preferredColorScheme(.dark)
         .alert("ABC 입력기 비활성화", isPresented: $showDisableAlert) {
             Button("취소", role: .cancel) {

@@ -122,4 +122,34 @@ public class ConfigurationManager: @unchecked Sendable {
     public var controlSpaceAsToggle: Bool {
         return toggleKey == .controlSpace
     }
+    
+    // MARK: - Text Input Features
+    
+    /// Whether to auto-capitalize first letter of sentences in English mode
+    /// Default: enabled
+    public var autoCapitalizeEnabled: Bool {
+        get {
+            if defaults.object(forKey: "com.pritype.autoCapitalize") == nil {
+                return true  // Default enabled
+            }
+            return defaults.bool(forKey: "com.pritype.autoCapitalize")
+        }
+        set {
+            defaults.set(newValue, forKey: "com.pritype.autoCapitalize")
+        }
+    }
+    
+    /// Whether double-space inserts a period
+    /// Default: enabled
+    public var doubleSpacePeriodEnabled: Bool {
+        get {
+            if defaults.object(forKey: "com.pritype.doubleSpacePeriod") == nil {
+                return true  // Default enabled
+            }
+            return defaults.bool(forKey: "com.pritype.doubleSpacePeriod")
+        }
+        set {
+            defaults.set(newValue, forKey: "com.pritype.doubleSpacePeriod")
+        }
+    }
 }
