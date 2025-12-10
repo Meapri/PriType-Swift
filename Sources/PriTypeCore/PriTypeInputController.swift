@@ -16,10 +16,10 @@ public class PriTypeInputController: IMKInputController {
     private var lastClient: IMKTextInput?
     
     // Keep adapter alive for external toggle calls
-    private var lastAdapter: ClientAdapter?
+    private var lastAdapter: (any HangulComposerDelegate)?
     
     // Adapter class to bridge IMKTextInput calls to HangulComposerDelegate
-    private class ClientAdapter: HangulComposerDelegate {
+    private class ClientAdapter: NSObject, HangulComposerDelegate {
         let client: IMKTextInput
         
         init(client: IMKTextInput) {
@@ -65,6 +65,33 @@ public class PriTypeInputController: IMKInputController {
             
             let replacementRange = NSRange(location: selRange.location - length, length: length)
             client.insertText(text, replacementRange: replacementRange)
+        }
+    }
+    
+    // Adapter for Finder non-text areas - skips setMarkedText to avoid floating window
+    private class ImmediateModeAdapter: NSObject, HangulComposerDelegate {
+        let client: IMKTextInput
+        
+        init(client: IMKTextInput) {
+            self.client = client
+        }
+        
+        func insertText(_ text: String) {
+            guard !text.isEmpty else { return }
+            client.insertText(text, replacementRange: NSRange(location: NSNotFound, length: NSNotFound))
+        }
+        
+        func setMarkedText(_ text: String) {
+            // Intentionally skip setMarkedText to prevent floating window
+            // Characters will be committed immediately via insertText
+        }
+        
+        func textBeforeCursor(length: Int) -> String? {
+            return nil // Not needed for immediate mode
+        }
+        
+        func replaceTextBeforeCursor(length: Int, with text: String) {
+            // Not supported in immediate mode
         }
     }
     
@@ -127,6 +154,32 @@ public class PriTypeInputController: IMKInputController {
             DebugLogger.log("Invalid selection range (Secure Input?), passing through")
             return false
         }      
+        
+        // MARK: - Finder-specific Detection
+        let bundleId = client.bundleIdentifier() ?? ""
+        
+        if bundleId == "com.apple.finder" {
+            // Finder Detection Heuristic:
+            // 1. Finder Desktop/File List (Non-editable): Returns internal window coordinates.
+            //    - firstRect.origin.y is consistently small (e.g., 20.0 or 6.0).
+            // 2. Finder Search Bar/Rename (Editable): Returns actual screen coordinates.
+            
+            let firstRect = client.firstRect(forCharacterRange: NSRange(location: 0, length: 0), actualRange: nil)
+            
+            // FirstRect log showed consistent (5.0, 20.0).
+            // We use 50.0 as a safe threshold (2.5x margin) to avoid false positives 
+            // while minimizing the "blind zone" for real bottom-left files.
+            let isLikelyDesktop = firstRect.origin.x < 50 && firstRect.origin.y < 50
+            
+            if isLikelyDesktop {
+                // Desktop/File List: Use ImmediateMode to prevent floating window
+                lastClient = client
+                lastAdapter = ImmediateModeAdapter(client: client)
+                return composer.handle(event, delegate: lastAdapter!)
+            }
+            
+            // Search Bar/Rename: Use ClientAdapter
+        }
         
         lastClient = client
         lastAdapter = ClientAdapter(client: client)
