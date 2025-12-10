@@ -8,3 +8,4 @@ icon_*.png
 candidate_icon.png
 .DS_Store
 *.zip
+.build

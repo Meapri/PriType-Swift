@@ -1,3 +1,0 @@
-module PriTypeCore {
-    header "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/PriTypeCore.build/include/PriTypeCore-Swift.h"
-}

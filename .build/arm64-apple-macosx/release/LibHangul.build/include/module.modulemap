@@ -1,3 +1,0 @@
-module LibHangul {
-    header "/Users/naen/Git/PriType-Swift/.build/arm64-apple-macosx/release/LibHangul.build/include/LibHangul-Swift.h"
-}
