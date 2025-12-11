@@ -1,0 +1,26 @@
+/* PriType Settings UI - English */
+
+/* General */
+"settings.title" = "Settings";
+"settings.footer" = "Designed for macOS Sequoia";
+
+/* Keyboard Layout */
+"keyboard.title" = "Keyboard Layout";
+"keyboard.2set" = "2-Set Standard";
+"keyboard.3set390" = "3-Set 390";
+"keyboard.2setOld" = "2-Set Old Hangul";
+"keyboard.3setOld" = "3-Set Old Hangul";
+
+/* Toggle Key */
+"toggle.title" = "Korean/English Toggle";
+"toggle.rightCmd" = "⌘ Right Command";
+"toggle.ctrlSpace" = "⌃ Control + Space";
+"toggle.description" = "Choose the key to toggle between Korean and English";
+
+/* Text Input */
+"textInput.title" = "Text Input";
+"textInput.autoCapitalize" = "Auto-capitalize sentences";
+"textInput.doubleSpacePeriod" = "Double-space for period";
+
+/* About */
+"about.title" = "About";

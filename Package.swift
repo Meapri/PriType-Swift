@@ -3,8 +3,9 @@ import PackageDescription
 
 let package = Package(
     name: "PriType",
+    defaultLocalization: "ko",
     platforms: [
-        .macOS(.v13)
+        .macOS(.v14)  // Sonoma or later (required for modern SwiftUI APIs)
     ],
     products: [
         .executable(
@@ -23,6 +24,12 @@ let package = Package(
             dependencies: [
                 .product(name: "LibHangul", package: "libhangul-swift")
             ],
+            resources: [
+                .process("Resources")
+            ],
+            swiftSettings: [
+                .unsafeFlags(["-Xfrontend", "-strict-concurrency=complete"])
+            ],
             linkerSettings: [
                 .unsafeFlags(["-framework", "InputMethodKit"])
             ]
@@ -39,6 +46,10 @@ let package = Package(
         ),
         .executableTarget(
             name: "PriTypeVerify",
+            dependencies: ["PriTypeCore"]
+        ),
+        .testTarget(
+            name: "PriTypeCoreTests",
             dependencies: ["PriTypeCore"]
         )
     ]

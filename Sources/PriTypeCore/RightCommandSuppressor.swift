@@ -2,12 +2,27 @@ import Foundation
 import Cocoa
 import ApplicationServices
 
-/// CGEventTap to handle toggle keys for language switching
-/// Supports: Right Command (instant + normal keys), Control+Space
-public final class RightCommandSuppressor {
+/// Primary toggle key handler using CGEventTap.
+///
+/// ## Role
+/// Intercepts Right Command and Control+Space key events at the system level
+/// using CGEventTap to provide instant language mode switching.
+///
+/// ## Relationship with IOKitManager
+/// - **Primary handler**: `RightCommandSuppressor` (this class)
+/// - **Backup handler**: `IOKitManager`
+///
+/// This class uses `IOKitManager.hasAccessibilityPermission()` to check permissions.
+/// If CGEventTap creation fails (e.g., permission issues), `IOKitManager` takes over.
+///
+/// ## Key Features
+/// - **Instant toggle**: Switches on key press, not release
+/// - **Modifier stripping**: When Right Command is held, removes Command modifier from other keys
+/// - **Control+Space support**: Alternative toggle key combination
+public final class RightCommandSuppressor: @unchecked Sendable {
     
-    // Singleton
-    nonisolated(unsafe) public static let shared = RightCommandSuppressor()
+    // Singleton - accessed from CGEventTap callback context
+    public static let shared = RightCommandSuppressor()
     
     private var eventTap: CFMachPort?
     private var runLoopSource: CFRunLoopSource?
@@ -18,15 +33,7 @@ public final class RightCommandSuppressor {
     /// Track Right Command state
     private var rightCommandIsDown = false
     
-    /// Right Command keyCode
-    private let rightCommandKeyCode: Int64 = 54
-    
-    /// Control keyCode
-    private let controlKeyCode: Int64 = 59
-    private let rightControlKeyCode: Int64 = 62
-    
-    /// Space keyCode
-    private let spaceKeyCode: Int64 = 49
+    // Key codes are centralized in KeyCode enum
     
     /// Track Control state for Control+Space
     private var controlIsDown = false
@@ -115,7 +122,7 @@ public final class RightCommandSuppressor {
             controlIsDown = flags.contains(.maskControl)
             
             // Right Command toggle - INSTANT (toggle on press)
-            if keyCode == rightCommandKeyCode && config.rightCommandAsToggle {
+            if keyCode == KeyCode.rightCommand && config.rightCommandAsToggle {
                 let commandPressed = flags.contains(.maskCommand)
                 
                 if commandPressed && !rightCommandIsDown {
@@ -138,7 +145,7 @@ public final class RightCommandSuppressor {
         // Handle keyDown
         if type == .keyDown {
             // Control+Space toggle
-            if keyCode == spaceKeyCode && controlIsDown && config.controlSpaceAsToggle {
+            if keyCode == KeyCode.spaceInt64 && controlIsDown && config.controlSpaceAsToggle {
                 DebugLogger.log("RightCommandSuppressor: Control+Space - TOGGLE triggered")
                 triggerToggle()
                 return nil  // Suppress the space
@@ -167,4 +174,3 @@ public final class RightCommandSuppressor {
         }
     }
 }
-

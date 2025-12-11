@@ -21,6 +21,14 @@ public enum ToggleKey: String, CaseIterable, Sendable {
     }
 }
 
+// MARK: - Notification Names
+
+/// Notification names used by PriType
+public extension Notification.Name {
+    /// Posted when the keyboard layout changes
+    static let keyboardLayoutChanged = Notification.Name("PriTypeKeyboardLayoutChanged")
+}
+
 // MARK: - ConfigurationManager
 
 /// Manages persistent user configuration using UserDefaults
@@ -43,14 +51,14 @@ public enum ToggleKey: String, CaseIterable, Sendable {
 /// to notify observers (e.g., `PriTypeInputController`) to update the input engine.
 ///
 /// ## Thread Safety
-/// This class uses `@unchecked Sendable` and should be accessed carefully from
-/// multiple threads. The underlying `UserDefaults` is thread-safe.
-public class ConfigurationManager: @unchecked Sendable {
+/// This class uses `UserDefaults` which is thread-safe for reading/writing.
+/// The class is marked `@unchecked Sendable` as UserDefaults provides the synchronization.
+public final class ConfigurationManager: @unchecked Sendable {
     
     // MARK: - Singleton
     
     /// Shared instance for global access
-    nonisolated(unsafe) public static let shared = ConfigurationManager()
+    public static let shared = ConfigurationManager()
     
     // MARK: - Private Properties
     
@@ -63,6 +71,8 @@ public class ConfigurationManager: @unchecked Sendable {
     private enum Keys {
         static let keyboardId = "com.pritype.keyboardId"
         static let toggleKey = "com.pritype.toggleKey"
+        static let autoCapitalize = "com.pritype.autoCapitalize"
+        static let doubleSpacePeriod = "com.pritype.doubleSpacePeriod"
     }
     
     // MARK: - Keyboard Layout
@@ -84,7 +94,7 @@ public class ConfigurationManager: @unchecked Sendable {
             if keyboardId != newValue {
                 defaults.set(newValue, forKey: Keys.keyboardId)
                 // Notify observers (e.g. InputController) to update the engine
-                NotificationCenter.default.post(name: Notification.Name("PriTypeKeyboardLayoutChanged"), object: nil)
+                NotificationCenter.default.post(name: .keyboardLayoutChanged, object: nil)
             }
         }
     }
@@ -129,13 +139,13 @@ public class ConfigurationManager: @unchecked Sendable {
     /// Default: enabled
     public var autoCapitalizeEnabled: Bool {
         get {
-            if defaults.object(forKey: "com.pritype.autoCapitalize") == nil {
+            if defaults.object(forKey: Keys.autoCapitalize) == nil {
                 return true  // Default enabled
             }
-            return defaults.bool(forKey: "com.pritype.autoCapitalize")
+            return defaults.bool(forKey: Keys.autoCapitalize)
         }
         set {
-            defaults.set(newValue, forKey: "com.pritype.autoCapitalize")
+            defaults.set(newValue, forKey: Keys.autoCapitalize)
         }
     }
     
@@ -143,13 +153,13 @@ public class ConfigurationManager: @unchecked Sendable {
     /// Default: enabled
     public var doubleSpacePeriodEnabled: Bool {
         get {
-            if defaults.object(forKey: "com.pritype.doubleSpacePeriod") == nil {
+            if defaults.object(forKey: Keys.doubleSpacePeriod) == nil {
                 return true  // Default enabled
             }
-            return defaults.bool(forKey: "com.pritype.doubleSpacePeriod")
+            return defaults.bool(forKey: Keys.doubleSpacePeriod)
         }
         set {
-            defaults.set(newValue, forKey: "com.pritype.doubleSpacePeriod")
+            defaults.set(newValue, forKey: Keys.doubleSpacePeriod)
         }
     }
 }

@@ -3,12 +3,27 @@ import IOKit
 import IOKit.hid
 import ApplicationServices
 
-/// Manager for IOHIDManager to detect Right Command key at hardware level
-/// Handles toggle directly without EventTapManager
-public final class IOKitManager {
+/// Manager for IOHIDManager to detect Right Command key at hardware level.
+///
+/// ## Role
+/// Provides hardware-level keyboard monitoring via IOHIDManager.
+/// This class serves as a **backup fallback** when CGEventTap fails to start.
+///
+/// ## Relationship with RightCommandSuppressor
+/// - **Primary handler**: `RightCommandSuppressor` (CGEventTap)
+/// - **Backup handler**: `IOKitManager` (IOHIDManager)
+///
+/// The main entry point (`main.swift`) first attempts to start `RightCommandSuppressor`.
+/// If that fails, `IOKitManager` takes over as the primary toggle handler.
+/// When CGEventTap succeeds, `IOKitManager` runs in passive monitoring mode only.
+///
+/// ## Primary Use Cases
+/// - Accessibility permission check (`hasAccessibilityPermission()`)
+/// - Hardware-level key event monitoring when CGEventTap is unavailable
+public final class IOKitManager: @unchecked Sendable {
     
-    // Singleton
-    nonisolated(unsafe) public static let shared = IOKitManager()
+    // Singleton - accessed from IOKit callback context
+    public static let shared = IOKitManager()
     
     private var manager: IOHIDManager?
     
@@ -40,10 +55,12 @@ public final class IOKitManager {
     // MARK: - Start/Stop
     
     /// Start monitoring keyboard events via IOHIDManager
-    public func start() {
+    /// - Returns: `true` if successfully started, `false` otherwise
+    @discardableResult
+    public func start() -> Bool {
         guard manager == nil else {
             DebugLogger.log("IOKitManager: Already running")
-            return
+            return true
         }
         
         DebugLogger.log("IOKitManager: Starting IOKit-only toggle detection...")
@@ -78,10 +95,11 @@ public final class IOKitManager {
         if result != kIOReturnSuccess {
             DebugLogger.log("IOKitManager: Failed to open IOHIDManager: \(result)")
             manager = nil
-            return
+            return false
         }
         
         DebugLogger.log("IOKitManager: Started successfully (IOKit-only mode)")
+        return true
     }
     
     /// Stop monitoring

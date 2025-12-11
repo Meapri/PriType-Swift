@@ -1,0 +1,52 @@
+# SwiftLint Configuration for PriType-Swift
+# https://github.com/realm/SwiftLint
+
+# Only enable essential rules for maintainability
+opt_in_rules:
+  - empty_count
+  - empty_string
+  - closure_spacing
+  - explicit_init
+  - first_where
+  - force_unwrapping
+  - implicitly_unwrapped_optional
+  - redundant_nil_coalescing
+  - unneeded_break_in_switch
+  - vertical_whitespace_closing_braces
+
+disabled_rules:
+  - trailing_whitespace  # Too noisy
+  - line_length  # Custom limit below
+  - identifier_name  # Allow short names like 'id', 'x', etc.
+  - type_body_length  # HangulComposer is complex by nature
+  - function_body_length  # handle() is complex by nature
+  - file_length  # Some files are large
+  - cyclomatic_complexity  # Hangul composition is complex
+
+# Path exclusions
+excluded:
+  - .build
+  - Tests
+  - Sources/PriTypeVerify
+
+# Custom rule configurations
+line_length:
+  warning: 150
+  error: 200
+  ignores_comments: true
+  ignores_urls: true
+
+nesting:
+  type_level: 3
+  function_level: 3
+
+type_name:
+  min_length: 2
+  max_length: 50
+
+file_header:
+  required_pattern: |
+    \/\/.*
+    \/\/.*PriType.*
+
+reporter: "xcode"

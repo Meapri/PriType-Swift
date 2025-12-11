@@ -2,9 +2,10 @@ import Cocoa
 import SwiftUI
 
 /// Manages the settings window for the input method
-public class SettingsWindowController: NSObject, @unchecked Sendable {
+@MainActor
+public class SettingsWindowController: NSObject {
     
-    nonisolated(unsafe) public static let shared = SettingsWindowController()
+    public static let shared = SettingsWindowController()
     
     private var window: NSWindow?
     
@@ -36,7 +37,7 @@ public class SettingsWindowController: NSObject, @unchecked Sendable {
         newWindow.backgroundColor = .clear
         
         // Set proper size to avoid truncation
-        newWindow.setContentSize(NSSize(width: 400, height: 680))
+        newWindow.setContentSize(NSSize(width: PriTypeConfig.settingsWindowWidth, height: PriTypeConfig.settingsWindowHeight))
         newWindow.center()
         newWindow.delegate = self
         
@@ -85,17 +86,14 @@ struct SettingsView: View {
     @State private var selectedKeyboard = ConfigurationManager.shared.keyboardId
     @State private var selectedToggleKey = ConfigurationManager.shared.toggleKey
     @State private var hoverZone: String? = nil
-    @State private var isABCEnabled = InputSourceManager.shared.isABCEnabledInPlist()
-    @State private var showDisableAlert = false
-    @State private var showRestartAlert = false
     @State private var autoCapitalizeEnabled = ConfigurationManager.shared.autoCapitalizeEnabled
     @State private var doubleSpacePeriodEnabled = ConfigurationManager.shared.doubleSpacePeriodEnabled
     
     private let keyboardOptions = [
-        ("2", "두벌식 표준"),
-        ("3", "세벌식 390"),
-        ("2y", "두벌식 옛한글"),
-        ("3y", "세벌식 옛한글")
+        ("2", L10n.keyboard.twoSet),
+        ("3", L10n.keyboard.threeSet390),
+        ("2y", L10n.keyboard.twoSetOld),
+        ("3y", L10n.keyboard.threeSetOld)
     ]
     
     var body: some View {
@@ -138,7 +136,7 @@ struct SettingsView: View {
                     VStack(alignment: .leading, spacing: 20) {
                         
                         // Keyboard Layout Tile
-                        GlassTile(title: "자판 배열") {
+                        GlassTile(title: L10n.keyboard.title) {
                             VStack(spacing: 8) {
                                 ForEach(keyboardOptions, id: \.0) { option in
                                     LiquidSelectionRow(
@@ -149,12 +147,12 @@ struct SettingsView: View {
                                 }
                             }
                         }
-                        .onChange(of: selectedKeyboard) { newValue in
+                        .onChange(of: selectedKeyboard) { _, newValue in
                             ConfigurationManager.shared.keyboardId = newValue
                         }
                         
                         // Toggle Key Tile
-                        GlassTile(title: "한영 전환 키") {
+                        GlassTile(title: L10n.toggle.title) {
                             VStack(spacing: 8) {
                                 ForEach(ToggleKey.allCases, id: \.self) { key in
                                     LiquidSelectionRow(
@@ -165,54 +163,17 @@ struct SettingsView: View {
                                 }
                             }
                         }
-                        .onChange(of: selectedToggleKey) { newValue in
+                        .onChange(of: selectedToggleKey) { _, newValue in
                             ConfigurationManager.shared.toggleKey = newValue
                         }
                         
-                        // Input Source Management Tile
-                        GlassTile(title: "입력 소스 관리") {
-                            VStack(spacing: 12) {
-                                // ABC Keyboard Toggle
-                                HStack {
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Text("기본 영어 입력기 (ABC)")
-                                            .font(.system(size: 14, weight: .medium, design: .rounded))
-                                            .foregroundColor(.white)
-                                        Text(isABCEnabled ? "활성화됨" : "비활성화됨")
-                                            .font(.system(size: 11, design: .rounded))
-                                            .foregroundColor(isABCEnabled ? .green.opacity(0.8) : .orange.opacity(0.8))
-                                    }
-                                    
-                                    Spacer()
-                                    
-                                    Toggle("", isOn: $isABCEnabled)
-                                        .toggleStyle(.switch)
-                                        .labelsHidden()
-                                        .scaleEffect(0.8)
-                                }
-                                .padding(.vertical, 4)
-                                
-                                // Info Text
-                                HStack(spacing: 6) {
-                                    Image(systemName: "info.circle")
-                                        .font(.system(size: 11))
-                                    Text("비활성화하면 PriType만 사용됩니다")
-                                        .font(.system(size: 11, design: .rounded))
-                                }
-                                .foregroundColor(.white.opacity(0.5))
-                            }
-                        }
-                        .onChange(of: isABCEnabled) { newValue in
-                            handleABCToggle(enabled: newValue)
-                        }
-                        
                         // Text Input Options Tile
-                        GlassTile(title: "텍스트 입력") {
+                        GlassTile(title: L10n.textInput.title) {
                             VStack(spacing: 12) {
                                 // Auto-Capitalize Toggle
                                 HStack {
                                     VStack(alignment: .leading, spacing: 2) {
-                                        Text("자동으로 문장을 대문자로 시작")
+                                        Text(L10n.textInput.autoCapitalize)
                                             .font(.system(size: 13, weight: .medium, design: .rounded))
                                             .foregroundColor(.white)
                                     }
@@ -228,7 +189,7 @@ struct SettingsView: View {
                                 // Double-Space Period Toggle
                                 HStack {
                                     VStack(alignment: .leading, spacing: 2) {
-                                        Text("스페이스를 두 번 눌러 마침표 추가")
+                                        Text(L10n.textInput.doubleSpacePeriod)
                                             .font(.system(size: 13, weight: .medium, design: .rounded))
                                             .foregroundColor(.white)
                                     }
@@ -240,10 +201,10 @@ struct SettingsView: View {
                                 }
                             }
                         }
-                        .onChange(of: autoCapitalizeEnabled) { newValue in
+                        .onChange(of: autoCapitalizeEnabled) { _, newValue in
                             ConfigurationManager.shared.autoCapitalizeEnabled = newValue
                         }
-                        .onChange(of: doubleSpacePeriodEnabled) { newValue in
+                        .onChange(of: doubleSpacePeriodEnabled) { _, newValue in
                             ConfigurationManager.shared.doubleSpacePeriodEnabled = newValue
                         }
                     }
@@ -254,7 +215,7 @@ struct SettingsView: View {
                 HStack {
                     Image(systemName: "drop.fill") // Liquid icon
                         .font(.caption)
-                    Text("Designed for macOS 26")
+                    Text("Designed for macOS Sequoia")
                         .font(.caption2)
                         .fontWeight(.semibold)
                     Spacer()
@@ -267,45 +228,19 @@ struct SettingsView: View {
             }
             .padding(30)
         }
-        .frame(width: 420, height: 680)
+        .frame(width: PriTypeConfig.settingsWindowWidth, height: PriTypeConfig.settingsWindowHeight)
         .preferredColorScheme(.dark)
-        .alert("ABC 입력기 비활성화", isPresented: $showDisableAlert) {
-            Button("취소", role: .cancel) {
-                isABCEnabled = true
-            }
-            Button("비활성화", role: .destructive) {
-                let success = InputSourceManager.shared.disableABC()
-                if success {
-                    showRestartAlert = true
-                } else {
-                    // Failed, revert toggle
-                    isABCEnabled = true
-                }
-            }
-        } message: {
-            Text("기본 영어 입력기를 비활성화하면 PriType 영어 모드만 사용됩니다.\n\n계속하시겠습니까?")
+        .onAppear {
+            // Sync state with ConfigurationManager on appear
+            // This handles cases where settings were changed externally
+            selectedKeyboard = ConfigurationManager.shared.keyboardId
+            selectedToggleKey = ConfigurationManager.shared.toggleKey
+            autoCapitalizeEnabled = ConfigurationManager.shared.autoCapitalizeEnabled
+            doubleSpacePeriodEnabled = ConfigurationManager.shared.doubleSpacePeriodEnabled
         }
-        .alert("재시작 필요", isPresented: $showRestartAlert) {
-            Button("확인", role: .cancel) {}
-        } message: {
-            Text("변경 사항을 적용하려면 로그아웃 후 다시 로그인하거나 Mac을 재시작해 주세요.")
-        }
+
     }
     
-    // MARK: - Private Methods
-    
-    private func handleABCToggle(enabled: Bool) {
-        if enabled {
-            // Re-enable ABC
-            let success = InputSourceManager.shared.enableABC()
-            if success {
-                showRestartAlert = true
-            }
-        } else {
-            // Show confirmation alert before disabling
-            showDisableAlert = true
-        }
-    }
 }
 
 // MARK: - Liquid Design Components
@@ -351,6 +286,8 @@ struct GlassTile<Content: View>: View {
             )
             .shadow(color: Color.black.opacity(0.2), radius: 10, x: 0, y: 5)
         }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(title)
     }
 }
 
@@ -401,5 +338,9 @@ struct LiquidSelectionRow: View {
         .onHover { hover in
             isHovering = hover
         }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(title)
+        .accessibilityAddTraits(isSelected ? [.isSelected, .isButton] : .isButton)
+        .accessibilityHint(isSelected ? "현재 선택됨" : "선택하려면 탭하세요")
     }
 }

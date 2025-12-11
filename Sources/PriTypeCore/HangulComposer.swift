@@ -1,59 +1,8 @@
 import Cocoa
 import LibHangul
 
-// MARK: - Protocols
-
-/// Protocol for receiving text composition events from `HangulComposer`
-///
-/// Implement this protocol to receive callbacks when the composer needs to
-/// insert finalized text or update the in-progress composition (marked text).
-///
-/// ## Example Implementation
-/// ```swift
-/// class MyDelegate: HangulComposerDelegate {
-///     func insertText(_ text: String) {
-///         textView.insertText(text)
-///     }
-///     func setMarkedText(_ text: String) {
-///         textView.setMarkedText(text)
-///     }
-/// }
-/// ```
-public protocol HangulComposerDelegate: AnyObject {
-    /// Called when finalized text should be inserted
-    /// - Parameter text: The text to insert (already composed Hangul syllables)
-    func insertText(_ text: String)
-    
-    /// Called when the in-progress composition text should be displayed
-    /// - Parameter text: The preedit text (incomplete Hangul being composed)
-    func setMarkedText(_ text: String)
-    
-    /// Returns the text immediately before the current cursor position
-    /// - Parameter length: Maximum length of text to retrieve
-    /// - Returns: The text before cursor, or nil if unavailable
-    func textBeforeCursor(length: Int) -> String?
-    
-    /// Replaces text before the cursor with new text
-    ///Used for features like double-space period where we modify existing text
-    /// - Parameters:
-    ///   - length: Number of characters to replace (counting backwards from cursor)
-    ///   - text: The new text to insert
-    func replaceTextBeforeCursor(length: Int, with text: String)
-}
-
-// MARK: - Types
-
-/// Input mode for the Hangul composer
-///
-/// The composer can operate in two modes:
-/// - `korean`: Processes keystrokes as Hangul input
-/// - `english`: Passes keystrokes through unchanged
-public enum InputMode: Sendable {
-    /// Korean input mode - keystrokes are processed as Hangul
-    case korean
-    /// English input mode - keystrokes pass through to system
-    case english
-}
+// Protocol and InputMode are now in HangulComposerTypes.swift
+// Helper functions are now in CompositionHelpers.swift
 
 // MARK: - HangulComposer
 
@@ -86,88 +35,38 @@ public class HangulComposer {
     /// When in `.english` mode, all keystrokes are passed through unchanged.
     public private(set) var inputMode: InputMode = .korean
     
+    // MARK: - Dependencies
+    
+    /// Status bar updater (injected for testability)
+    private let statusBar: StatusBarUpdating
+    
     // MARK: - Private Properties
     
     /// Track last delegate for external toggle calls
     private weak var lastDelegate: (any HangulComposerDelegate)?
     
-    /// The libhangul context for character composition
-    @available(*, deprecated, message: "Intentionally using synchronous context")
-    private var context: HangulInputContext = {
-       let ctx = HangulInputContext(keyboard: PriTypeConfig.defaultKeyboardId)
+    // MARK: - libhangul Context
+    // ThreadSafeHangulInputContext is thread-safe and supports synchronous calls.
+    // It uses NSLock internally for synchronization.
+    private var context: ThreadSafeHangulInputContext = {
+       let ctx = ThreadSafeHangulInputContext(keyboard: PriTypeConfig.defaultKeyboardId)
        DebugLogger.log("Configured context with 2-set (id: '\(PriTypeConfig.defaultKeyboardId)')")
        return ctx
     }()
     
-    // MARK: - Auto-Capitalize & Double-Space State (macOS-aligned)
-    
-    // MARK: - Auto-Capitalize & Double-Space State
-    
-    /// Track if last character was a space (for double-space detection & pending space)
-    private var lastCharacterWasSpace: Bool = false
-    
-    /// Timestamp of the last space key press (for double-space timing check)
-    private var lastSpaceTime: CFAbsoluteTime = 0
-    private let doubleSpaceThreshold: TimeInterval = 0.45 // Standard double-tap speed
-    
-    // Note: Other state variables (sentenceEndedBeforeSpace, shouldCapitalizeNext, etc.) 
-    // have been removed in favor of robust context-based detection.
-    
-    // MARK: - Helpers
-    
-    /// Determines if the next character should be auto-capitalized based on document context.
-    /// Checks for: Start of document, Newline, or Sentence ending (. ! ?) followed by space.
-    private func shouldAutoCapitalize(delegate: HangulComposerDelegate) -> Bool {
-        // Read enough context (e.g. 5 chars) to detect patterns like ". " or "? "
-        guard let text = delegate.textBeforeCursor(length: 5) else {
-            return true  // Start of document -> Capitalize
-        }
-        
-        if text.isEmpty { return true }
-        
-        // 1. Check for Newline (immediate capitalization)
-        if let last = text.last {
-            if last == "\n" || last == "\r" { return true }
-        }
-        
-        // 2. Check for Sentence Ending Pattern
-        // The pattern we look for is: [Punctuation] [Space(s)] [Cursor]
-        // If the immediate preceding char is NOT a space, we are in the middle of a word -> No Cap.
-        // Exception: If we are at the very start of a line/doc (already handled above).
-        
-        guard let lastChar = text.last, lastChar.isWhitespace else {
-            return false // Cursor is right after a non-space char (e.g. "Hello." or "Word") -> No Cap
-        }
-        
-        // Find the last non-whitespace character
-        let trimmed = text.trimmingCharacters(in: .whitespaces)
-        if let lastNonSpace = trimmed.last {
-            if lastNonSpace == "." || lastNonSpace == "!" || lastNonSpace == "?" {
-                return true
-            }
-        }
-        
-        return false
-    }
-    
-    /// Checks if a character is a Hangul syllable or Jamo
-    private func isHangul(_ char: Character) -> Bool {
-        guard let scalar = char.unicodeScalars.first else { return false }
-        let val = scalar.value
-        // Hangul Syllables: AC00-D7A3
-        // Hangul Compatibility Jamo: 3130-318F
-        // Hangul Jamo: 1100-11FF
-        return (val >= 0xAC00 && val <= 0xD7A3) ||
-               (val >= 0x3130 && val <= 0x318F) ||
-               (val >= 0x1100 && val <= 0x11FF)
-    }
+    /// Text convenience handler (auto-capitalize, double-space period)
+    /// Owns all state for text convenience features
+    private let textConvenience = TextConvenienceHandler()
     
     // MARK: - Initialization
     
     /// Creates a new HangulComposer with default settings
-    public init() {
+    /// - Parameter statusBar: Status bar updater (defaults to shared manager)
+    public init(statusBar: StatusBarUpdating = StatusBarManager.shared) {
+        self.statusBar = statusBar
         DebugLogger.log("HangulComposer init")
     }
+    
     
     // MARK: - Public Methods
     
@@ -185,7 +84,7 @@ public class HangulComposer {
         }
         
         // Re-initialize context with new keyboard ID
-        context = HangulInputContext(keyboard: id)
+        context = ThreadSafeHangulInputContext(keyboard: id)
     }
     
     /// Toggle between Korean and English input modes
@@ -205,9 +104,128 @@ public class HangulComposer {
             DebugLogger.log("Composition committed before mode switch")
         }
         
-        inputMode = (inputMode == .korean) ? .english : .korean
-        StatusBarManager.shared.setMode(inputMode)
+        switchMode()
+    }
+    
+    // MARK: - Private Helpers
+    
+    /// Switch between Korean and English modes
+    /// Centralizes mode switching logic to avoid duplication
+    private func switchMode() {
+        inputMode = inputMode.toggled
+        statusBar.setMode(inputMode)
         DebugLogger.log("Mode switched to: \(inputMode)")
+    }
+    
+    /// Handle special keys (Return, Escape, Space, Arrow, Tab, Backspace)
+    /// - Returns: `nil` if not a special key, otherwise the result to return from handle()
+    private func handleSpecialKey(keyCode: UInt16, delegate: HangulComposerDelegate) -> Bool? {
+        // Return / Enter
+        if keyCode == KeyCode.return || keyCode == KeyCode.numpadEnter {
+            DebugLogger.log("Return key -> commit")
+            commitComposition(delegate: delegate)
+            return false  // Let system insert newline
+        }
+        
+        // Escape
+        if keyCode == KeyCode.escape {
+            DebugLogger.log("Escape -> cancel")
+            cancelComposition(delegate: delegate)
+            return true
+        }
+        
+        // Space - handle double-space period
+        if keyCode == KeyCode.space {
+            commitComposition(delegate: delegate)
+            let result = textConvenience.handleDoubleSpacePeriod(delegate: delegate, checkHangul: true)
+            if result == .convertedToPeriod {
+                DebugLogger.log("Double-space -> period (Korean mode)")
+                return true
+            }
+            DebugLogger.log("Space -> flush and space")
+            return false
+        }
+        
+        // Non-space: reset space state
+        textConvenience.resetSpaceState()
+        
+        // Arrow keys
+        if keyCode == KeyCode.leftArrow || keyCode == KeyCode.rightArrow ||
+           keyCode == KeyCode.upArrow || keyCode == KeyCode.downArrow {
+            DebugLogger.log("Arrow key -> commit and pass to system")
+            commitComposition(delegate: delegate)
+            return false
+        }
+        
+        // Tab
+        if keyCode == KeyCode.tab {
+            DebugLogger.log("Tab key -> commit")
+            commitComposition(delegate: delegate)
+            return false
+        }
+        
+        // Backspace
+        if keyCode == KeyCode.backspace {
+            DebugLogger.log("Backspace")
+            if !context.isEmpty() {
+                if context.backspace() {
+                    DebugLogger.log("Engine backspace success")
+                    updateComposition(delegate: delegate)
+                    return true
+                } else {
+                    DebugLogger.log("Engine backspace caused empty")
+                    updateComposition(delegate: delegate)
+                    return true
+                }
+            }
+            return false
+        }
+        
+        return nil  // Not a special key
+    }
+    
+    /// Process a single character through the Hangul engine
+    /// - Returns: `true` if the character was processed, `false` if skipped
+    private func processCharacter(_ char: Unicode.Scalar, delegate: HangulComposerDelegate) -> Bool {
+        let charCode = UInt32(char.value)
+        
+        // Skip non-printable characters
+        if KeyCode.shouldPassThrough(charCode) {
+            return false
+        }
+        
+        DebugLogger.log("Processing char code: \(charCode)")
+        
+        // Primary attempt
+        if context.process(Int(charCode)) {
+            DebugLogger.log("Process success")
+            updateComposition(delegate: delegate)
+            return true
+        }
+        
+        // Failure case - try committing first then retry
+        DebugLogger.log("Process failed")
+        
+        if !context.isEmpty() {
+            commitComposition(delegate: delegate)
+        }
+        
+        // Retry with clean context
+        if context.process(Int(charCode)) {
+            DebugLogger.log("Retry success")
+            updateComposition(delegate: delegate)
+            return true
+        }
+        
+        // Still failed - insert printable ASCII directly
+        if KeyCode.isPrintableASCII(charCode) {
+            DebugLogger.log("Retry failed, inserting printable char")
+            delegate.insertText(String(char))
+            return true
+        }
+        
+        DebugLogger.log("Retry failed, skipping non-printable char")
+        return false
     }
     
     /// Handle a keyboard event
@@ -223,7 +241,6 @@ public class HangulComposer {
     public func handle(_ event: NSEvent, delegate: HangulComposerDelegate) -> Bool {
         // Track delegate for external toggle calls
         self.lastDelegate = delegate
-
         
         // Only handle key down events
         if event.type != .keyDown {
@@ -241,15 +258,11 @@ public class HangulComposer {
                 DebugLogger.log("Composition committed before mode switch")
             }
             
-            // Toggle mode
-            inputMode = (inputMode == .korean) ? .english : .korean
-            StatusBarManager.shared.setMode(inputMode)
-            DebugLogger.log("Mode switched to: \(inputMode)")
-            
+            switchMode()
             return true  // Consume the event
         }
         
-        // English mode: handle auto-capitalize and double-space period (macOS-aligned)
+        // English mode: delegate to TextConvenienceHandler
         if inputMode == .english {
             DebugLogger.log("English mode")
             
@@ -257,53 +270,8 @@ public class HangulComposer {
                 return false
             }
             
-            // Handle space key
-            if char == " " {
-                let now = CFAbsoluteTimeGetCurrent()
-                let isDoubleTap = (now - lastSpaceTime) < doubleSpaceThreshold
-                lastSpaceTime = now
-                
-                // Double-space period: Only if enabled, just typed space, AND fast enough
-                if ConfigurationManager.shared.doubleSpacePeriodEnabled && lastCharacterWasSpace && isDoubleTap {
-                    // Check context to confirm valid double-space condition
-                    // We need to look back: [WordChar] [Space] [Cursor]
-                    // Since the first space was already committed, the cursor is AFTER the space.
-                    // So textBeforeCursor(1) should be " ".
-                    // textBeforeCursor(2) should be "X " (X is word char).
-                    
-                    if let context = delegate.textBeforeCursor(length: 2),
-                       context.hasSuffix(" ") {
-                        let preSpaceChar = context.dropLast().last
-                        if let lastChar = preSpaceChar, (lastChar.isLetter || lastChar.isNumber) {
-                            // Valid double-space condition!
-                            // Replace previous space (length 1) with ". "
-                            delegate.replaceTextBeforeCursor(length: 1, with: ". ")
-                            lastCharacterWasSpace = false
-                            DebugLogger.log("Double-space -> period (Context validated, Replaced)")
-                            return true
-                        }
-                    }
-                }
-                
-                // Normal space handling - immediate commit (let system handle it)
-                lastCharacterWasSpace = true
-                return false
-            }
-            
-            // Non-space character handling
-            lastCharacterWasSpace = false
-            
-            // Auto-capitalize: Only if enabled
-            if ConfigurationManager.shared.autoCapitalizeEnabled && char.isLetter {
-                if shouldAutoCapitalize(delegate: delegate) {
-                    let uppercased = String(char).uppercased()
-                    delegate.insertText(uppercased)
-                    DebugLogger.log("Auto-capitalized: \(char) -> \(uppercased)")
-                    return true
-                }
-            }
-            
-            return false  // Pass through to system
+            let result = textConvenience.handleEnglishModeInput(char: char, delegate: delegate)
+            return result == .handled
         }
         
         // Pass through if modifiers (Command, Control, Option) are present
@@ -333,93 +301,9 @@ public class HangulComposer {
         let keyCode = event.keyCode
 
         
-        // 1. Check for Special Keys
-        // Return / Enter
-        if keyCode == KeyCode.return || keyCode == KeyCode.numpadEnter {
-             DebugLogger.log("Return key -> commit")
-             commitComposition(delegate: delegate)
-             // Return true to consume if we want to handle newline ourselves,
-             // or return false to let system insert newline. 
-             // Usually, committing is enough, and we let system do newline.
-             return false 
-        }
-        
-        // Escape
-        if keyCode == KeyCode.escape {
-             DebugLogger.log("Escape -> cancel")
-             cancelComposition(delegate: delegate)
-             return true
-        }
-        
-        // Space
-        if keyCode == KeyCode.space {
-            let now = CFAbsoluteTimeGetCurrent()
-            let isDoubleTap = (now - lastSpaceTime) < doubleSpaceThreshold
-            lastSpaceTime = now
-            
-            // Double-space period: Only if enabled, just typed space, AND fast enough
-            if ConfigurationManager.shared.doubleSpacePeriodEnabled && lastCharacterWasSpace && isDoubleTap {
-                // Check context to confirm valid double-space condition in Korean mode
-                // Need to look back: [WordChar/Hangul] [Space] [Cursor]
-                if let context = delegate.textBeforeCursor(length: 2),
-                   context.hasSuffix(" ") {
-                    let preSpaceChar = context.dropLast().last
-                    if let lastChar = preSpaceChar,
-                       (lastChar.isLetter || lastChar.isNumber || isHangul(lastChar)) {
-                        // Valid double-space condition!
-                        // Replace previous space (length 1) with ". "
-                        delegate.replaceTextBeforeCursor(length: 1, with: ". ")
-                        lastCharacterWasSpace = false
-                        DebugLogger.log("Double-space -> period (Korean mode, Context validated, Replaced)")
-                        return true
-                    }
-                }
-            }
-            
-            DebugLogger.log("Space -> flush and space")
-            commitComposition(delegate: delegate)
-            
-            // Pending space logic removed - Immediate commit
-            lastCharacterWasSpace = true
-            return false // Let system handle space insertion
-        }
-        
-        // Non-space: No pending space to commit (already committed)
-        lastCharacterWasSpace = false
-        
-        // 방향키 - 조합 커밋 후 시스템에 전달
-        if keyCode == KeyCode.leftArrow || keyCode == KeyCode.rightArrow ||
-           keyCode == KeyCode.upArrow || keyCode == KeyCode.downArrow {
-            DebugLogger.log("Arrow key -> commit and pass to system")
-            commitComposition(delegate: delegate)
-            return false // 시스템이 커서 이동 처리
-        }
-        
-        // Tab 키 - 조합 커밋 후 시스템에 전달
-        if keyCode == KeyCode.tab {
-            DebugLogger.log("Tab key -> commit")
-            commitComposition(delegate: delegate)
-            return false
-        }
-        
-        // Backspace
-        if keyCode == KeyCode.backspace {
-            DebugLogger.log("Backspace")
-            // If composing, try to backspace within engine
-            if !context.isEmpty() {
-                 if context.backspace() {
-                     DebugLogger.log("Engine backspace success")
-                     updateComposition(delegate: delegate)
-                     return true
-                 } else {
-                     // Empty context after backspace? reset UI
-                     DebugLogger.log("Engine backspace caused empty")
-                     updateComposition(delegate: delegate)
-                     return true
-                 }
-            }
-            // If not composing, return false to let system delete previous char
-            return false
+        // Handle special keys (Return, Escape, Space, Arrow, Tab, Backspace)
+        if let result = handleSpecialKey(keyCode: keyCode, delegate: delegate) {
+            return result
         }
         
         // 2. Alphanumeric Keys (Typing)
@@ -429,14 +313,10 @@ public class HangulComposer {
         DebugLogger.log("Handle key: \(inputCharacters) code: \(keyCode)")
         
         // Filter: If input contains non-printable characters (e.g., function keys, arrows)
-        // Return false to pass to system. Function keys often have charCode > 63000.
-        // Printable ASCII is 32-126. We also allow extended for international.
-        // However, we must NOT process function key codes at all.
+        // Return false to pass to system.
         if let firstScalar = inputCharacters.unicodeScalars.first {
-            let firstCharCode = Int(firstScalar.value)
-            // Function keys and special keys have very high char codes (> 63000)
-            // or are control characters (< 32, except for special handling)
-            if firstCharCode >= 63000 || (firstCharCode < 32 && firstCharCode != 9 && firstCharCode != 10 && firstCharCode != 13) {
+            let firstCharCode = UInt32(firstScalar.value)
+            if KeyCode.shouldPassThrough(firstCharCode) {
                 DebugLogger.log("Non-printable key detected, passing to system")
                 return false
             }
@@ -445,58 +325,12 @@ public class HangulComposer {
         var handledAtLeastOnce = false
         
         for char in inputCharacters.unicodeScalars {
-            let charCode = Int(char.value)
-            
-            // Skip non-printable characters in the loop as well
-            if charCode >= 63000 || (charCode < 32 && charCode != 9 && charCode != 10 && charCode != 13) {
-                continue
-            }
-            
-            // Check if standard typing range (approx)
-            // ASCII 33-126 are printable. 
-            // In Hangul mode, we map mapped keys.
-            // If it's a typing key, we MUST consume it (return true).
-            // Fallback: If libhangul fails, we insert it manually.
-            
-            DebugLogger.log("Processing char code: \(charCode)")
-            
-            // Primary attempt
-            if context.process(charCode) {
-                DebugLogger.log("Process success")
+            if processCharacter(char, delegate: delegate) {
                 handledAtLeastOnce = true
-                updateComposition(delegate: delegate)
-            } else {
-                // Failure case (e.g. invalid key for engine, or boundary)
-                DebugLogger.log("Process failed")
-                
-                // If we have composition, commit it first (boundary case)
-                if !context.isEmpty() {
-                    commitComposition(delegate: delegate)
-                }
-                
-                // Retry with clean context
-                if context.process(charCode) {
-                     DebugLogger.log("Retry success")
-                     handledAtLeastOnce = true
-                     updateComposition(delegate: delegate)
-                } else {
-                     // Still failed. It's an unprocessable char (e.g. maybe symbol not in map).
-                     // ONLY insert if it's a printable character (32-126 or extended)
-                     if charCode >= 32 && charCode < 127 {
-                         DebugLogger.log("Retry failed, inserting printable char")
-                         delegate.insertText(String(char))
-                         handledAtLeastOnce = true
-                     } else {
-                         // Non-printable, skip insertion but still mark as handled
-                         // to avoid leakage to system
-                         DebugLogger.log("Retry failed, skipping non-printable char")
-                     }
-                }
             }
         }
         
-        // If we processed anything, we return true to stop system from handling it duplicates.
-        // We assume standard typing keys are processed.
+        // If we processed anything, we return true to stop system from handling duplicates.
         return handledAtLeastOnce
     }
     
@@ -506,28 +340,13 @@ public class HangulComposer {
         
         // If there is committed text, insert it first
         if !commit.isEmpty {
-            let commitStr = String(commit.compactMap { UnicodeScalar($0) }.map { Character($0) })
+            let commitStr = CompositionHelpers.convertToString(commit)
             delegate.insertText(commitStr.precomposedStringWithCanonicalMapping)
         }
         
         // Update preedit text
         if !preedit.isEmpty {
-            // Normalize: Map to Compatibility Jamo for better display (Windows-style)
-            let scs = preedit.compactMap { UnicodeScalar($0) }
-            let mapped = scs.map { scalar in
-                 let val = scalar.value
-                 // 1. Try standard helper (covers Choseong/Jungseong)
-                 let stdMapped = HangulCharacter.jamoToCJamo(val)
-                 if stdMapped != val { return UnicodeScalar(stdMapped) ?? scalar }
-                 
-                 // 2. Use unified JamoMapper for all Jamo types
-                 if let compat = JamoMapper.toCompatibilityJamo(val) {
-                     return UnicodeScalar(compat) ?? scalar
-                 }
-                 
-                 return scalar
-            }
-            let preeditStr = String(mapped.map { Character($0) })
+            let preeditStr = CompositionHelpers.normalizeJamoForDisplay(preedit)
             delegate.setMarkedText(preeditStr)
         } else {
              delegate.setMarkedText("")
@@ -537,7 +356,7 @@ public class HangulComposer {
     private func commitComposition(delegate: HangulComposerDelegate) {
         // Flush context
         let flushed = context.flush()
-        let commitStr = String(flushed.compactMap { UnicodeScalar($0) }.map { Character($0) })
+        let commitStr = CompositionHelpers.convertToString(flushed)
         
         DebugLogger.log("commitComposition: flushed=\(flushed), str='\(commitStr)'")
         

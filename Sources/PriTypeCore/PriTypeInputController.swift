@@ -5,11 +5,17 @@ import LibHangul
 @objc(PriTypeInputController)
 public class PriTypeInputController: IMKInputController {
     
-    // Shared composer for EventTapManager access
+    // MARK: - Shared State
+    // These static properties are accessed only from the main thread via IMK callbacks.
+    // nonisolated(unsafe) is required for Swift 6 strict concurrency, but is safe because:
+    // 1. IMKInputController lifecycle is managed by InputMethodKit on main thread
+    // 2. All access happens through IMK callbacks which are main-thread-only
+    
+    /// Shared composer for EventTapManager access
     nonisolated(unsafe) public static let sharedComposer = HangulComposer()
     private var composer: HangulComposer { Self.sharedComposer }
     
-    // Keep last active controller for toggle access
+    /// Keep last active controller for toggle access
     nonisolated(unsafe) public static weak var sharedController: PriTypeInputController?
     
     // Strong reference to prevent client being released during rapid switching
@@ -18,8 +24,11 @@ public class PriTypeInputController: IMKInputController {
     // Keep adapter alive for external toggle calls
     private var lastAdapter: (any HangulComposerDelegate)?
     
-    // Adapter class to bridge IMKTextInput calls to HangulComposerDelegate
-    private class ClientAdapter: NSObject, HangulComposerDelegate {
+    // MARK: - Adapter Classes
+    
+    /// Base adapter class with common IMKTextInput operations
+    /// Subclasses override setMarkedText for different behaviors
+    private class BaseClientAdapter: NSObject, HangulComposerDelegate {
         let client: IMKTextInput
         
         init(client: IMKTextInput) {
@@ -32,26 +41,16 @@ public class PriTypeInputController: IMKInputController {
         }
         
         func setMarkedText(_ text: String) {
-            // Use NSAttributedString with underline style for native cursor appearance
-            let attributes: [NSAttributedString.Key: Any] = [
-                .underlineStyle: NSUnderlineStyle.single.rawValue,
-                .underlineColor: NSColor.textColor
-            ]
-            let attributed = NSAttributedString(string: text, attributes: attributes)
-            client.setMarkedText(attributed, selectionRange: NSRange(location: text.count, length: 0), replacementRange: NSRange(location: NSNotFound, length: NSNotFound))
+            // Default: no-op, subclasses override
         }
         
         func textBeforeCursor(length: Int) -> String? {
-            // Get the selection range (cursor position)
             let selRange = client.selectedRange()
             guard selRange.location != NSNotFound else { return nil }
             
-            // Calculate range to read
             let location = max(0, selRange.location - length)
             let actualLength = selRange.location - location
-            guard actualLength > 0 else {
-                return nil // Start of document, treat as empty context
-            }
+            guard actualLength > 0 else { return nil }
             
             let charRange = NSRange(location: location, length: actualLength)
             return client.attributedSubstring(from: charRange)?.string
@@ -59,40 +58,29 @@ public class PriTypeInputController: IMKInputController {
         
         func replaceTextBeforeCursor(length: Int, with text: String) {
             let selRange = client.selectedRange()
-            guard selRange.location != NSNotFound && selRange.location >= length else {
-                return 
-            }
+            guard selRange.location != NSNotFound && selRange.location >= length else { return }
             
             let replacementRange = NSRange(location: selRange.location - length, length: length)
             client.insertText(text, replacementRange: replacementRange)
         }
     }
     
-    // Adapter for Finder non-text areas - skips setMarkedText to avoid floating window
-    private class ImmediateModeAdapter: NSObject, HangulComposerDelegate {
-        let client: IMKTextInput
-        
-        init(client: IMKTextInput) {
-            self.client = client
+    /// Standard adapter with underlined marked text for composition display
+    private final class ClientAdapter: BaseClientAdapter {
+        override func setMarkedText(_ text: String) {
+            let attributes: [NSAttributedString.Key: Any] = [
+                .underlineStyle: NSUnderlineStyle.single.rawValue,
+                .underlineColor: NSColor.textColor
+            ]
+            let attributed = NSAttributedString(string: text, attributes: attributes)
+            client.setMarkedText(attributed, selectionRange: NSRange(location: text.count, length: 0), replacementRange: NSRange(location: NSNotFound, length: NSNotFound))
         }
-        
-        func insertText(_ text: String) {
-            guard !text.isEmpty else { return }
-            client.insertText(text, replacementRange: NSRange(location: NSNotFound, length: NSNotFound))
-        }
-        
-        func setMarkedText(_ text: String) {
-            // Intentionally skip setMarkedText to prevent floating window
-            // Characters will be committed immediately via insertText
-        }
-        
-        func textBeforeCursor(length: Int) -> String? {
-            return nil // Not needed for immediate mode
-        }
-        
-        func replaceTextBeforeCursor(length: Int, with text: String) {
-            // Not supported in immediate mode
-        }
+    }
+    
+    /// Immediate mode adapter for non-text contexts (e.g., Finder desktop)
+    /// Skips setMarkedText to prevent floating composition window
+    private final class ImmediateModeAdapter: BaseClientAdapter {
+        // Inherits no-op setMarkedText from base class
     }
     
     // 입력기가 활성화될 때 호출 - 새 세션 시작
@@ -111,7 +99,7 @@ public class PriTypeInputController: IMKInputController {
         composer.updateKeyboardLayout(id: currentLayoutId)
         
         // Observe layout changes
-        NotificationCenter.default.addObserver(self, selector: #selector(handleLayoutChange), name: Notification.Name("PriTypeKeyboardLayoutChanged"), object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(handleLayoutChange), name: .keyboardLayoutChanged, object: nil)
     }
     
     override public func deactivateServer(_ sender: Any!) {
@@ -123,7 +111,7 @@ public class PriTypeInputController: IMKInputController {
         super.deactivateServer(sender)
         // 클라이언트 참조 해제
         lastClient = nil
-        NotificationCenter.default.removeObserver(self, name: Notification.Name("PriTypeKeyboardLayoutChanged"), object: nil)
+        NotificationCenter.default.removeObserver(self, name: .keyboardLayoutChanged, object: nil)
     }
     
     @objc private func handleLayoutChange() {
@@ -159,20 +147,20 @@ public class PriTypeInputController: IMKInputController {
         let bundleId = client.bundleIdentifier() ?? ""
         
         if bundleId == "com.apple.finder" {
-            // Finder Detection Heuristic:
-            // 1. Finder Desktop/File List (Non-editable): Returns internal window coordinates.
-            //    - firstRect.origin.y is consistently small (e.g., 20.0 or 6.0).
-            // 2. Finder Search Bar/Rename (Editable): Returns actual screen coordinates.
+            // Improved Finder Detection:
+            // Primary: validAttributesForMarkedText - empty means no text input capability
+            // Secondary: Coordinate heuristic as fallback
             
+            let validAttrs = client.validAttributesForMarkedText() ?? []
+            let hasTextInputCapability = validAttrs.count > 0
+            
+            // Fallback: Coordinate-based heuristic (for edge cases)
             let firstRect = client.firstRect(forCharacterRange: NSRange(location: 0, length: 0), actualRange: nil)
+            let isLikelyDesktop = firstRect.origin.x < PriTypeConfig.finderDesktopThreshold && firstRect.origin.y < PriTypeConfig.finderDesktopThreshold
             
-            // FirstRect log showed consistent (5.0, 20.0).
-            // We use 50.0 as a safe threshold (2.5x margin) to avoid false positives 
-            // while minimizing the "blind zone" for real bottom-left files.
-            let isLikelyDesktop = firstRect.origin.x < 50 && firstRect.origin.y < 50
-            
-            if isLikelyDesktop {
-                // Desktop/File List: Use ImmediateMode to prevent floating window
+            // Use immediate mode if: no text input capability OR likely desktop area
+            if !hasTextInputCapability || isLikelyDesktop {
+                DebugLogger.log("Finder: ImmediateMode (validAttrs=\(validAttrs.count), firstRect=\(firstRect.origin))")
                 lastClient = client
                 lastAdapter = ImmediateModeAdapter(client: client)
                 return composer.handle(event, delegate: lastAdapter!)
@@ -185,10 +173,7 @@ public class PriTypeInputController: IMKInputController {
         lastAdapter = ClientAdapter(client: client)
         
         return composer.handle(event, delegate: lastAdapter!)
-    }        
-
-    
-
+    }
     
     // 마우스 클릭 등으로 조합 영역 외부 클릭 시 조합 커밋
     override public func commitComposition(_ sender: Any!) {
@@ -230,10 +215,6 @@ public class PriTypeInputController: IMKInputController {
     @MainActor
     @objc private func showAbout(_ sender: Any?) {
         DebugLogger.log("Showing about")
-        let alert = NSAlert()
-        alert.messageText = "PriType"
-        alert.informativeText = "macOS용 한글 입력기\n\n버전: 1.0\n© 2025"
-        alert.alertStyle = .informational
-        alert.runModal()
+        AboutInfo.showAlert()
     }
 }
