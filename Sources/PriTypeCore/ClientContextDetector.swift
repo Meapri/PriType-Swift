@@ -68,22 +68,44 @@ public struct ClientContextDetector: Sendable {
     /// - Parameter client: The text input client to analyze
     /// - Returns: A `ClientContext` containing the analysis results
     public static func analyze(client: IMKTextInput) -> ClientContext {
-        let bundleId = client.bundleIdentifier() ?? ""
+        // 1. FAST PATH: Check active application Bundle ID
+        // Using NSWorkspace is generally faster and safer than generic IPC calls on the client
+        var bundleId = client.bundleIdentifier() ?? ""
+        if bundleId.isEmpty, let app = NSWorkspace.shared.frontmostApplication {
+            bundleId = app.bundleIdentifier ?? ""
+        }
         
+        let isFinder = (bundleId == "com.apple.finder")
+        
+        // 2. Capabilities Check (Required for both Finder and standard apps)
         // Check text input capability via validAttributesForMarkedText
         let validAttrs = client.validAttributesForMarkedText() ?? []
         let hasTextInputCapability = validAttrs.count > 0
         
-        // Coordinate-based heuristic for desktop detection
-        let firstRect = client.firstRect(
-            forCharacterRange: NSRange(location: 0, length: 0),
-            actualRange: nil
-        )
-        let isLikelyDesktopArea = firstRect.origin.x < PriTypeConfig.finderDesktopThreshold &&
-                                   firstRect.origin.y < PriTypeConfig.finderDesktopThreshold
-        
-        // Check for secure input mode (password fields)
+        // 3. SECURE INPUT CHECK (Fastest exit for password fields)
         let isSecureInputActive = IsSecureEventInputEnabled()
+        if isSecureInputActive {
+            return ClientContext(
+                bundleId: bundleId,
+                hasTextInputCapability: hasTextInputCapability,
+                isLikelyDesktopArea: false, // Irrelevant in secure mode
+                isSecureInputActive: true
+            )
+        }
+        
+        // 4. CONDITIONAL HEURISTIC: Coordinate check ONLY for Finder
+        // This prevents false positives in other apps (e.g. Safari tabs at top of screen)
+        var isLikelyDesktopArea = false
+        if isFinder {
+            // Coordinate-based heuristic for desktop detection
+            let firstRect = client.firstRect(
+                forCharacterRange: NSRange(location: 0, length: 0),
+                actualRange: nil
+            )
+            // Check if input area is suspiciously close to top-left (typical for Finder's dummy window)
+            isLikelyDesktopArea = firstRect.origin.x < PriTypeConfig.finderDesktopThreshold &&
+                                   firstRect.origin.y < PriTypeConfig.finderDesktopThreshold
+        }
         
         return ClientContext(
             bundleId: bundleId,
