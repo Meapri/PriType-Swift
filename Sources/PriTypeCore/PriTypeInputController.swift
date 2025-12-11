@@ -1,6 +1,7 @@
 import Cocoa
 import InputMethodKit
 import LibHangul
+import Carbon.HIToolbox
 
 @objc(PriTypeInputController)
 public class PriTypeInputController: IMKInputController {
@@ -134,12 +135,12 @@ public class PriTypeInputController: IMKInputController {
         // Debug: Log all incoming events to diagnose Caps Lock issue
         DebugLogger.log("InputController.handle() event type: \(event.type.rawValue) keyCode: \(event.keyCode)")
         
-        // Efficient Secure Input Detection
-        // If the client doesn't report a valid selection range (NSNotFound),
-        // it likely means it's a password field or doesn't support IM text manipulation.
-        // In this case, we pass the event through to let the system handle raw input.
-        if client.selectedRange().location == NSNotFound {
-            DebugLogger.log("Invalid selection range (Secure Input?), passing through")
+        // Secure Input Detection using system-level API
+        // IsSecureEventInputEnabled() returns true when password fields are active
+        // This is more reliable than selectedRange check and allows games like Minecraft
+        // to receive Korean input (they don't use Secure Input mode)
+        if IsSecureEventInputEnabled() {
+            DebugLogger.log("Secure Input Mode active (password field), passing through")
             return false
         }      
         
