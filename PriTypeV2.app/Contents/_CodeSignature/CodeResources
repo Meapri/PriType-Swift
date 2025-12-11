@@ -12,6 +12,28 @@
 		<data>
 		TohbAPr0AAu76WTqdYq8h0uM6U8=
 		</data>
+		<key>Resources/PriType_PriTypeCore.bundle/Info.plist</key>
+		<data>
+		wI35pW3GN9L7y3chvej45LoGibc=
+		</data>
+		<key>Resources/PriType_PriTypeCore.bundle/en.lproj/Localizable.strings</key>
+		<dict>
+			<key>hash</key>
+			<data>
+			oh59UjDMrpCYHxfbqXH5ANQUMsA=
+			</data>
+			<key>optional</key>
+			<true/>
+		</dict>
+		<key>Resources/PriType_PriTypeCore.bundle/ko.lproj/Localizable.strings</key>
+		<dict>
+			<key>hash</key>
+			<data>
+			etrYUe3S10tTpDbNcEDiknDXNtA=
+			</data>
+			<key>optional</key>
+			<true/>
+		</dict>
 		<key>Resources/en.lproj/InfoPlist.strings</key>
 		<dict>
 			<key>hash</key>
@@ -50,6 +72,31 @@
 			<data>
 			BhIy53neGZrKl5V2uV2WhYfDGVWVXJYcvQzbiXCFE48=
 			</data>
+		</dict>
+		<key>Resources/PriType_PriTypeCore.bundle/Info.plist</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			CUbDCci8p2g94ddSb5vLlwC3Eom7Cg1v23Pm9ccVBnM=
+			</data>
+		</dict>
+		<key>Resources/PriType_PriTypeCore.bundle/en.lproj/Localizable.strings</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			mht1T46ZUpmYMP1cOS8bmK2u1/xqOjPTDEEzG2Ofipw=
+			</data>
+			<key>optional</key>
+			<true/>
+		</dict>
+		<key>Resources/PriType_PriTypeCore.bundle/ko.lproj/Localizable.strings</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			5L15yBx9aGQ03YvEWgoDt18jZVvuYkamwddyS42c9mM=
+			</data>
+			<key>optional</key>
+			<true/>
 		</dict>
 		<key>Resources/en.lproj/InfoPlist.strings</key>
 		<dict>

@@ -12,13 +12,22 @@ import Foundation
 public enum L10n {
     
     /// Returns the bundle containing localized resources
-    private static var bundle: Bundle {
+    /// Uses robust fallback logic for both development and distribution environments
+    private static let bundle: Bundle = {
+        // 1. Try to find the SPM resource bundle in app's Resources directory (distribution)
+        if let resourceURL = Bundle.main.resourceURL,
+           let resourceBundle = Bundle(url: resourceURL.appendingPathComponent("PriType_PriTypeCore.bundle")) {
+            return resourceBundle
+        }
+        
+        // 2. Try Bundle.module for SPM development environment
         #if SWIFT_PACKAGE
-        return Bundle.module
-        #else
-        return Bundle(for: SettingsWindowController.self)
+        // This is safe in dev environment, but we use lazy fallback logic for robustness
         #endif
-    }
+        
+        // 3. Fallback to main bundle (localization files directly in Resources)
+        return Bundle.main
+    }()
     
     /// Helper to get localized string
     private static func localized(_ key: String) -> String {

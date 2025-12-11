@@ -23,6 +23,14 @@ cp -R Resources/* build_dist/Contents/Resources/ || true
 cp "AppIcon.icns" build_dist/Contents/Resources/ 2>/dev/null || true
 cp "icon.tiff" build_dist/Contents/Resources/ 2>/dev/null || true
 
+# Copy Swift Package Manager resource bundle (required for Bundle.module / L10n)
+if [ -d ".build/release/PriType_PriTypeCore.bundle" ]; then
+    cp -R ".build/release/PriType_PriTypeCore.bundle" build_dist/Contents/Resources/
+    echo "Copied PriType_PriTypeCore.bundle"
+else
+    echo "Warning: PriType_PriTypeCore.bundle not found"
+fi
+
 
 # Rename to .app
 rm -rf "$APP_BUNDLE"
