@@ -29,6 +29,43 @@ public extension Notification.Name {
     static let keyboardLayoutChanged = Notification.Name("PriTypeKeyboardLayoutChanged")
 }
 
+// MARK: - ConfigurationProviding Protocol
+
+/// Protocol for accessing configuration settings
+///
+/// This protocol enables dependency injection for configuration access,
+/// improving testability by allowing mock implementations in tests.
+///
+/// ## Usage
+/// ```swift
+/// class MyClass {
+///     private let config: ConfigurationProviding
+///     
+///     init(config: ConfigurationProviding = ConfigurationManager.shared) {
+///         self.config = config
+///     }
+/// }
+/// ```
+public protocol ConfigurationProviding: AnyObject, Sendable {
+    /// The current keyboard layout identifier
+    var keyboardId: String { get set }
+    
+    /// The selected toggle key for switching between Korean and English
+    var toggleKey: ToggleKey { get set }
+    
+    /// Whether Right Command key is configured as the toggle key
+    var rightCommandAsToggle: Bool { get }
+    
+    /// Whether Control+Space is configured as the toggle key
+    var controlSpaceAsToggle: Bool { get }
+    
+    /// Whether to auto-capitalize first letter of sentences in English mode
+    var autoCapitalizeEnabled: Bool { get set }
+    
+    /// Whether double-space inserts a period
+    var doubleSpacePeriodEnabled: Bool { get set }
+}
+
 // MARK: - ConfigurationManager
 
 /// Manages persistent user configuration using UserDefaults
@@ -53,7 +90,7 @@ public extension Notification.Name {
 /// ## Thread Safety
 /// This class uses `UserDefaults` which is thread-safe for reading/writing.
 /// The class is marked `@unchecked Sendable` as UserDefaults provides the synchronization.
-public final class ConfigurationManager: @unchecked Sendable {
+public final class ConfigurationManager: ConfigurationProviding, @unchecked Sendable {
     
     // MARK: - Singleton
     

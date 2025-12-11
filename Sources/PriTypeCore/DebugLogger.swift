@@ -47,12 +47,19 @@ public final class DebugLogger: @unchecked Sendable {
     
     // MARK: - Public API
     
+    /// Cached date formatter for performance (avoid repeated allocations)
+    /// - Note: Access is serialized via logQueue, so nonisolated(unsafe) is safe here.
+    nonisolated(unsafe) private static let dateFormatter: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        return formatter
+    }()
+    
     /// Log a debug message to file with console fallback
     /// - Parameter msg: The message to log
     /// - Note: Thread-safe. Falls back to system console if file logging fails.
     /// - Important: This function is only available in DEBUG builds.
     public static func log(_ msg: String) {
-        let timestamp = ISO8601DateFormatter().string(from: Date())
+        let timestamp = dateFormatter.string(from: Date())
         let logMsg = "[\(timestamp)] \(msg)\n"
         
         logQueue.async {

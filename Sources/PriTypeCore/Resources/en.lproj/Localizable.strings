@@ -24,3 +24,9 @@
 
 /* About */
 "about.title" = "About";
+"about.description" = "Korean Input Method for macOS";
+"about.version" = "Version";
+
+/* App */
+"app.copyright" = "© 2025";
+"app.quit" = "Quit PriType";

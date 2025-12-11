@@ -70,7 +70,7 @@ public final class StatusBarManager: NSObject, StatusBarUpdating, @unchecked Sen
         
         menu.addItem(NSMenuItem.separator())
         
-        let quitItem = NSMenuItem(title: "PriType 종료", action: #selector(quitApp), keyEquivalent: "q")
+        let quitItem = NSMenuItem(title: L10n.app.quit, action: #selector(quitApp), keyEquivalent: "q")
         quitItem.target = self
         menu.addItem(quitItem)
         

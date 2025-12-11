@@ -7,16 +7,29 @@ import Carbon.HIToolbox
 public class PriTypeInputController: IMKInputController {
     
     // MARK: - Shared State
-    // These static properties are accessed only from the main thread via IMK callbacks.
-    // nonisolated(unsafe) is required for Swift 6 strict concurrency, but is safe because:
-    // 1. IMKInputController lifecycle is managed by InputMethodKit on main thread
-    // 2. All access happens through IMK callbacks which are main-thread-only
+    //
+    // THREAD SAFETY INVARIANTS:
+    // These static properties use `nonisolated(unsafe)` for Swift 6 strict concurrency compliance.
+    // This is safe because ALL access is guaranteed to occur on the main thread:
+    //
+    // 1. `sharedComposer`: Created once at startup, accessed only via:
+    //    - IMK callbacks (handle, commitComposition, etc.) - main thread only
+    //    - RightCommandSuppressor.onToggle - dispatches to main thread
+    //
+    // 2. `sharedController`: Read/written only in:
+    //    - activateServer() - IMK callback, main thread
+    //    - deactivateServer() - IMK callback, main thread
+    //
+    // These invariants are enforced by InputMethodKit's design and our callback dispatch.
+    // If you add new access patterns, ensure they maintain main-thread-only access.
     
-    /// Shared composer for EventTapManager access
+    /// Shared composer instance for toggle key handler access
+    /// - Warning: Access from main thread only. See THREAD SAFETY INVARIANTS above.
     nonisolated(unsafe) public static let sharedComposer = HangulComposer()
     private var composer: HangulComposer { Self.sharedComposer }
     
-    /// Keep last active controller for toggle access
+    /// Last active controller reference for external toggle access
+    /// - Warning: Access from main thread only. See THREAD SAFETY INVARIANTS above.
     nonisolated(unsafe) public static weak var sharedController: PriTypeInputController?
     
     // Strong reference to prevent client being released during rapid switching
@@ -135,39 +148,21 @@ public class PriTypeInputController: IMKInputController {
         // Debug: Log all incoming events to diagnose Caps Lock issue
         DebugLogger.log("InputController.handle() event type: \(event.type.rawValue) keyCode: \(event.keyCode)")
         
-        // Secure Input Detection using system-level API
-        // IsSecureEventInputEnabled() returns true when password fields are active
-        // This is more reliable than selectedRange check and allows games like Minecraft
-        // to receive Korean input (they don't use Secure Input mode)
-        if IsSecureEventInputEnabled() {
+        // Analyze client context using dedicated detector
+        let context = ClientContextDetector.analyze(client: client)
+        
+        // Secure Input Detection (password fields)
+        if context.shouldPassThrough {
             DebugLogger.log("Secure Input Mode active (password field), passing through")
             return false
-        }      
+        }
         
-        // MARK: - Finder-specific Detection
-        let bundleId = client.bundleIdentifier() ?? ""
-        
-        if bundleId == "com.apple.finder" {
-            // Improved Finder Detection:
-            // Primary: validAttributesForMarkedText - empty means no text input capability
-            // Secondary: Coordinate heuristic as fallback
-            
-            let validAttrs = client.validAttributesForMarkedText() ?? []
-            let hasTextInputCapability = validAttrs.count > 0
-            
-            // Fallback: Coordinate-based heuristic (for edge cases)
-            let firstRect = client.firstRect(forCharacterRange: NSRange(location: 0, length: 0), actualRange: nil)
-            let isLikelyDesktop = firstRect.origin.x < PriTypeConfig.finderDesktopThreshold && firstRect.origin.y < PriTypeConfig.finderDesktopThreshold
-            
-            // Use immediate mode if: no text input capability OR likely desktop area
-            if !hasTextInputCapability || isLikelyDesktop {
-                DebugLogger.log("Finder: ImmediateMode (validAttrs=\(validAttrs.count), firstRect=\(firstRect.origin))")
-                lastClient = client
-                lastAdapter = ImmediateModeAdapter(client: client)
-                return composer.handle(event, delegate: lastAdapter!)
-            }
-            
-            // Search Bar/Rename: Use ClientAdapter
+        // Finder-specific handling
+        if context.shouldUseImmediateMode {
+            DebugLogger.log("Finder: ImmediateMode (context=\(context))")
+            lastClient = client
+            lastAdapter = ImmediateModeAdapter(client: client)
+            return composer.handle(event, delegate: lastAdapter!)
         }
         
         lastClient = client

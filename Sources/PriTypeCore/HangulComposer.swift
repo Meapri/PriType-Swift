@@ -334,6 +334,14 @@ public class HangulComposer {
         return handledAtLeastOnce
     }
     
+    /// Updates the marked text and commits any finalized text
+    ///
+    /// This method retrieves the current preedit (composition in progress) and commit
+    /// strings from libhangul, then updates the delegate accordingly:
+    /// - Committed text is inserted immediately
+    /// - Preedit text replaces the current marked text
+    ///
+    /// - Parameter delegate: The delegate to receive composition updates
     private func updateComposition(delegate: HangulComposerDelegate) {
         let preedit = context.getPreeditString()
         let commit = context.getCommitString()
@@ -353,6 +361,13 @@ public class HangulComposer {
         }
     }
     
+    /// Commits the current composition by flushing the libhangul context
+    ///
+    /// Flushes all pending text from the context and inserts it as finalized text.
+    /// The committed string is normalized using precomposed canonical mapping to
+    /// ensure proper Unicode representation.
+    ///
+    /// - Parameter delegate: The delegate to receive the committed text
     private func commitComposition(delegate: HangulComposerDelegate) {
         // Flush context
         let flushed = context.flush()
@@ -367,6 +382,12 @@ public class HangulComposer {
         }
     }
 
+    /// Cancels the current composition without committing
+    ///
+    /// Resets the libhangul context and clears the marked text display.
+    /// Use this when the user explicitly cancels input (e.g., pressing Escape).
+    ///
+    /// - Parameter delegate: The delegate to receive the cleared state
     private func cancelComposition(delegate: HangulComposerDelegate) {
         context.reset()
         delegate.setMarkedText("")

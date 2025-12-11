@@ -63,5 +63,15 @@ public enum L10n {
     
     public enum about {
         public static var title: String { localized("about.title") }
+        public static var description: String { localized("about.description") }
+        public static var version: String { localized("about.version") }
+    }
+    
+    // MARK: - App
+    
+    public enum app {
+        public static var name: String { "PriType" }
+        public static var copyright: String { localized("app.copyright") }
+        public static var quit: String { localized("app.quit") }
     }
 }
