@@ -97,6 +97,12 @@ public class PriTypeInputController: IMKInputController {
         // Inherits no-op setMarkedText from base class
     }
     
+    // MARK: - State Management
+    
+    /// Cached client context to avoid expensive IPC calls on every keystroke
+    /// - Note: Calculated in `activateServer`, used in `handle`, cleared in `deactivateServer`
+    private var cachedContext: ClientContext?
+    
     // 입력기가 활성화될 때 호출 - 새 세션 시작
     override public func activateServer(_ sender: Any!) {
         super.activateServer(sender)
@@ -104,7 +110,16 @@ public class PriTypeInputController: IMKInputController {
         if let client = sender as? IMKTextInput {
             lastClient = client
             lastAdapter = ClientAdapter(client: client)
+            
+            // PERFORMANCE: Analyze context ONCE per session and cache it.
+            // This avoids heavy IPC calls (bundleId check, coordinate calculation) on every keystroke.
+            self.cachedContext = ClientContextDetector.analyze(client: client)
+            DebugLogger.log("Activated for client: \(self.cachedContext?.bundleId ?? "unknown") (Cached Context)")
+        } else {
+            // Fallback if sender is not IMKTextInput (rare)
+            self.cachedContext = nil
         }
+        
         // Set as active controller for toggle access
         Self.sharedController = self
         
@@ -125,6 +140,8 @@ public class PriTypeInputController: IMKInputController {
         super.deactivateServer(sender)
         // 클라이언트 참조 해제
         lastClient = nil
+        // Clear cached context to prevent stale state
+        cachedContext = nil
         NotificationCenter.default.removeObserver(self, name: .keyboardLayoutChanged, object: nil)
     }
     
@@ -148,8 +165,17 @@ public class PriTypeInputController: IMKInputController {
         // Debug: Log all incoming events to diagnose Caps Lock issue
         DebugLogger.log("InputController.handle() event type: \(event.type.rawValue) keyCode: \(event.keyCode)")
         
-        // Analyze client context using dedicated detector
-        let context = ClientContextDetector.analyze(client: client)
+        // PERFORMANCE: Use cached context if available, otherwise analyze (fallback)
+        // This dramatically reduces input latency by avoiding IPC on hot path.
+        let context: ClientContext
+        if let cached = self.cachedContext {
+            context = cached
+        } else {
+            // Fallback for edge cases where activateServer might not have populated cache
+            DebugLogger.log("Warning: cachedContext is nil in handle(), performing analysis (Slow Path)")
+            context = ClientContextDetector.analyze(client: client)
+            self.cachedContext = context // Cache it for subsequent events
+        }
         
         // Secure Input Detection (password fields)
         if context.shouldPassThrough {
