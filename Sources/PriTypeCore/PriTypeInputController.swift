@@ -10,26 +10,25 @@ public class PriTypeInputController: IMKInputController {
     //
     // THREAD SAFETY INVARIANTS:
     // These static properties use `nonisolated(unsafe)` for Swift 6 strict concurrency compliance.
-    // This is safe because ALL access is guaranteed to occur on the main thread:
     //
-    // 1. `sharedComposer`: Created once at startup, accessed only via:
-    //    - IMK callbacks (handle, commitComposition, etc.) - main thread only
-    //    - RightCommandSuppressor.onToggle - dispatches to main thread
+    // WHY NOT @MainActor?
+    // IMKInputController callbacks (handle, activateServer, etc.) are NOT @MainActor-isolated.
+    // Swift 6 compiler would reject @MainActor property access from these callbacks.
     //
-    // 2. `sharedController`: Read/written only in:
-    //    - activateServer() - IMK callback, main thread
-    //    - deactivateServer() - IMK callback, main thread
+    // IMK guarantees main thread execution by design:
+    // 1. `sharedComposer`: Created once at startup, accessed only via IMK callbacks
+    // 2. `sharedController`: Read/written only in activateServer/deactivateServer
     //
-    // These invariants are enforced by InputMethodKit's design and our callback dispatch.
-    // If you add new access patterns, ensure they maintain main-thread-only access.
+    // This is a documented limitation of integrating Swift 6 strict concurrency with
+    // legacy Objective-C frameworks like InputMethodKit.
     
     /// Shared composer instance for toggle key handler access
-    /// - Warning: Access from main thread only. See THREAD SAFETY INVARIANTS above.
+    /// - Warning: Access from main thread only (guaranteed by IMK, not compiler-enforced)
     nonisolated(unsafe) public static let sharedComposer = HangulComposer()
     private var composer: HangulComposer { Self.sharedComposer }
     
     /// Last active controller reference for external toggle access
-    /// - Warning: Access from main thread only. See THREAD SAFETY INVARIANTS above.
+    /// - Warning: Access from main thread only (guaranteed by IMK, not compiler-enforced)
     nonisolated(unsafe) public static weak var sharedController: PriTypeInputController?
     
     // Strong reference to prevent client being released during rapid switching
