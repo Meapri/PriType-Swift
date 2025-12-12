@@ -197,7 +197,7 @@ public class HangulComposer {
         DebugLogger.log("Processing char code: \(charCode)")
         
         // Primary attempt
-        if context.process(Int(charCode)) {
+        if context.process(Character(char)) {
             DebugLogger.log("Process success")
             updateComposition(delegate: delegate)
             return true
@@ -211,7 +211,7 @@ public class HangulComposer {
         }
         
         // Retry with clean context
-        if context.process(Int(charCode)) {
+        if context.process(Character(char)) {
             DebugLogger.log("Retry success")
             updateComposition(delegate: delegate)
             return true
