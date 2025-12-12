@@ -1,6 +1,7 @@
 import Foundation
 import Cocoa
 import PriTypeCore
+import LibHangul
 
 class MockDelegate: HangulComposerDelegate {
     var markedText: String = ""
@@ -311,11 +312,12 @@ func verify() {
         exit(1)
     }
     
-    // Test 11: JamoMapper utility functions
-    print("\nTest 11: JamoMapper utilities")
+    // Test 11: HangulCharacter (from LibHangul) utility functions
+    print("\nTest 11: HangulCharacter (LibHangul) utilities")
     
+    // Note: Using LibHangul.HangulCharacter instead of JamoMapper
     // Test isChoseong
-    if JamoMapper.isChoseong(0x1100) && JamoMapper.isChoseong(0x1112) && !JamoMapper.isChoseong(0x1161) {
+    if HangulCharacter.isChoseong(0x1100) && HangulCharacter.isChoseong(0x1112) && !HangulCharacter.isChoseong(0x1161) {
         print("PASS: isChoseong works correctly")
     } else {
         print("FAIL: isChoseong")
@@ -323,7 +325,7 @@ func verify() {
     }
     
     // Test isJungseong
-    if JamoMapper.isJungseong(0x1161) && JamoMapper.isJungseong(0x1175) && !JamoMapper.isJungseong(0x11A8) {
+    if HangulCharacter.isJungseong(0x1161) && HangulCharacter.isJungseong(0x1175) && !HangulCharacter.isJungseong(0x11A8) {
         print("PASS: isJungseong works correctly")
     } else {
         print("FAIL: isJungseong")
@@ -331,20 +333,20 @@ func verify() {
     }
     
     // Test isJongseong
-    if JamoMapper.isJongseong(0x11A8) && JamoMapper.isJongseong(0x11C2) && !JamoMapper.isJongseong(0x1100) {
+    if HangulCharacter.isJongseong(0x11A8) && HangulCharacter.isJongseong(0x11C2) && !HangulCharacter.isJongseong(0x1100) {
         print("PASS: isJongseong works correctly")
     } else {
         print("FAIL: isJongseong")
         exit(1)
     }
     
-    // Test toCompatibilityJamo
-    if JamoMapper.toCompatibilityJamo(0x1100) == 0x3131 && // ㄱ (choseong)
-       JamoMapper.toCompatibilityJamo(0x1161) == 0x314F && // ㅏ (jungseong)
-       JamoMapper.toCompatibilityJamo(0x11A8) == 0x3131 {  // ㄱ (jongseong)
-        print("PASS: toCompatibilityJamo works correctly")
+    // Test jamoToCJamo (replaces JamoMapper.toCompatibilityJamo)
+    if HangulCharacter.jamoToCJamo(0x1100) == 0x3131 && // ㄱ (choseong)
+       HangulCharacter.jamoToCJamo(0x1161) == 0x314F && // ㅏ (jungseong)
+       HangulCharacter.jamoToCJamo(0x11A8) == 0x3131 {  // ㄱ (jongseong)
+        print("PASS: jamoToCJamo works correctly")
     } else {
-        print("FAIL: toCompatibilityJamo")
+        print("FAIL: jamoToCJamo")
         exit(1)
     }
     

@@ -29,19 +29,9 @@ public struct CompositionHelpers: Sendable {
         let scalars = preedit.compactMap { UnicodeScalar($0) }
         let mapped = scalars.map { scalar -> UnicodeScalar in
             let val = scalar.value
-            
-            // 1. Try standard helper (covers Choseong/Jungseong)
-            let stdMapped = HangulCharacter.jamoToCJamo(val)
-            if stdMapped != val {
-                return UnicodeScalar(stdMapped) ?? scalar
-            }
-            
-            // 2. Use unified JamoMapper for all Jamo types
-            if let compat = JamoMapper.toCompatibilityJamo(val) {
-                return UnicodeScalar(compat) ?? scalar
-            }
-            
-            return scalar
+            // HangulCharacter.jamoToCJamo handles Choseong, Jungseong, AND Jongseong
+            let cJamo = HangulCharacter.jamoToCJamo(val)
+            return UnicodeScalar(cJamo) ?? scalar
         }
         return String(mapped.map { Character($0) })
     }
