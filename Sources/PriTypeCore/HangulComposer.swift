@@ -40,6 +40,9 @@ public class HangulComposer {
     /// Status bar updater (injected for testability)
     private let statusBar: StatusBarUpdating
     
+    /// Configuration provider (injected for testability)
+    private let configuration: ConfigurationProviding
+    
     // MARK: - Private Properties
     
     /// Track last delegate for external toggle calls
@@ -61,9 +64,15 @@ public class HangulComposer {
     // MARK: - Initialization
     
     /// Creates a new HangulComposer with default settings
-    /// - Parameter statusBar: Status bar updater (defaults to shared manager)
-    public init(statusBar: StatusBarUpdating = StatusBarManager.shared) {
+    /// - Parameters:
+    ///   - statusBar: Status bar updater (defaults to shared manager)
+    ///   - configuration: Configuration provider (defaults to shared manager)
+    public init(
+        statusBar: StatusBarUpdating = StatusBarManager.shared,
+        configuration: ConfigurationProviding = ConfigurationManager.shared
+    ) {
         self.statusBar = statusBar
+        self.configuration = configuration
         DebugLogger.log("HangulComposer init")
     }
     
@@ -249,7 +258,7 @@ public class HangulComposer {
         
         // Control+Space: Language toggle (only if enabled in settings)
         if event.keyCode == KeyCode.space && event.modifierFlags.contains(.control) 
-            && ConfigurationManager.shared.controlSpaceAsToggle {
+            && configuration.controlSpaceAsToggle {
             DebugLogger.log("Control+Space -> Toggle mode")
             
             // Commit any composition before switching (preserve text)
