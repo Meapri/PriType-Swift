@@ -251,7 +251,17 @@ public class HangulComposer {
         // Track delegate for external toggle calls
         self.lastDelegate = delegate
         
-        // Only handle key down events
+        // Critical Fix: Caps Lock Passthrough & Immediate Commit
+        // We check this BEFORE the keyDown check so .flagsChanged can trigger a commit immediately
+        // when the Caps Lock key is pressed during composition.
+        if event.modifierFlags.contains(.capsLock) {
+            if !context.isEmpty() {
+                commitComposition(delegate: delegate)
+            }
+            return false // Let the system handle raw input (Uppercase English)
+        }
+        
+        // Only handle key down events for actual typing
         if event.type != .keyDown {
             return false
         }
@@ -290,16 +300,7 @@ public class HangulComposer {
              return false
         }
         
-        // Critical Fix: Caps Lock Passthrough
-        // If Caps Lock is ON, we should NOT process input as Hangul.
 
-        // Instead, commit any existing composition and let the system handle raw input (Uppercase English).
-        if event.modifierFlags.contains(.capsLock) {
-            if !context.isEmpty() {
-                commitComposition(delegate: delegate)
-            }
-            return false
-        }
         
         guard let characters = event.characters, !characters.isEmpty else {
             return false

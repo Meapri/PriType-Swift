@@ -130,9 +130,8 @@ public final class IOKitManager: @unchecked Sendable {
             DebugLogger.log("IOKitManager: Modifier key 0x\(String(usage, radix: 16)) \(pressed ? "DOWN" : "UP")")
         }
         
-        // Note: Caps Lock toggle is handled by RightCommandSuppressor (CGEventTap)
-        // IOKitManager no longer handles Caps Lock to avoid duplicate toggles
         
+
         // Check for Right Command (Right GUI) key - only if enabled
         if usage == rightCommandUsage && ConfigurationManager.shared.rightCommandAsToggle {
             if pressed {

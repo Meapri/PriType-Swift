@@ -164,6 +164,13 @@ public class PriTypeInputController: IMKInputController {
         // Debug: Log all incoming events to diagnose Caps Lock issue
         DebugLogger.log("InputController.handle() event type: \(event.type.rawValue) keyCode: \(event.keyCode)")
         
+        // DYNAMIC CHECK: Secure Input (password fields)
+        // Checked dynamically on every event to handle rapid focus changes between normal/secure fields without activateServer calls.
+        if IsSecureEventInputEnabled() {
+            DebugLogger.log("Secure Input Mode active, passing through")
+            return false
+        }
+        
         // PERFORMANCE: Use cached context if available, otherwise analyze (fallback)
         // This dramatically reduces input latency by avoiding IPC on hot path.
         var context: ClientContext
@@ -184,8 +191,7 @@ public class PriTypeInputController: IMKInputController {
                 context = ClientContext(
                     bundleId: context.bundleId,
                     hasTextInputCapability: context.hasTextInputCapability,
-                    isLikelyDesktopArea: isLikelyDesktopArea,
-                    isSecureInputActive: context.isSecureInputActive
+                    isLikelyDesktopArea: isLikelyDesktopArea
                 )
             }
         } else {
@@ -193,12 +199,6 @@ public class PriTypeInputController: IMKInputController {
             DebugLogger.log("Warning: cachedContext is nil in handle(), performing analysis (Slow Path)")
             context = ClientContextDetector.analyze(client: client)
             self.cachedContext = context // Cache it for subsequent events
-        }
-        
-        // Secure Input Detection (password fields)
-        if context.shouldPassThrough {
-            DebugLogger.log("Secure Input Mode active (password field), passing through")
-            return false
         }
         
         // Finder-specific handling

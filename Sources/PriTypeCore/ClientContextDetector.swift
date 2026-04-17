@@ -18,9 +18,6 @@ public struct ClientContext: Sendable {
     /// Whether the client appears to be in a desktop/non-text area (coordinate heuristic)
     public let isLikelyDesktopArea: Bool
     
-    /// Whether secure input is currently enabled (password field)
-    public let isSecureInputActive: Bool
-    
     // MARK: - Derived Properties
     
     /// Whether the client is Finder
@@ -36,12 +33,6 @@ public struct ClientContext: Sendable {
         isFinder && (!hasTextInputCapability || isLikelyDesktopArea)
     }
     
-    /// Whether input should be passed through to the system
-    ///
-    /// Returns `true` when secure input is active (password fields)
-    public var shouldPassThrough: Bool {
-        isSecureInputActive
-    }
 }
 
 // MARK: - ClientContextDetector
@@ -54,9 +45,6 @@ public struct ClientContext: Sendable {
 /// ## Usage
 /// ```swift
 /// let context = ClientContextDetector.analyze(client: sender as! IMKTextInput)
-/// if context.shouldPassThrough {
-///     return false
-/// }
 /// if context.shouldUseImmediateMode {
 ///     // Use ImmediateModeAdapter
 /// }
@@ -82,16 +70,8 @@ public struct ClientContextDetector: Sendable {
         let validAttrs = client.validAttributesForMarkedText() ?? []
         let hasTextInputCapability = validAttrs.count > 0
         
-        // 3. SECURE INPUT CHECK (Fastest exit for password fields)
-        let isSecureInputActive = IsSecureEventInputEnabled()
-        if isSecureInputActive {
-            return ClientContext(
-                bundleId: bundleId,
-                hasTextInputCapability: hasTextInputCapability,
-                isLikelyDesktopArea: false, // Irrelevant in secure mode
-                isSecureInputActive: true
-            )
-        }
+        // 3. SECURE INPUT CHECK is no longer cached here.
+        // It is checked dynamically in PriTypeInputController.handle() for better accuracy.
         
         // 4. CONDITIONAL HEURISTIC: Coordinate check ONLY for Finder
         // This prevents false positives in other apps (e.g. Safari tabs at top of screen)
@@ -110,8 +90,7 @@ public struct ClientContextDetector: Sendable {
         return ClientContext(
             bundleId: bundleId,
             hasTextInputCapability: hasTextInputCapability,
-            isLikelyDesktopArea: isLikelyDesktopArea,
-            isSecureInputActive: isSecureInputActive
+            isLikelyDesktopArea: isLikelyDesktopArea
         )
     }
 }
