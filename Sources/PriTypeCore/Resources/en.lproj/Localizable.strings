@@ -2,7 +2,7 @@
 
 /* General */
 "settings.title" = "Settings";
-"settings.footer" = "Designed for macOS Sequoia";
+"settings.footer" = "Designed for macOS Tahoe";
 
 /* Keyboard Layout */
 "keyboard.title" = "Keyboard Layout";

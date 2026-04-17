@@ -27,14 +27,18 @@ public class SettingsWindowController: NSObject {
         // Create hosting controller
         let hostingController = NSHostingController(rootView: settingsView)
         
-        // Create window with "liquid" style (full size content, transparent titlebar)
+        // Create window with Liquid Glass style
         let newWindow = NSWindow(contentViewController: hostingController)
         newWindow.title = "PriType 설정"
         newWindow.styleMask = [.titled, .closable, .miniaturizable, .fullSizeContentView]
         newWindow.titlebarAppearsTransparent = true
         newWindow.titleVisibility = .hidden
         newWindow.isMovableByWindowBackground = true
+        newWindow.titlebarSeparatorStyle = .none
+        
+        // Translucent glass window — desktop shows through with blur
         newWindow.backgroundColor = .clear
+        newWindow.isOpaque = false
         
         // Set proper size to avoid truncation
         newWindow.setContentSize(NSSize(width: PriTypeConfig.settingsWindowWidth, height: PriTypeConfig.settingsWindowHeight))
@@ -60,43 +64,6 @@ extension SettingsWindowController: NSWindowDelegate {
     }
 }
 
-// MARK: - Animated Liquid Background
-
-struct AnimatedLiquidBackground: View {
-    @State private var isAnimating = false
-    
-    var body: some View {
-        ZStack {
-            // Base dark background
-            Color.black.edgesIgnoringSafeArea(.all)
-            
-            // Moving liquid blobs
-            Circle()
-                .fill(Color(red: 0.2, green: 0.4, blue: 0.9).opacity(0.5))
-                .frame(width: 350, height: 350)
-                .offset(x: isAnimating ? -100 : 150, y: isAnimating ? -150 : 100)
-                .blur(radius: 90)
-            
-            Circle()
-                .fill(Color(red: 0.6, green: 0.2, blue: 0.8).opacity(0.5))
-                .frame(width: 400, height: 400)
-                .offset(x: isAnimating ? 150 : -100, y: isAnimating ? 150 : -50)
-                .blur(radius: 100)
-                
-            Circle()
-                .fill(Color(red: 0.1, green: 0.7, blue: 0.8).opacity(0.4))
-                .frame(width: 300, height: 300)
-                .offset(x: isAnimating ? 50 : -150, y: isAnimating ? 50 : 200)
-                .blur(radius: 80)
-        }
-        .onAppear {
-            withAnimation(.easeInOut(duration: 7.0).repeatForever(autoreverses: true)) {
-                isAnimating = true
-            }
-        }
-    }
-}
-
 // MARK: - SwiftUI Settings View
 
 struct SettingsView: View {
@@ -114,110 +81,156 @@ struct SettingsView: View {
     
     var body: some View {
         ZStack {
-            // Background
-            AnimatedLiquidBackground()
+            // Translucent glass window background
+            VisualEffectView(material: .hudWindow, blendingMode: .behindWindow)
                 .edgesIgnoringSafeArea(.all)
             
-            VStack(alignment: .leading, spacing: 20) {
-                // Liquid Header
-                HStack {
-                    Text("PriType")
-                        .font(.system(size: 36, weight: .heavy, design: .rounded))
-                        .foregroundStyle(
-                            LinearGradient(
-                                colors: [.white, .white.opacity(0.7)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .shadow(color: .white.opacity(0.3), radius: 10, x: 0, y: 0)
-                    
-                    Text("Settings")
-                        .font(.system(size: 36, weight: .ultraLight, design: .rounded))
-                        .foregroundColor(.white.opacity(0.6))
-                    Spacer()
-                }
-                .padding(.top, 15)
-                .padding(.horizontal, 10)
-                
-                // Scrollable Content
-                ScrollView(.vertical, showsIndicators: false) {
-                    VStack(alignment: .leading, spacing: 24) {
-                        
-                        // Keyboard Layout Tile
-                        GlassTile(title: L10n.keyboard.title) {
-                            VStack(spacing: 8) {
-                                ForEach(keyboardOptions, id: \.0) { option in
-                                    LiquidSelectionRow(
-                                        title: option.1,
-                                        isSelected: selectedKeyboard == option.0,
-                                        action: { selectedKeyboard = option.0 }
+            GlassEffectContainer {
+                VStack(spacing: 0) {
+                    // ── Header ──
+                    HStack(spacing: 12) {
+                        // App icon badge
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                .fill(.ultraThinMaterial)
+                                .frame(width: 48, height: 48)
+                            
+                            Text("ㅎ")
+                                .font(.system(size: 24, weight: .bold, design: .rounded))
+                                .foregroundStyle(
+                                    LinearGradient(
+                                        colors: [.cyan, .blue],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
                                     )
-                                }
-                            }
+                                )
                         }
-                        .onChange(of: selectedKeyboard) { _, newValue in
-                            ConfigurationManager.shared.keyboardId = newValue
+                        .glassEffect(.regular, in: .rect(cornerRadius: 14))
+                        
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("PriType")
+                                .font(.system(size: 24, weight: .bold, design: .rounded))
+                                .foregroundStyle(.primary)
+                            Text(L10n.settings.title)
+                                .font(.system(size: 13, weight: .medium, design: .rounded))
+                                .foregroundStyle(.secondary)
                         }
                         
-                        // Toggle Key Tile
-                        GlassTile(title: L10n.toggle.title) {
-                            VStack(spacing: 8) {
-                                ForEach(ToggleKey.allCases, id: \.self) { key in
-                                    LiquidSelectionRow(
-                                        title: key.displayName,
-                                        isSelected: selectedToggleKey == key,
-                                        action: { selectedToggleKey = key }
-                                    )
-                                }
-                            }
-                        }
-                        .onChange(of: selectedToggleKey) { _, newValue in
-                            ConfigurationManager.shared.toggleKey = newValue
-                        }
-                        
-                        // Text Input Options Tile
-                        GlassTile(title: L10n.textInput.title) {
-                            VStack(spacing: 12) {
-                                LiquidToggleRow(title: L10n.textInput.autoCapitalize, isOn: $autoCapitalizeEnabled)
-                                Divider().background(Color.white.opacity(0.2))
-                                LiquidToggleRow(title: L10n.textInput.doubleSpacePeriod, isOn: $doubleSpacePeriodEnabled)
-                            }
-                        }
-                        .onChange(of: autoCapitalizeEnabled) { _, newValue in
-                            ConfigurationManager.shared.autoCapitalizeEnabled = newValue
-                        }
-                        .onChange(of: doubleSpacePeriodEnabled) { _, newValue in
-                            ConfigurationManager.shared.doubleSpacePeriodEnabled = newValue
-                        }
+                        Spacer()
                     }
+                    .padding(.top, 24)
                     .padding(.bottom, 20)
-                    .padding(.horizontal, 5)
+                    .padding(.horizontal, 28)
+                    
+                    // Thin separator
+                    Divider()
+                        .opacity(0.3)
+                        .padding(.horizontal, 20)
+                    
+                    // ── Scrollable Content ──
+                    ScrollView(.vertical, showsIndicators: false) {
+                        VStack(alignment: .leading, spacing: 28) {
+                            
+                            // Keyboard Layout Section
+                            LiquidGlassSection(
+                                title: L10n.keyboard.title,
+                                icon: "keyboard"
+                            ) {
+                                VStack(spacing: 2) {
+                                    ForEach(keyboardOptions, id: \.0) { option in
+                                        LiquidSelectionRow(
+                                            title: option.1,
+                                            isSelected: selectedKeyboard == option.0,
+                                            action: { selectedKeyboard = option.0 }
+                                        )
+                                    }
+                                }
+                            }
+                            .onChange(of: selectedKeyboard) { _, newValue in
+                                ConfigurationManager.shared.keyboardId = newValue
+                            }
+                            
+                            // Toggle Key Section
+                            LiquidGlassSection(
+                                title: L10n.toggle.title,
+                                icon: "globe"
+                            ) {
+                                VStack(spacing: 2) {
+                                    ForEach(ToggleKey.allCases, id: \.self) { key in
+                                        LiquidSelectionRow(
+                                            title: key.displayName,
+                                            isSelected: selectedToggleKey == key,
+                                            action: { selectedToggleKey = key }
+                                        )
+                                    }
+                                }
+                            }
+                            .onChange(of: selectedToggleKey) { _, newValue in
+                                ConfigurationManager.shared.toggleKey = newValue
+                            }
+                            
+                            // Text Input Options Section
+                            LiquidGlassSection(
+                                title: L10n.textInput.title,
+                                icon: "text.cursor"
+                            ) {
+                                VStack(spacing: 0) {
+                                    LiquidToggleRow(
+                                        title: L10n.textInput.autoCapitalize,
+                                        icon: "textformat.size.larger",
+                                        isOn: $autoCapitalizeEnabled
+                                    )
+                                    Divider()
+                                        .opacity(0.3)
+                                        .padding(.horizontal, 12)
+                                    LiquidToggleRow(
+                                        title: L10n.textInput.doubleSpacePeriod,
+                                        icon: "period",
+                                        isOn: $doubleSpacePeriodEnabled
+                                    )
+                                }
+                            }
+                            .onChange(of: autoCapitalizeEnabled) { _, newValue in
+                                ConfigurationManager.shared.autoCapitalizeEnabled = newValue
+                            }
+                            .onChange(of: doubleSpacePeriodEnabled) { _, newValue in
+                                ConfigurationManager.shared.doubleSpacePeriodEnabled = newValue
+                            }
+                        }
+                        .padding(.top, 20)
+                        .padding(.bottom, 16)
+                        .padding(.horizontal, 4)
+                    }
+                    .padding(.horizontal, 24)
+                    
+                    // ── Footer ──
+                    Divider()
+                        .opacity(0.3)
+                        .padding(.horizontal, 20)
+                    
+                    HStack(spacing: 6) {
+                        Image(systemName: "drop.fill")
+                            .font(.system(size: 10))
+                            .foregroundStyle(
+                                LinearGradient(
+                                    colors: [.cyan.opacity(0.7), .blue.opacity(0.7)],
+                                    startPoint: .top,
+                                    endPoint: .bottom
+                                )
+                            )
+                        Text(L10n.settings.footer)
+                            .font(.system(size: 11, weight: .medium, design: .rounded))
+                        Spacer()
+                        Text("v2.0")
+                            .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                    }
+                    .foregroundStyle(.tertiary)
+                    .padding(.horizontal, 28)
+                    .padding(.vertical, 14)
                 }
-                
-                // Footer
-                HStack {
-                    Image(systemName: "drop.fill")
-                        .font(.caption)
-                        .foregroundStyle(
-                            LinearGradient(colors: [.blue, .purple], startPoint: .top, endPoint: .bottom)
-                        )
-                    Text("Designed for macOS Sequoia")
-                        .font(.caption2)
-                        .fontWeight(.medium)
-                    Spacer()
-                    Text("v1.0 Liquid")
-                        .font(.caption2)
-                        .fontWeight(.bold)
-                }
-                .foregroundColor(.white.opacity(0.5))
-                .padding(.horizontal, 10)
-                .padding(.bottom, 10)
             }
-            .padding(25)
         }
         .frame(width: PriTypeConfig.settingsWindowWidth, height: PriTypeConfig.settingsWindowHeight)
-        .preferredColorScheme(.dark)
         .onAppear {
             selectedKeyboard = ConfigurationManager.shared.keyboardId
             selectedToggleKey = ConfigurationManager.shared.toggleKey
@@ -227,49 +240,67 @@ struct SettingsView: View {
     }
 }
 
-// MARK: - Liquid Design Components
+// MARK: - Visual Effect View (Window Background)
 
-struct GlassTile<Content: View>: View {
+struct VisualEffectView: NSViewRepresentable {
+    let material: NSVisualEffectView.Material
+    let blendingMode: NSVisualEffectView.BlendingMode
+    
+    func makeNSView(context: Context) -> NSVisualEffectView {
+        let view = NSVisualEffectView()
+        view.material = material
+        view.blendingMode = blendingMode
+        view.state = .active
+        return view
+    }
+    
+    func updateNSView(_ nsView: NSVisualEffectView, context: Context) {
+        nsView.material = material
+        nsView.blendingMode = blendingMode
+    }
+}
+
+// MARK: - Liquid Glass Components
+
+/// A section card with an icon, title label, and native Liquid Glass content area
+struct LiquidGlassSection<Content: View>: View {
     let title: String
+    let icon: String
     let content: Content
     
-    init(title: String, @ViewBuilder content: () -> Content) {
+    init(title: String, icon: String, @ViewBuilder content: () -> Content) {
         self.title = title
+        self.icon = icon
         self.content = content()
     }
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 15) {
-            Text(title)
-                .font(.system(size: 16, weight: .semibold, design: .rounded))
-                .foregroundColor(.white.opacity(0.8))
-                .padding(.leading, 5)
+        VStack(alignment: .leading, spacing: 10) {
+            // Section header with icon
+            HStack(spacing: 6) {
+                Image(systemName: icon)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                Text(title)
+                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.leading, 4)
             
+            // Glass card
             VStack {
                 content
             }
-            .padding(16)
-            .background(.ultraThinMaterial)
-            .environment(\.colorScheme, .dark)
-            .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .strokeBorder(
-                        LinearGradient(
-                            colors: [.white.opacity(0.4), .white.opacity(0.1), .clear],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ),
-                        lineWidth: 1
-                    )
-            )
-            .shadow(color: Color.black.opacity(0.3), radius: 15, x: 0, y: 8)
+            .padding(.vertical, 6)
+            .padding(.horizontal, 4)
+            .glassEffect(.regular, in: .rect(cornerRadius: 16))
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel(title)
     }
 }
 
+/// A selection row with polished hover and selected states
 struct LiquidSelectionRow: View {
     let title: String
     let isSelected: Bool
@@ -278,48 +309,49 @@ struct LiquidSelectionRow: View {
     
     var body: some View {
         Button(action: {
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
                 action()
             }
         }) {
-            HStack {
+            HStack(spacing: 10) {
+                // Selection indicator dot
+                Circle()
+                    .fill(isSelected
+                          ? AnyShapeStyle(LinearGradient(colors: [.cyan, .blue], startPoint: .top, endPoint: .bottom))
+                          : AnyShapeStyle(Color.primary.opacity(0.15)))
+                    .frame(width: 8, height: 8)
+                
                 Text(title)
-                    .font(.system(size: 15, weight: isSelected ? .bold : .medium, design: .rounded))
-                    .foregroundColor(isSelected ? .white : .white.opacity(0.7))
+                    .font(.system(size: 14, weight: isSelected ? .semibold : .regular, design: .rounded))
+                    .foregroundStyle(isSelected ? .primary : .secondary)
                 
                 Spacer()
                 
                 if isSelected {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundStyle(
-                            LinearGradient(colors: [.cyan, .blue], startPoint: .topLeading, endPoint: .bottomTrailing)
-                        )
-                        .shadow(color: .cyan.opacity(0.6), radius: 4)
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(.cyan)
                         .transition(.scale.combined(with: .opacity))
                 }
             }
-            .padding(.vertical, 14)
-            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .padding(.horizontal, 12)
             .background(
-                ZStack {
+                Group {
                     if isSelected {
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .fill(Color.white.opacity(0.1))
-                        
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .strokeBorder(Color.white.opacity(0.2), lineWidth: 1)
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .fill(.cyan.opacity(0.08))
                     } else if isHovering {
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .fill(Color.white.opacity(0.05))
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .fill(.primary.opacity(0.04))
                     }
                 }
             )
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .scaleEffect(isHovering && !isSelected ? 1.02 : 1.0)
-        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isHovering)
+        .animation(.easeOut(duration: 0.15), value: isHovering)
+        .animation(.spring(response: 0.35, dampingFraction: 0.7), value: isSelected)
         .onHover { hover in
             isHovering = hover
         }
@@ -329,22 +361,28 @@ struct LiquidSelectionRow: View {
     }
 }
 
+/// A toggle row with an icon for on/off settings
 struct LiquidToggleRow: View {
     let title: String
+    let icon: String
     @Binding var isOn: Bool
     
     var body: some View {
-        HStack {
+        HStack(spacing: 10) {
+            Image(systemName: icon)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(.secondary)
+                .frame(width: 20)
+            
             Text(title)
-                .font(.system(size: 15, weight: .medium, design: .rounded))
-                .foregroundColor(.white)
+                .font(.system(size: 14, weight: .regular, design: .rounded))
+                .foregroundStyle(.primary)
             Spacer()
             Toggle("", isOn: $isOn)
                 .toggleStyle(.switch)
                 .labelsHidden()
-                .tint(.cyan)
         }
-        .padding(.vertical, 4)
-        .padding(.horizontal, 4)
+        .padding(.vertical, 10)
+        .padding(.horizontal, 12)
     }
 }

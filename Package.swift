@@ -1,11 +1,11 @@
-// swift-tools-version: 6.0
+// swift-tools-version: 6.2
 import PackageDescription
 
 let package = Package(
     name: "PriType",
     defaultLocalization: "ko",
     platforms: [
-        .macOS(.v14)  // Sonoma or later (required for modern SwiftUI APIs)
+        .macOS(.v26)  // Tahoe or later (required for native Liquid Glass APIs)
     ],
     products: [
         .executable(
