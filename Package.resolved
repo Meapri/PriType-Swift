@@ -1,5 +1,5 @@
 {
-  "originHash" : "a44c6c36128fcac8712d642cd8912afc099c41b37d1451ef8905dc9ee81aca32",
+  "originHash" : "0661a832a4392dc3febac0a594532c63a45e917aac061d12d32b64a74bab2463",
   "pins" : [
     {
       "identity" : "libhangul-swift",
@@ -7,7 +7,7 @@
       "location" : "https://github.com/Meapri/libhangul-swift",
       "state" : {
         "branch" : "main",
-        "revision" : "d50f34b82deebc3c44a3b0a88ea0849f7230609c"
+        "revision" : "e5c658e2a873808d53acc547c3a833676930e4ec"
       }
     }
   ],
