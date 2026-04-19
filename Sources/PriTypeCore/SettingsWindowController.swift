@@ -90,22 +90,17 @@ struct SettingsView: View {
                     // ── Header ──
                     HStack(spacing: 12) {
                         // App icon badge
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                .fill(.ultraThinMaterial)
-                                .frame(width: 48, height: 48)
-                            
-                            Text("ㅎ")
-                                .font(.system(size: 24, weight: .bold, design: .rounded))
-                                .foregroundStyle(
-                                    LinearGradient(
-                                        colors: [.cyan, .blue],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    )
+                        Text("ㅎ")
+                            .font(.system(size: 28, weight: .bold, design: .rounded))
+                            .foregroundStyle(
+                                LinearGradient(
+                                    colors: [.cyan, .blue],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
                                 )
-                        }
-                        .glassEffect(.regular, in: .rect(cornerRadius: 14))
+                            )
+                            .frame(width: 56, height: 56)
+                            .glassEffect(.regular, in: .rect(cornerRadius: 16))
                         
                         VStack(alignment: .leading, spacing: 2) {
                             Text("PriType")
@@ -204,29 +199,17 @@ struct SettingsView: View {
                     .padding(.horizontal, 24)
                     
                     // ── Footer ──
-                    Divider()
-                        .opacity(0.3)
-                        .padding(.horizontal, 20)
-                    
-                    HStack(spacing: 6) {
-                        Image(systemName: "drop.fill")
-                            .font(.system(size: 10))
-                            .foregroundStyle(
-                                LinearGradient(
-                                    colors: [.cyan.opacity(0.7), .blue.opacity(0.7)],
-                                    startPoint: .top,
-                                    endPoint: .bottom
-                                )
-                            )
-                        Text(L10n.settings.footer)
-                            .font(.system(size: 11, weight: .medium, design: .rounded))
+                    HStack {
                         Spacer()
                         Text("v2.0")
                             .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                            .foregroundStyle(.secondary)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 6)
+                            .glassEffect(.regular, in: .capsule)
+                        Spacer()
                     }
-                    .foregroundStyle(.tertiary)
-                    .padding(.horizontal, 28)
-                    .padding(.vertical, 14)
+                    .padding(.vertical, 12)
                 }
             }
         }
@@ -260,6 +243,23 @@ struct VisualEffectView: NSViewRepresentable {
     }
 }
 
+// MARK: - Conditional Glass Modifier
+
+/// Applies `.glassEffect()` only when `isActive` is true.
+/// Works around the limitation that GlassEffect styles cannot be used in ternary expressions.
+struct ConditionalGlass<S: InsettableShape>: ViewModifier {
+    let isActive: Bool
+    let shape: S
+    
+    func body(content: Content) -> some View {
+        if isActive {
+            content.glassEffect(.regular, in: shape)
+        } else {
+            content
+        }
+    }
+}
+
 // MARK: - Liquid Glass Components
 
 /// A section card with an icon, title label, and native Liquid Glass content area
@@ -279,13 +279,15 @@ struct LiquidGlassSection<Content: View>: View {
             // Section header with icon
             HStack(spacing: 6) {
                 Image(systemName: icon)
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(.secondary)
                 Text(title)
-                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    .font(.system(size: 12, weight: .semibold, design: .rounded))
                     .foregroundStyle(.secondary)
             }
-            .padding(.leading, 4)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 5)
+            .glassEffect(.regular, in: .capsule)
             
             // Glass card
             VStack {
@@ -314,12 +316,14 @@ struct LiquidSelectionRow: View {
             }
         }) {
             HStack(spacing: 10) {
-                // Selection indicator dot
+                // Selection indicator
                 Circle()
                     .fill(isSelected
                           ? AnyShapeStyle(LinearGradient(colors: [.cyan, .blue], startPoint: .top, endPoint: .bottom))
-                          : AnyShapeStyle(Color.primary.opacity(0.15)))
-                    .frame(width: 8, height: 8)
+                          : AnyShapeStyle(Color.primary.opacity(0.12)))
+                    .frame(width: 7, height: 7)
+                    .padding(6)
+                    .modifier(ConditionalGlass(isActive: isSelected, shape: .circle))
                 
                 Text(title)
                     .font(.system(size: 14, weight: isSelected ? .semibold : .regular, design: .rounded))
@@ -328,25 +332,21 @@ struct LiquidSelectionRow: View {
                 Spacer()
                 
                 if isSelected {
-                    Image(systemName: "checkmark")
-                        .font(.system(size: 12, weight: .bold))
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 16, weight: .medium))
                         .foregroundStyle(.cyan)
                         .transition(.scale.combined(with: .opacity))
                 }
             }
-            .padding(.vertical, 10)
-            .padding(.horizontal, 12)
-            .background(
-                Group {
-                    if isSelected {
-                        RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .fill(.cyan.opacity(0.08))
-                    } else if isHovering {
-                        RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .fill(.primary.opacity(0.04))
-                    }
+            .padding(.vertical, 8)
+            .padding(.horizontal, 10)
+            .background {
+                if isHovering && !isSelected {
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(.primary.opacity(0.04))
                 }
-            )
+            }
+            .modifier(ConditionalGlass(isActive: isSelected, shape: .rect(cornerRadius: 10)))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -370,9 +370,10 @@ struct LiquidToggleRow: View {
     var body: some View {
         HStack(spacing: 10) {
             Image(systemName: icon)
-                .font(.system(size: 13, weight: .medium))
+                .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(.secondary)
-                .frame(width: 20)
+                .frame(width: 28, height: 28)
+                .glassEffect(.regular, in: .circle)
             
             Text(title)
                 .font(.system(size: 14, weight: .regular, design: .rounded))

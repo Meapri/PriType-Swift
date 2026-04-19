@@ -136,11 +136,14 @@ public class HangulComposer {
             return false  // Let system insert newline
         }
         
-        // Escape
+        // Escape - only consume if there's an active composition to cancel
         if keyCode == KeyCode.escape {
-            DebugLogger.log("Escape -> cancel")
-            cancelComposition(delegate: delegate)
-            return true
+            if !context.isEmpty() {
+                DebugLogger.log("Escape -> cancel composition")
+                cancelComposition(delegate: delegate)
+                return true
+            }
+            return false  // No composition, pass to system (e.g. Finder close dialog)
         }
         
         // Space - handle double-space period
