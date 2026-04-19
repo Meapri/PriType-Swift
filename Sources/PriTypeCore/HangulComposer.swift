@@ -229,6 +229,20 @@ public class HangulComposer {
             return true
         }
         
+        // Shift fallback: if uppercase letter failed, try lowercase.
+        // libhangul only maps uppercase for keys with shift variants (Q→ㅃ, W→ㅉ, etc.)
+        // For keys without shift variants (A→ㅁ), the uppercase 'A' is not in the table.
+        // Falling back to lowercase lets libhangul find the correct mapping.
+        let charStr = String(char)
+        let lowered = charStr.lowercased()
+        if lowered != charStr, let lowerScalar = lowered.unicodeScalars.first {
+            if context.process(Character(lowerScalar)) {
+                DebugLogger.log("Lowercase fallback success: \(char) -> \(lowerScalar)")
+                updateComposition(delegate: delegate)
+                return true
+            }
+        }
+        
         // Still failed - insert printable ASCII directly
         if KeyCode.isPrintableASCII(charCode) {
             DebugLogger.log("Retry failed, inserting printable char")
