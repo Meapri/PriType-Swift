@@ -197,8 +197,12 @@ public class HangulComposer {
     }
     
     /// Process a single character through the Hangul engine
+    /// - Parameters:
+    ///   - char: The character to process
+    ///   - delegate: The delegate to receive composition callbacks
+    ///   - shiftFallback: When Shift is held, the lowercase version to try if uppercase is unmapped
     /// - Returns: `true` if the character was processed, `false` if skipped
-    private func processCharacter(_ char: Unicode.Scalar, delegate: HangulComposerDelegate) -> Bool {
+    private func processCharacter(_ char: Unicode.Scalar, delegate: HangulComposerDelegate, shiftFallback: Unicode.Scalar? = nil) -> Bool {
         let charCode = UInt32(char.value)
         
         // Skip non-printable characters
@@ -208,8 +212,52 @@ public class HangulComposer {
         
         DebugLogger.log("Processing char code: \(charCode)")
         
+        // Snapshot context state before processing.
+        // If libhangul doesn't have a mapping for this key (e.g. uppercase 'A'),
+        // it commits the raw ASCII character and returns true. We need to detect
+        // this and retry with lowercase for Korean input.
+        let preeditBefore = context.getPreeditString()
+        let wasEmpty = context.isEmpty()
+        
         // Primary attempt
         if context.process(Character(char)) {
+            // Check if libhangul just echoed back the raw ASCII.
+            // This happens when the key has no mapping in the keyboard table.
+            // Symptom: preedit is still empty AND commitString contains the raw char.
+            if let fallback = shiftFallback, fallback != char {
+                let preeditAfter = context.getPreeditString()
+                let commitAfter = context.getCommitString()
+                
+                // Detect raw ASCII echo: no preedit change and commit is just our input char
+                let isRawEcho = preeditAfter.isEmpty && commitAfter.count == 1 
+                    && commitAfter[0] == charCode
+                let isRawEchoWithFlush = !wasEmpty && !commitAfter.isEmpty
+                    && commitAfter.last == charCode && preeditAfter.isEmpty
+                
+                if isRawEcho || isRawEchoWithFlush {
+                    DebugLogger.log("Detected raw ASCII echo for '\(char)', retrying with '\(fallback)'")
+                    // Reset context - the raw char was already consumed
+                    context.reset()
+                    
+                    // Re-insert any previously committed Korean text
+                    if isRawEchoWithFlush && commitAfter.count > 1 {
+                        let koreanPart = Array(commitAfter.dropLast())
+                        let koreanStr = CompositionHelpers.convertToString(koreanPart)
+                        delegate.insertText(koreanStr.precomposedStringWithCanonicalMapping)
+                    } else if !wasEmpty {
+                        // Was composing before - need to commit what was there
+                        // (already lost due to reset, but the flush happened inside process())
+                    }
+                    
+                    // Retry with lowercase
+                    if context.process(Character(fallback)) {
+                        DebugLogger.log("Lowercase retry success: \(fallback)")
+                        updateComposition(delegate: delegate)
+                        return true
+                    }
+                }
+            }
+            
             DebugLogger.log("Process success")
             updateComposition(delegate: delegate)
             return true
@@ -227,20 +275,6 @@ public class HangulComposer {
             DebugLogger.log("Retry success")
             updateComposition(delegate: delegate)
             return true
-        }
-        
-        // Shift fallback: if uppercase letter failed, try lowercase.
-        // libhangul only maps uppercase for keys with shift variants (Q→ㅃ, W→ㅉ, etc.)
-        // For keys without shift variants (A→ㅁ), the uppercase 'A' is not in the table.
-        // Falling back to lowercase lets libhangul find the correct mapping.
-        let charStr = String(char)
-        let lowered = charStr.lowercased()
-        if lowered != charStr, let lowerScalar = lowered.unicodeScalars.first {
-            if context.process(Character(lowerScalar)) {
-                DebugLogger.log("Lowercase fallback success: \(char) -> \(lowerScalar)")
-                updateComposition(delegate: delegate)
-                return true
-            }
         }
         
         // Still failed - insert printable ASCII directly
@@ -323,10 +357,12 @@ public class HangulComposer {
             return false
         }
         
+        let keyCode = event.keyCode
         let inputCharacters = characters
         
-        let keyCode = event.keyCode
-
+        // Detect if only Shift modifier is held (no Cmd, Ctrl, Opt)
+        let onlyShiftHeld = event.modifierFlags.contains(.shift) 
+            && event.modifierFlags.intersection([.command, .control, .option]).isEmpty
         
         // Handle special keys (Return, Escape, Space, Arrow, Tab, Backspace)
         if let result = handleSpecialKey(keyCode: keyCode, delegate: delegate) {
@@ -334,13 +370,9 @@ public class HangulComposer {
         }
         
         // 2. Alphanumeric Keys (Typing)
-        // We define "typing keys" as Printable ASCII usually.
-        // For simplicity, let's process everything that has characters.
-        
         DebugLogger.log("Handle key: \(inputCharacters) code: \(keyCode)")
         
         // Filter: If input contains non-printable characters (e.g., function keys, arrows)
-        // Return false to pass to system.
         if let firstScalar = inputCharacters.unicodeScalars.first {
             let firstCharCode = UInt32(firstScalar.value)
             if KeyCode.shouldPassThrough(firstCharCode) {
@@ -351,8 +383,21 @@ public class HangulComposer {
         
         var handledAtLeastOnce = false
         
-        for char in inputCharacters.unicodeScalars {
-            if processCharacter(char, delegate: delegate) {
+        // Prepare lowercase fallback for Shift+key.
+        // When Shift is held, event.characters gives uppercase (e.g. 'A').
+        // libhangul maps uppercase only for shift variants (Q→ㅃ, W→ㅉ, etc.)
+        // For unmapped uppercase (A, S, D...), libhangul commits raw ASCII.
+        // We pass the lowercase version as a fallback to processCharacter.
+        let fallbackScalars: [Unicode.Scalar]?
+        if onlyShiftHeld, let unshifted = event.charactersIgnoringModifiers {
+            fallbackScalars = Array(unshifted.unicodeScalars)
+        } else {
+            fallbackScalars = nil
+        }
+        
+        for (i, char) in inputCharacters.unicodeScalars.enumerated() {
+            let fallback = fallbackScalars.flatMap { i < $0.count ? $0[i] : nil }
+            if processCharacter(char, delegate: delegate, shiftFallback: fallback) {
                 handledAtLeastOnce = true
             }
         }
