@@ -5,7 +5,7 @@ let package = Package(
     name: "PriType",
     defaultLocalization: "ko",
     platforms: [
-        .macOS(.v14)
+        .macOS(.v26)  // Tahoe or later (required for native Liquid Glass APIs)
     ],
     products: [
         .executable(
