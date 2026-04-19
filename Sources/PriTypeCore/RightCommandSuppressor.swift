@@ -66,7 +66,7 @@ public final class RightCommandSuppressor: @unchecked Sendable {
             options: .defaultTap,
             eventsOfInterest: CGEventMask(eventMask),
             callback: { proxy, type, event, refcon in
-                guard let refcon = refcon else { return Unmanaged.passRetained(event) }
+                guard let refcon = refcon else { return Unmanaged.passUnretained(event) }
                 let suppressor = Unmanaged<RightCommandSuppressor>.fromOpaque(refcon).takeUnretainedValue()
                 return suppressor.handleEvent(proxy: proxy, type: type, event: event)
             },
@@ -108,7 +108,7 @@ public final class RightCommandSuppressor: @unchecked Sendable {
             if let tap = eventTap {
                 CGEvent.tapEnable(tap: tap, enable: true)
             }
-            return Unmanaged.passRetained(event)
+            return Unmanaged.passUnretained(event)
         }
         
         let keyCode = event.getIntegerValueField(.keyboardEventKeycode)
@@ -139,7 +139,7 @@ public final class RightCommandSuppressor: @unchecked Sendable {
                 }
             }
             
-            return Unmanaged.passRetained(event)
+            return Unmanaged.passUnretained(event)
         }
         
         // Handle keyDown
@@ -160,11 +160,11 @@ public final class RightCommandSuppressor: @unchecked Sendable {
                 event.flags = newFlags
                 DebugLogger.log("RightCommandSuppressor: Key with Right Command - stripped modifier (normal input)")
                 // Let the modified event pass through
-                return Unmanaged.passRetained(event)
+                return Unmanaged.passUnretained(event)
             }
         }
         
-        return Unmanaged.passRetained(event)
+        return Unmanaged.passUnretained(event)
     }
     
     private func triggerToggle() {

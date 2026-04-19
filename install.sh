@@ -42,12 +42,28 @@ else
 fi
 
 # Code Signing
+if [ -z "$SIGNING_IDENTITY" ]; then
+    # 1. 정식 Apple Development 인증서가 있는지 먼저 확인
+    APPLE_DEV_CERT=$(security find-identity -v -p codesigning | grep "Apple Development:" | head -n 1 | awk -F'"' '{print $2}')
+    
+    if [ -n "$APPLE_DEV_CERT" ]; then
+        SIGNING_IDENTITY="$APPLE_DEV_CERT"
+    else
+        # 2. 없다면 개발용 자체 서명 인증서(PriTypeDev) 확인
+        if security find-certificate -c "PriTypeDev" > /dev/null 2>&1; then
+            SIGNING_IDENTITY="PriTypeDev"
+        fi
+    fi
+fi
+
 if [ -n "$SIGNING_IDENTITY" ]; then
     echo "Signing with identity: $SIGNING_IDENTITY"
-    codesign --force --options runtime --sign "$SIGNING_IDENTITY" "$APP_BUNDLE"
+    codesign --force --options runtime --entitlements PriType.entitlements --sign "$SIGNING_IDENTITY" "$APP_BUNDLE"
     echo "Signing complete."
 else
-    echo "No SIGNING_IDENTITY set. Skipping signing (Ad-hoc signing may apply automatically locally)."
+    echo "No SIGNING_IDENTITY set and 'PriTypeDev' certificate not found."
+    echo "Using ad-hoc signing. (Warning: Accessibility permissions will break on every build!)"
+    codesign --force --deep --entitlements PriType.entitlements --sign - "$APP_BUNDLE"
 fi
 
 echo "Installing to $INSTALL_DIR..."

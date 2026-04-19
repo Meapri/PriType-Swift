@@ -206,7 +206,7 @@ public class HangulComposer {
             return false
         }
         
-        DebugLogger.log("Processing char code: \(charCode)")
+        DebugLogger.logSensitive("Processing char code", sensitiveContent: "\(charCode)")
         
         // Primary attempt
         if context.process(Character(char)) {
@@ -318,7 +318,7 @@ public class HangulComposer {
         }
         
         // 2. Alphanumeric Keys (Typing)
-        DebugLogger.log("Handle key: \(inputCharacters) code: \(keyCode)")
+        DebugLogger.logSensitive("Handle key code \(keyCode)", sensitiveContent: inputCharacters)
         
         // Filter: If input contains non-printable characters (e.g., function keys, arrows)
         if let firstScalar = inputCharacters.unicodeScalars.first {
@@ -380,12 +380,12 @@ public class HangulComposer {
         let flushed = context.flush()
         let commitStr = CompositionHelpers.convertToString(flushed)
         
-        DebugLogger.log("commitComposition: flushed=\(flushed), str='\(commitStr)'")
+        DebugLogger.logSensitive("commitComposition flushed=\(flushed)", sensitiveContent: "'\(commitStr)'")
         
         if !commitStr.isEmpty {
             // insertText replaces the marked text automatically
             delegate.insertText(commitStr.precomposedStringWithCanonicalMapping)
-            DebugLogger.log("commitComposition: inserted '\(commitStr)'")
+            DebugLogger.logSensitive("commitComposition inserted", sensitiveContent: "'\(commitStr)'")
         }
     }
 

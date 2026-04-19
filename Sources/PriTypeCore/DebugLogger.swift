@@ -82,6 +82,18 @@ public final class DebugLogger: @unchecked Sendable {
         }
     }
     
+    /// Log sensitive input data (like keystrokes or composed strings).
+    /// By default, the actual content is redacted even in DEBUG builds to prevent accidental leakage.
+    /// To see actual input logs, developers must explicitly change `redactSensitiveLogs` to false.
+    public static func logSensitive(_ msg: String, sensitiveContent: String) {
+        let redactSensitiveLogs = true // Set to false ONLY during active local debugging
+        if redactSensitiveLogs {
+            log("\(msg): [REDACTED]")
+        } else {
+            log("\(msg): \(sensitiveContent)")
+        }
+    }
+    
     /// Log an error with context
     /// - Parameters:
     ///   - error: The error that occurred
@@ -152,10 +164,19 @@ public final class DebugLogger: @unchecked Sendable {
     /// - Parameter msg: Ignored in release builds
     @inlinable
     public static func log(_ msg: String) {
-        // Intentionally empty - no logging in release builds for security
+        // Explicitly empty for zero overhead in release
     }
     
     /// No-op in release builds - does nothing
+    @inlinable
+    public static func logSensitive(_ msg: String, sensitiveContent: String) {
+        // Explicitly empty for zero overhead in release
+    }
+    
+    /// No-op in release builds - does nothing
+    /// - Parameters:
+    ///   - error: Ignored in release builds
+    ///   - context: Ignored in release builds
     @inlinable
     public static func logError(_ error: Error, context: String) {
         // Intentionally empty - no logging in release builds for security

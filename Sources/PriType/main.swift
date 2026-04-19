@@ -55,21 +55,18 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Track if CGEventTap started successfully
         let eventTapStarted = RightCommandSuppressor.shared.start()
         
-        // IOKit backup: Only activate actual toggle if CGEventTap failed
+        // IOKit backup: Only start and activate actual toggle if CGEventTap failed
         if eventTapStarted {
             DebugLogger.log("Primary: CGEventTap started successfully")
-            // IOKit runs in passive mode - just for monitoring/debugging
-            IOKitManager.shared.onRightCommandToggle = nil
+            // Do NOT start IOKit if CGEventTap is working, to minimize privacy/security footprint
         } else {
             DebugLogger.log("Primary: CGEventTap FAILED - IOKit taking over as primary")
             // IOKit takes over as primary toggle handler
             IOKitManager.shared.onRightCommandToggle = {
                 PriTypeInputController.sharedComposer.toggleInputMode()
             }
+            IOKitManager.shared.start()
         }
-        
-        // Always start IOKit for hardware-level monitoring
-        IOKitManager.shared.start()
         
         DebugLogger.log("Toggle key monitoring initialized")
     }

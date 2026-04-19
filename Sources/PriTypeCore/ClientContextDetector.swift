@@ -83,7 +83,8 @@ public struct ClientContextDetector: Sendable {
                 actualRange: nil
             )
             // Check if input area is suspiciously close to top-left (typical for Finder's dummy window)
-            isLikelyDesktopArea = firstRect.origin.x < PriTypeConfig.finderDesktopThreshold &&
+            isLikelyDesktopArea = firstRect.origin.x >= 0 && firstRect.origin.y >= 0 &&
+                                   firstRect.origin.x < PriTypeConfig.finderDesktopThreshold &&
                                    firstRect.origin.y < PriTypeConfig.finderDesktopThreshold
         }
         

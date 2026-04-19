@@ -86,7 +86,7 @@ public class PriTypeInputController: IMKInputController {
                 .underlineColor: NSColor.textColor
             ]
             let attributed = NSAttributedString(string: text, attributes: attributes)
-            client.setMarkedText(attributed, selectionRange: NSRange(location: text.count, length: 0), replacementRange: NSRange(location: NSNotFound, length: NSNotFound))
+            client.setMarkedText(attributed, selectionRange: NSRange(location: text.utf16.count, length: 0), replacementRange: NSRange(location: NSNotFound, length: NSNotFound))
         }
     }
     

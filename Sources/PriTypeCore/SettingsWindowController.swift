@@ -1,6 +1,42 @@
 import Cocoa
 import SwiftUI
 
+// Polyfill for macOS 14 compatibility
+extension View {
+    @ViewBuilder
+    func glassEffect<S: Shape>(_ material: Material, in shape: S) -> some View {
+        if #available(macOS 26.0, *) {
+            self.modifier(GlassEffectModifier(material: material, shape: shape))
+        } else {
+            self.background(material, in: shape)
+        }
+    }
+}
+
+private struct GlassEffectModifier<S: Shape>: ViewModifier {
+    let material: Material
+    let shape: S
+    func body(content: Content) -> some View {
+        // We use a separate modifier to avoid ambiguous reference errors if the compiler knows about the native one
+        content.background(material, in: shape)
+    }
+}
+
+// Polyfill for GlassEffectContainer
+struct GlassEffectContainer<Content: View>: View {
+    let content: Content
+    
+    init(@ViewBuilder content: () -> Content) {
+        self.content = content()
+    }
+    
+    var body: some View {
+        ZStack {
+            content
+        }
+    }
+}
+
 /// Manages the settings window for the input method
 @MainActor
 public class SettingsWindowController: NSObject {
