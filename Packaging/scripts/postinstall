@@ -1,0 +1,10 @@
+#!/bin/bash
+# postinstall for PriTypeV2.pkg
+
+# Open the Keyboard Input Sources System Settings
+open "x-apple.systempreferences:com.apple.preference.keyboard?InputSources" || true
+
+# Use osascript to show an alert to the user about logging out
+osascript -e 'display dialog "PriType 입력기 설치가 완료되었습니다.\n\n시스템에 입력기를 완전히 인식시키려면 지금 [로그아웃] 후 다시 로그인하거나 [재시동]해야 합니다.\n\n재로그인 후 시스템 설정 > 키보드 > 텍스트 입력의 [입력 소스 편집]에서 PriTypeV2를 추가해 주세요." buttons {"확인"} default button "확인" with title "PriType 설치 완료" with icon note' || true
+
+exit 0
