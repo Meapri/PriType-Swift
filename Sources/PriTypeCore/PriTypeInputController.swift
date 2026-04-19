@@ -185,7 +185,8 @@ public class PriTypeInputController: IMKInputController {
                     actualRange: nil
                 )
                 // Re-calculate isLikelyDesktopArea based on current focus
-                let isLikelyDesktopArea = firstRect.origin.x < PriTypeConfig.finderDesktopThreshold &&
+                let isLikelyDesktopArea = firstRect.origin.x >= 0 && firstRect.origin.y >= 0 &&
+                                          firstRect.origin.x < PriTypeConfig.finderDesktopThreshold &&
                                           firstRect.origin.y < PriTypeConfig.finderDesktopThreshold
                 // Create updated context with correct desktop area flag
                 context = ClientContext(

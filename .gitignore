@@ -6,7 +6,17 @@ Assets.xcassets/
 test_icon*.pdf
 icon_*.png
 candidate_icon.png
-.DS_Store
 *.zip
-.build
 PriTypeV2.app/
+
+# Build artifacts
+*.pkg
+Packaging/Payload/
+
+# SPM cache
+.spm-cache/
+.spm-config/
+.spm-security/
+
+# Temporary files
+test*.swift

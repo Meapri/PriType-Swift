@@ -14,7 +14,7 @@ public struct AboutInfo: Sendable {
     public static var appName: String { L10n.app.name }
     
     /// Current version string
-    public static let version = "1.0"
+    public static let version = "2.0.0"
     
     /// Copyright notice (localized)
     public static var copyright: String { L10n.app.copyright }

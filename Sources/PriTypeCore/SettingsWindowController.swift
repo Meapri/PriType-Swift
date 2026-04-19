@@ -201,7 +201,7 @@ struct SettingsView: View {
                     // ── Footer ──
                     HStack {
                         Spacer()
-                        Text("v2.0")
+                        Text("v\(AboutInfo.version)")
                             .font(.system(size: 11, weight: .semibold, design: .monospaced))
                             .foregroundStyle(.secondary)
                             .padding(.horizontal, 14)
