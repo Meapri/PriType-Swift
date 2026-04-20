@@ -58,12 +58,12 @@ fi
 
 if [ -n "$SIGNING_IDENTITY" ]; then
     echo "Signing with identity: $SIGNING_IDENTITY"
-    codesign --force --entitlements PriType.entitlements --sign "$SIGNING_IDENTITY" "$APP_BUNDLE"
+    codesign --force --sign "$SIGNING_IDENTITY" "$APP_BUNDLE"
     echo "Signing complete."
 else
     echo "No SIGNING_IDENTITY set and 'PriTypeDev' certificate not found."
     echo "Using ad-hoc signing. (Warning: Accessibility permissions will break on every build!)"
-    codesign --force --deep --entitlements PriType.entitlements --sign - "$APP_BUNDLE"
+    codesign --force --deep --sign - "$APP_BUNDLE"
 fi
 
 echo "Installing to $INSTALL_DIR..."

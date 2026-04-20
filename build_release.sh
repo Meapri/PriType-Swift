@@ -53,11 +53,11 @@ fi
 
 if [ -n "$APP_SIGN_IDENTITY" ]; then
     echo "Using App Identity: $APP_SIGN_IDENTITY"
-    codesign --force --timestamp --entitlements PriType.entitlements --sign "$APP_SIGN_IDENTITY" "$PAYLOAD_DIR/$APP_BUNDLE"
+    codesign --force --timestamp --sign "$APP_SIGN_IDENTITY" "$PAYLOAD_DIR/$APP_BUNDLE"
 else
     echo "Warning: No valid Developer ID Application or Apple Development certificate found."
     echo "Using ad-hoc signing for the .app (Not suitable for external distribution)."
-    codesign --force --deep --entitlements PriType.entitlements --sign - "$PAYLOAD_DIR/$APP_BUNDLE"
+    codesign --force --deep --sign - "$PAYLOAD_DIR/$APP_BUNDLE"
 fi
 
 # Building the PKG
