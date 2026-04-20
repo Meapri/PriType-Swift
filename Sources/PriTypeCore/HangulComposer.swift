@@ -333,6 +333,7 @@ public class HangulComposer {
         // This ensures system shortcuts work correctly without interference
         let significantModifiers: NSEvent.ModifierFlags = [.command, .control, .option]
         if !event.modifierFlags.intersection(significantModifiers).isEmpty {
+             localTextBuffer = "" // Any system shortcut (Cmd+V, Cmd+Z, etc.) invalidates local context
              return false
         }
         

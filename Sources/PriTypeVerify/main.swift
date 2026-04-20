@@ -453,6 +453,24 @@ func verify() {
         exit(1)
     }
 
+    // Test 16: Edge Case - System Shortcuts Clear localTextBuffer
+    print("\nTest 16: System Shortcuts (Cmd+V) clear localTextBuffer")
+    _ = composer.handle(NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [], timestamp: 0, windowNumber: 0, context: nil, characters: "D", charactersIgnoringModifiers: "D", isARepeat: false, keyCode: 2)!, delegate: delegate)
+    
+    if composer.localTextBuffer == "D" {
+         print("Setup PASS: localTextBuffer has 'D'")
+    }
+    
+    let cmdVEvent = NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [.command], timestamp: 0, windowNumber: 0, context: nil, characters: "v", charactersIgnoringModifiers: "v", isARepeat: false, keyCode: 9)!
+    _ = composer.handle(cmdVEvent, delegate: delegate)
+    
+    if composer.localTextBuffer == "" {
+        print("PASS: localTextBuffer cleared on Cmd+V")
+    } else {
+        print("FAIL: localTextBuffer was NOT cleared on Cmd+V. It is '\(composer.localTextBuffer)'")
+        exit(1)
+    }
+
     print("\n========================================")
     print("All tests passed!")
     print("========================================")
