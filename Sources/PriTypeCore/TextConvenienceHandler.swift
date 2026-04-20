@@ -40,10 +40,11 @@ public final class TextConvenienceHandler: @unchecked Sendable {
     /// Handle space key press for double-space period conversion
     ///
     /// - Parameters:
-    ///   - delegate: The delegate to query/modify text
+    ///   - buffer: The local text buffer to query and modify
+    ///   - delegate: The delegate to modify text
     ///   - checkHangul: If true, also checks for Hangul characters before space
     /// - Returns: Result indicating whether period conversion occurred
-    public func handleDoubleSpacePeriod(delegate: HangulComposerDelegate, checkHangul: Bool = false) -> DoubleSpaceResult {
+    public func handleDoubleSpacePeriod(buffer: inout String, delegate: HangulComposerDelegate, checkHangul: Bool = false) -> DoubleSpaceResult {
         let now = CFAbsoluteTimeGetCurrent()
         let isDoubleTap = (now - lastSpaceTime) < PriTypeConfig.doubleSpaceThreshold
         lastSpaceTime = now
@@ -51,14 +52,15 @@ public final class TextConvenienceHandler: @unchecked Sendable {
         // Double-space period: Only if enabled, just typed space, AND fast enough
         if ConfigurationManager.shared.doubleSpacePeriodEnabled && lastWasSpace && isDoubleTap {
             // Check context to confirm valid double-space condition
-            if let context = delegate.textBeforeCursor(length: 2),
-               context.hasSuffix(" ") {
-                let preSpaceChar = context.dropLast().last
+            if buffer.hasSuffix(" ") {
+                let preSpaceChar = buffer.dropLast().last
                 if let lastChar = preSpaceChar {
                     let isValidChar = lastChar.isLetter || lastChar.isNumber || (checkHangul && isHangul(lastChar))
                     if isValidChar {
                         // Valid double-space condition - replace space with period
                         delegate.replaceTextBeforeCursor(length: 1, with: ". ")
+                        buffer.removeLast()
+                        buffer.append(". ")
                         lastWasSpace = false
                         DebugLogger.log("Double-space -> period (Context validated)")
                         return .convertedToPeriod
@@ -91,12 +93,13 @@ public final class TextConvenienceHandler: @unchecked Sendable {
     ///
     /// - Parameters:
     ///   - char: The character being typed
+    ///   - buffer: The local text buffer to query
     ///   - delegate: The delegate for text operations
     /// - Returns: Result indicating whether input was handled
-    public func handleEnglishModeInput(char: Character, delegate: HangulComposerDelegate) -> EnglishInputResult {
+    public func handleEnglishModeInput(char: Character, buffer: inout String, delegate: HangulComposerDelegate) -> EnglishInputResult {
         // Handle space key
         if char == " " {
-            let result = handleDoubleSpacePeriod(delegate: delegate, checkHangul: false)
+            let result = handleDoubleSpacePeriod(buffer: &buffer, delegate: delegate, checkHangul: false)
             return result == .convertedToPeriod ? .handled : .passThrough
         }
         
@@ -105,9 +108,11 @@ public final class TextConvenienceHandler: @unchecked Sendable {
         
         // Auto-capitalize: Only if enabled
         if ConfigurationManager.shared.autoCapitalizeEnabled && char.isLetter {
-            if shouldAutoCapitalize(delegate: delegate) {
+            if shouldAutoCapitalize(buffer: buffer) {
                 let uppercased = String(char).uppercased()
                 delegate.insertText(uppercased)
+                buffer.append(uppercased)
+                if buffer.count > 15 { buffer = String(buffer.suffix(15)) }
                 DebugLogger.log("Auto-capitalized: \(char) -> \(uppercased)")
                 return .handled
             }
@@ -125,13 +130,11 @@ public final class TextConvenienceHandler: @unchecked Sendable {
     /// - After newline
     /// - Sentence ending (. ! ?) followed by space
     ///
-    /// - Parameter delegate: The delegate to query for text context
+    /// - Parameter buffer: The local text buffer to query context from
     /// - Returns: `true` if the next character should be capitalized
-    public func shouldAutoCapitalize(delegate: HangulComposerDelegate) -> Bool {
-        // Read enough context (e.g. 5 chars) to detect patterns like ". " or "? "
-        guard let text = delegate.textBeforeCursor(length: 5) else {
-            return true  // Start of document -> Capitalize
-        }
+    public func shouldAutoCapitalize(buffer: String) -> Bool {
+        // Use local buffer instead of IPC call to `delegate.textBeforeCursor`
+        let text = buffer
         
         if text.isEmpty { return true }
         

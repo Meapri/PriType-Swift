@@ -444,7 +444,7 @@ func verifyConfigurationManager() {
     print("\n--- Test 15: ConfigurationManager ---")
     
     let config = ConfigurationManager.shared
-    let originalKeyboard = config.keyboardId
+    _ = config.keyboardId
     let originalToggle = config.toggleKey
     
     // Test 1: Default values
@@ -486,26 +486,26 @@ func verifyTextConvenienceHandler() {
     print("PASS: isHangul works correctly")
     
     // Test 2: shouldAutoCapitalize at document start
-    delegate.fullText = ""
-    assert(handler.shouldAutoCapitalize(delegate: delegate) == true, "FAIL: Should capitalize at start")
+    var buffer = ""
+    assert(handler.shouldAutoCapitalize(buffer: buffer) == true, "FAIL: Should capitalize at start")
     print("PASS: shouldAutoCapitalize at document start")
     
     // Test 3: shouldAutoCapitalize after period
-    delegate.fullText = "Hello. "
-    assert(handler.shouldAutoCapitalize(delegate: delegate) == true, "FAIL: Should capitalize after period")
+    buffer = "Hello. "
+    assert(handler.shouldAutoCapitalize(buffer: buffer) == true, "FAIL: Should capitalize after period")
     print("PASS: shouldAutoCapitalize after period")
     
     // Test 4: shouldAutoCapitalize mid-sentence
-    delegate.fullText = "Hello "
-    assert(handler.shouldAutoCapitalize(delegate: delegate) == false, "FAIL: Should not capitalize mid-sentence")
+    buffer = "Hello "
+    assert(handler.shouldAutoCapitalize(buffer: buffer) == false, "FAIL: Should not capitalize mid-sentence")
     print("PASS: shouldAutoCapitalize mid-sentence (false)")
     
     // Test 5: Double-space period (basic check)
     handler.resetSpaceState()
-    delegate.fullText = "Hello "
-    _ = handler.handleDoubleSpacePeriod(delegate: delegate, checkHangul: false)
+    buffer = "Hello "
+    _ = handler.handleDoubleSpacePeriod(buffer: &buffer, delegate: delegate, checkHangul: false)
     // First space recorded
-    let result = handler.handleDoubleSpacePeriod(delegate: delegate, checkHangul: false)
+    let result = handler.handleDoubleSpacePeriod(buffer: &buffer, delegate: delegate, checkHangul: false)
     // Second space should convert to period
     if result == .convertedToPeriod {
         print("PASS: Double-space converts to period")

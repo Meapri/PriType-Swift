@@ -137,8 +137,9 @@ public class PriTypeInputController: IMKInputController {
             composer.forceCommit(delegate: adapter)
         }
         super.deactivateServer(sender)
-        // 클라이언트 참조 해제
+        // 클라이언트 참조 해제 (메모리 누수 방지)
         lastClient = nil
+        lastAdapter = nil
         // Clear cached context to prevent stale state
         cachedContext = nil
         NotificationCenter.default.removeObserver(self, name: .keyboardLayoutChanged, object: nil)
@@ -176,25 +177,9 @@ public class PriTypeInputController: IMKInputController {
         var context: ClientContext
         if let cached = self.cachedContext {
             context = cached
-            
-            // For Finder, the coordinate heuristic MUST be re-evaluated dynamically
-            // because focus can change (Desktop <-> Search Bar) without re-activating the server.
-            if context.isFinder {
-                let firstRect = client.firstRect(
-                    forCharacterRange: NSRange(location: 0, length: 0),
-                    actualRange: nil
-                )
-                // Re-calculate isLikelyDesktopArea based on current focus
-                let isLikelyDesktopArea = firstRect.origin.x >= 0 && firstRect.origin.y >= 0 &&
-                                          firstRect.origin.x < PriTypeConfig.finderDesktopThreshold &&
-                                          firstRect.origin.y < PriTypeConfig.finderDesktopThreshold
-                // Create updated context with correct desktop area flag
-                context = ClientContext(
-                    bundleId: context.bundleId,
-                    hasTextInputCapability: context.hasTextInputCapability,
-                    isLikelyDesktopArea: isLikelyDesktopArea
-                )
-            }
+            // The firstRect heuristic for Finder is computationally expensive and triggers IPC.
+            // We now rely on the initial check performed during activateServer (which is cached)
+            // or the ContextDetector. This avoids IPC calls on every keystroke.
         } else {
             // Fallback for edge cases where activateServer might not have populated cache
             DebugLogger.log("Warning: cachedContext is nil in handle(), performing analysis (Slow Path)")

@@ -48,6 +48,10 @@ public class HangulComposer {
     /// Track last delegate for external toggle calls
     private weak var lastDelegate: (any HangulComposerDelegate)?
     
+    /// Local cache of recently typed text (English mode primarily) to avoid IPC calls
+    /// Maintains the last 15 characters to support auto-capitalization and double-space detection
+    public private(set) var localTextBuffer: String = ""
+    
     // MARK: - libhangul Context
     // ThreadSafeHangulInputContext is thread-safe and supports synchronous calls.
     // It uses NSLock internally for synchronization.
@@ -94,6 +98,7 @@ public class HangulComposer {
         
         // Re-initialize context with new keyboard ID
         context = ThreadSafeHangulInputContext(keyboard: id)
+        localTextBuffer = ""
     }
     
     /// Toggle between Korean and English input modes
@@ -149,12 +154,14 @@ public class HangulComposer {
         // Space - handle double-space period
         if keyCode == KeyCode.space {
             commitComposition(delegate: delegate)
-            let result = textConvenience.handleDoubleSpacePeriod(delegate: delegate, checkHangul: true)
+            let result = textConvenience.handleDoubleSpacePeriod(buffer: &localTextBuffer, delegate: delegate, checkHangul: true)
             if result == .convertedToPeriod {
                 DebugLogger.log("Double-space -> period (Korean mode)")
                 return true
             }
             DebugLogger.log("Space -> flush and space")
+            localTextBuffer.append(" ")
+            if localTextBuffer.count > 15 { localTextBuffer = String(localTextBuffer.suffix(15)) }
             return false
         }
         
@@ -179,6 +186,9 @@ public class HangulComposer {
         // Backspace
         if keyCode == KeyCode.backspace {
             DebugLogger.log("Backspace")
+            if !localTextBuffer.isEmpty {
+                localTextBuffer.removeLast()
+            }
             if !context.isEmpty() {
                 if context.backspace() {
                     DebugLogger.log("Engine backspace success")
@@ -233,6 +243,8 @@ public class HangulComposer {
         if KeyCode.isPrintableASCII(charCode) {
             DebugLogger.log("Retry failed, inserting printable char")
             delegate.insertText(String(char))
+            localTextBuffer.append(Character(char))
+            if localTextBuffer.count > 15 { localTextBuffer = String(localTextBuffer.suffix(15)) }
             return true
         }
         
@@ -292,7 +304,13 @@ public class HangulComposer {
                 return false
             }
             
-            let result = textConvenience.handleEnglishModeInput(char: char, delegate: delegate)
+            let result = textConvenience.handleEnglishModeInput(char: char, buffer: &localTextBuffer, delegate: delegate)
+            
+            // If passThrough, we still need to track it in our buffer
+            if result == .passThrough {
+                localTextBuffer.append(char)
+                if localTextBuffer.count > 15 { localTextBuffer = String(localTextBuffer.suffix(15)) }
+            }
             return result == .handled
         }
         
@@ -356,7 +374,10 @@ public class HangulComposer {
         // If there is committed text, insert it first
         if !commit.isEmpty {
             let commitStr = CompositionHelpers.convertToString(commit)
-            delegate.insertText(commitStr.precomposedStringWithCanonicalMapping)
+            let finalStr = commitStr.precomposedStringWithCanonicalMapping
+            delegate.insertText(finalStr)
+            localTextBuffer.append(finalStr)
+            if localTextBuffer.count > 15 { localTextBuffer = String(localTextBuffer.suffix(15)) }
         }
         
         // Update preedit text
@@ -384,7 +405,10 @@ public class HangulComposer {
         
         if !commitStr.isEmpty {
             // insertText replaces the marked text automatically
-            delegate.insertText(commitStr.precomposedStringWithCanonicalMapping)
+            let finalStr = commitStr.precomposedStringWithCanonicalMapping
+            delegate.insertText(finalStr)
+            localTextBuffer.append(finalStr)
+            if localTextBuffer.count > 15 { localTextBuffer = String(localTextBuffer.suffix(15)) }
             DebugLogger.logSensitive("commitComposition inserted", sensitiveContent: "'\(commitStr)'")
         }
     }
@@ -398,6 +422,7 @@ public class HangulComposer {
     private func cancelComposition(delegate: HangulComposerDelegate) {
         context.reset()
         delegate.setMarkedText("")
+        // Do NOT clear localTextBuffer on cancel, as previously committed text is still valid context
     }
     
     /// Force commit any in-progress composition
@@ -420,5 +445,6 @@ public class HangulComposer {
         context.reset()
         delegate.setMarkedText("")
         delegate.insertText("") 
+        localTextBuffer = ""
     }
 }
