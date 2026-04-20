@@ -138,6 +138,7 @@ public class HangulComposer {
         if keyCode == KeyCode.return || keyCode == KeyCode.numpadEnter {
             DebugLogger.log("Return key -> commit")
             commitComposition(delegate: delegate)
+            localTextBuffer = "" // Cursor moved to new line, context reset
             return false  // Let system insert newline
         }
         
@@ -173,6 +174,7 @@ public class HangulComposer {
            keyCode == KeyCode.upArrow || keyCode == KeyCode.downArrow {
             DebugLogger.log("Arrow key -> commit and pass to system")
             commitComposition(delegate: delegate)
+            localTextBuffer = "" // Cursor moved externally, clear cache
             return false
         }
         
@@ -180,6 +182,7 @@ public class HangulComposer {
         if keyCode == KeyCode.tab {
             DebugLogger.log("Tab key -> commit")
             commitComposition(delegate: delegate)
+            localTextBuffer = "" // Focus might change, clear cache
             return false
         }
         
@@ -433,6 +436,7 @@ public class HangulComposer {
     /// - Parameter delegate: The delegate to receive the committed text
     public func forceCommit(delegate: HangulComposerDelegate) {
         commitComposition(delegate: delegate)
+        localTextBuffer = "" // External commit implies focus change or click, invalidate context
     }
     
     /// Reset the composition state
