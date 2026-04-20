@@ -1,0 +1,14 @@
+#!/bin/bash
+# preinstall for PriTypeV2.pkg
+
+# Remove old installations to ensure a clean install
+rm -rf "/Library/Input Methods/PriTypeV2.app"
+rm -rf "/Library/Input Methods/PriType.app"
+
+# Remove from all user home directories (in case of previous relocated installs)
+for user_home in /Users/*; do
+    rm -rf "$user_home/Library/Input Methods/PriTypeV2.app"
+    rm -rf "$user_home/Library/Input Methods/PriType.app"
+done
+
+exit 0

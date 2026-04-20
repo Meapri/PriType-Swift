@@ -53,7 +53,7 @@ fi
 
 if [ -n "$APP_SIGN_IDENTITY" ]; then
     echo "Using App Identity: $APP_SIGN_IDENTITY"
-    codesign --force --options runtime --timestamp --entitlements PriType.entitlements --sign "$APP_SIGN_IDENTITY" "$PAYLOAD_DIR/$APP_BUNDLE"
+    codesign --force --timestamp --entitlements PriType.entitlements --sign "$APP_SIGN_IDENTITY" "$PAYLOAD_DIR/$APP_BUNDLE"
 else
     echo "Warning: No valid Developer ID Application or Apple Development certificate found."
     echo "Using ad-hoc signing for the .app (Not suitable for external distribution)."
@@ -62,6 +62,13 @@ fi
 
 # Building the PKG
 echo "[4/4] Building the PKG installer..."
+
+# Disable relocation by generating a component plist
+echo "Generating component plist to disable relocation..."
+pkgbuild --analyze --root "$PAYLOAD_DIR" "PriTypeV2_components.plist"
+# Use plutil to change BundleIsRelocatable to false for the first item
+plutil -replace 0.BundleIsRelocatable -bool NO "PriTypeV2_components.plist"
+
 PKG_SIGN_IDENTITY=""
 # Try to find Developer ID Installer first
 DEV_ID_INSTALLER=$(security find-identity -v -p codesigning | grep "Developer ID Installer:" | head -n 1 | awk -F'"' '{print $2}')
@@ -78,6 +85,7 @@ fi
 if [ -n "$PKG_SIGN_IDENTITY" ]; then
     echo "Using Installer Identity: $PKG_SIGN_IDENTITY"
     pkgbuild --root "$PAYLOAD_DIR" \
+             --component-plist "PriTypeV2_components.plist" \
              --install-location "$INSTALL_DIR" \
              --scripts "Packaging/scripts" \
              --identifier "com.meapri.PriTypeV2" \
@@ -88,12 +96,15 @@ else
     echo "Warning: No valid Developer ID Installer certificate found."
     echo "Building unsigned PKG."
     pkgbuild --root "$PAYLOAD_DIR" \
+             --component-plist "PriTypeV2_components.plist" \
              --install-location "$INSTALL_DIR" \
              --scripts "Packaging/scripts" \
              --identifier "com.meapri.PriTypeV2" \
              --version "2.0.0" \
              "$PKG_OUTPUT"
 fi
+
+rm "PriTypeV2_components.plist"
 
 echo "=========================================="
 echo "    Done! PKG created: $PKG_OUTPUT"

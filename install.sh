@@ -58,7 +58,7 @@ fi
 
 if [ -n "$SIGNING_IDENTITY" ]; then
     echo "Signing with identity: $SIGNING_IDENTITY"
-    codesign --force --options runtime --entitlements PriType.entitlements --sign "$SIGNING_IDENTITY" "$APP_BUNDLE"
+    codesign --force --entitlements PriType.entitlements --sign "$SIGNING_IDENTITY" "$APP_BUNDLE"
     echo "Signing complete."
 else
     echo "No SIGNING_IDENTITY set and 'PriTypeDev' certificate not found."
