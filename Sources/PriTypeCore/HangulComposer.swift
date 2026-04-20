@@ -138,7 +138,6 @@ public class HangulComposer {
         if keyCode == KeyCode.return || keyCode == KeyCode.numpadEnter {
             DebugLogger.log("Return key -> commit")
             commitComposition(delegate: delegate)
-            localTextBuffer = "" // Cursor moved to new line, context reset
             return false  // Let system insert newline
         }
         
@@ -174,7 +173,6 @@ public class HangulComposer {
            keyCode == KeyCode.upArrow || keyCode == KeyCode.downArrow {
             DebugLogger.log("Arrow key -> commit and pass to system")
             commitComposition(delegate: delegate)
-            localTextBuffer = "" // Cursor moved externally, clear cache
             return false
         }
         
@@ -182,7 +180,6 @@ public class HangulComposer {
         if keyCode == KeyCode.tab {
             DebugLogger.log("Tab key -> commit")
             commitComposition(delegate: delegate)
-            localTextBuffer = "" // Focus might change, clear cache
             return false
         }
         
@@ -284,6 +281,16 @@ public class HangulComposer {
             return false
         }
         
+        // Global context invalidation:
+        // Any navigation or confirmation key (Arrow, Tab, Return) invalidates our local text context
+        // because the cursor has likely moved, changing the text before it.
+        let keyCode = event.keyCode
+        if keyCode == KeyCode.leftArrow || keyCode == KeyCode.rightArrow ||
+           keyCode == KeyCode.upArrow || keyCode == KeyCode.downArrow ||
+           keyCode == KeyCode.tab || keyCode == KeyCode.return || keyCode == KeyCode.numpadEnter {
+            localTextBuffer = ""
+        }
+        
         // Control+Space: Language toggle (only if enabled in settings)
         if event.keyCode == KeyCode.space && event.modifierFlags.contains(.control) 
             && configuration.controlSpaceAsToggle {
@@ -304,6 +311,11 @@ public class HangulComposer {
             DebugLogger.log("English mode")
             
             guard let chars = event.characters, chars.count == 1, let char = chars.first else {
+                return false
+            }
+            
+            // Do not process or append non-printable characters (e.g., arrow keys) in English mode
+            if let firstScalar = chars.unicodeScalars.first, KeyCode.shouldPassThrough(UInt32(firstScalar.value)) {
                 return false
             }
             
@@ -330,7 +342,6 @@ public class HangulComposer {
             return false
         }
         
-        let keyCode = event.keyCode
         let inputCharacters = characters
         
         // Handle special keys (Return, Escape, Space, Arrow, Tab, Backspace)

@@ -397,6 +397,62 @@ func verify() {
         print("INFO: insertedText = '\(delegate.insertedText)' (may have been committed)")
     }
     
+    // Test 14: Edge Case - Arrow Keys Clear localTextBuffer
+    print("\nTest 14: Arrow Keys clear localTextBuffer")
+    commit(delegate: delegate, composer: composer)
+    
+    // Switch to English mode
+    if composer.inputMode == .korean {
+        composer.toggleInputMode()
+    }
+    
+    // Type some english to fill buffer
+    _ = composer.handle(NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [], timestamp: 0, windowNumber: 0, context: nil, characters: "A", charactersIgnoringModifiers: "A", isARepeat: false, keyCode: 0)!, delegate: delegate)
+    _ = composer.handle(NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [], timestamp: 0, windowNumber: 0, context: nil, characters: "B", charactersIgnoringModifiers: "B", isARepeat: false, keyCode: 11)!, delegate: delegate)
+    
+    if composer.localTextBuffer == "AB" {
+        print("Setup PASS: localTextBuffer has 'AB'")
+    } else {
+        print("FAIL: localTextBuffer is '\(composer.localTextBuffer)', expected 'AB'")
+        exit(1)
+    }
+    
+    // Press Left Arrow
+    let leftArrowEvent2 = NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [], timestamp: 0, windowNumber: 0, context: nil, characters: "\u{F702}", charactersIgnoringModifiers: "\u{F702}", isARepeat: false, keyCode: 123)!
+    _ = composer.handle(leftArrowEvent2, delegate: delegate)
+    
+    if composer.localTextBuffer == "" {
+        print("PASS: localTextBuffer cleared on Arrow Key")
+    } else {
+        print("FAIL: localTextBuffer was NOT cleared. It is '\(composer.localTextBuffer)'")
+        exit(1)
+    }
+    
+    // Test 15: Edge Case - forceCommit Clears localTextBuffer
+    print("\nTest 15: forceCommit clears localTextBuffer")
+    _ = composer.handle(NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [], timestamp: 0, windowNumber: 0, context: nil, characters: "C", charactersIgnoringModifiers: "C", isARepeat: false, keyCode: 8)!, delegate: delegate)
+    
+    if composer.localTextBuffer == "C" {
+         print("Setup PASS: localTextBuffer has 'C'")
+    } else {
+         print("FAIL: localTextBuffer is '\(composer.localTextBuffer)' expected 'C'")
+         exit(1)
+    }
+    
+    // Switch back to Korean mode for cleanup
+    if composer.inputMode == .english {
+        composer.toggleInputMode()
+    }
+    
+    composer.forceCommit(delegate: delegate)
+    
+    if composer.localTextBuffer == "" {
+        print("PASS: localTextBuffer cleared on forceCommit")
+    } else {
+        print("FAIL: localTextBuffer was NOT cleared on forceCommit. It is '\(composer.localTextBuffer)'")
+        exit(1)
+    }
+
     print("\n========================================")
     print("All tests passed!")
     print("========================================")
