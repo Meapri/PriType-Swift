@@ -333,6 +333,12 @@ public class HangulComposer {
         // This ensures system shortcuts work correctly without interference
         let significantModifiers: NSEvent.ModifierFlags = [.command, .control, .option]
         if !event.modifierFlags.intersection(significantModifiers).isEmpty {
+             // Commit any in-progress composition first. Otherwise marked text stays
+             // live and the host app ignores or misapplies the shortcut (e.g. Cmd+←).
+             if !context.isEmpty() {
+                 commitComposition(delegate: delegate)
+                 delegate.setMarkedText("")
+             }
              localTextBuffer = "" // Any system shortcut (Cmd+V, Cmd+Z, etc.) invalidates local context
              return false
         }
@@ -354,10 +360,17 @@ public class HangulComposer {
         DebugLogger.logSensitive("Handle key code \(keyCode)", sensitiveContent: inputCharacters)
         
         // Filter: If input contains non-printable characters (e.g., function keys, arrows)
+        // This catches Fn+Arrow (Home/End/PageUp/PageDown) and other navigation keys
+        // that don't match the KeyCode enum in handleSpecialKey.
         if let firstScalar = inputCharacters.unicodeScalars.first {
             let firstCharCode = UInt32(firstScalar.value)
             if KeyCode.shouldPassThrough(firstCharCode) {
                 DebugLogger.log("Non-printable key detected, passing to system")
+                if !context.isEmpty() {
+                    commitComposition(delegate: delegate)
+                    delegate.setMarkedText("")
+                }
+                localTextBuffer = ""
                 return false
             }
         }
