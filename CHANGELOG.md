@@ -20,6 +20,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Adapter classes refactored with BaseClientAdapter inheritance
 - Finder detection improved with validAttributesForMarkedText
 
+### Fixed
+- Cmd/Ctrl/Option+Arrow and Fn+Arrow (Home/End/PageUp/PageDown) shortcuts now work correctly during Hangul composition. The in-progress preedit is committed and marked text is cleared before the event is passed to the host application, preventing the shortcut from being ignored or misapplied.
+
 ### Security
 - Removed all shell command execution (PlistBuddy, killall cfprefsd)
 - Added -strict-concurrency=complete Swift flag

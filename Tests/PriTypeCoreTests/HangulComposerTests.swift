@@ -242,8 +242,70 @@ final class HangulComposerTests: XCTestCase {
         XCTAssertTrue(delegate.insertedTexts.contains("가"))
     }
     
+    // MARK: - Composition Commit on Shortcut Tests (Regression)
+
+    /// 조합 중 Cmd+방향키 → 시스템으로 pass-through 되기 전에 조합이 커밋되어야 함.
+    /// 커밋하지 않으면 marked text가 살아있어 호스트 앱이 단축키를 무시하거나 엉뚱한 위치에 문자가 남음.
+    func testCmdArrowCommitsCompositionBeforePassThrough() {
+        // Given: "가" 조합 중
+        _ = composer.handle(makeKeyEvent(char: "r", keyCode: 15)!, delegate: delegate)
+        _ = composer.handle(makeKeyEvent(char: "k", keyCode: 40)!, delegate: delegate)
+        XCTAssertEqual(delegate.markedText, "가")
+        XCTAssertTrue(delegate.insertedTexts.isEmpty, "아직 커밋 전이어야 함")
+
+        // When: Cmd+Left
+        let cmdLeft = makeKeyEvent(char: "\u{F702}", keyCode: KeyCode.leftArrow, modifiers: [.command])!
+        let handled = composer.handle(cmdLeft, delegate: delegate)
+
+        // Then: 시스템으로 넘기지만, 조합은 먼저 커밋됨
+        XCTAssertFalse(handled, "Cmd+Arrow는 시스템으로 pass-through되어야 함")
+        XCTAssertTrue(delegate.insertedTexts.contains("가"), "조합 중이던 '가'가 커밋되어야 함")
+        XCTAssertEqual(delegate.markedText, "", "marked text가 정리되어야 함")
+    }
+
+    /// 조합 중 Option+방향키도 동일하게 커밋 후 pass-through.
+    func testOptionArrowCommitsCompositionBeforePassThrough() {
+        _ = composer.handle(makeKeyEvent(char: "r", keyCode: 15)!, delegate: delegate)
+        _ = composer.handle(makeKeyEvent(char: "k", keyCode: 40)!, delegate: delegate)
+        XCTAssertEqual(delegate.markedText, "가")
+
+        let optLeft = makeKeyEvent(char: "\u{F702}", keyCode: KeyCode.leftArrow, modifiers: [.option])!
+        let handled = composer.handle(optLeft, delegate: delegate)
+
+        XCTAssertFalse(handled, "Option+Arrow는 시스템으로 pass-through되어야 함")
+        XCTAssertTrue(delegate.insertedTexts.contains("가"), "조합이 커밋되어야 함")
+        XCTAssertEqual(delegate.markedText, "")
+    }
+
+    /// Fn+Left는 macOS에서 Home 키(keyCode 115, NSHomeFunctionKey = U+F729)로 변환됨.
+    /// handleSpecialKey의 방향키 분기에 매칭되지 않고 non-printable 필터에서 pass-through 되는 경로.
+    /// 이 경로에서도 조합이 먼저 커밋되어야 함.
+    func testFnArrowHomeCommitsCompositionBeforePassThrough() {
+        _ = composer.handle(makeKeyEvent(char: "r", keyCode: 15)!, delegate: delegate)
+        _ = composer.handle(makeKeyEvent(char: "k", keyCode: 40)!, delegate: delegate)
+        XCTAssertEqual(delegate.markedText, "가")
+
+        // Home key: keyCode 115, characters = NSHomeFunctionKey (U+F729)
+        let homeKey = makeKeyEvent(char: "\u{F729}", keyCode: 115)!
+        let handled = composer.handle(homeKey, delegate: delegate)
+
+        XCTAssertFalse(handled, "Home 키는 시스템으로 pass-through되어야 함")
+        XCTAssertTrue(delegate.insertedTexts.contains("가"), "조합이 커밋되어야 함")
+        XCTAssertEqual(delegate.markedText, "")
+    }
+
+    /// 조합이 없는 상태에서는 단축키가 그대로 통과만 하고 추가 동작이 없어야 함.
+    func testCmdShortcutWithoutCompositionJustPassesThrough() {
+        let cmdS = makeKeyEvent(char: "s", keyCode: 1, modifiers: [.command])!
+        let handled = composer.handle(cmdS, delegate: delegate)
+
+        XCTAssertFalse(handled, "조합 없는 Cmd 단축키는 pass-through")
+        XCTAssertTrue(delegate.insertedTexts.isEmpty, "조합이 없었으므로 insertText가 호출되지 않아야 함")
+        XCTAssertEqual(delegate.markedText, "")
+    }
+
     // MARK: - Keyboard Layout Tests
-    
+
     func testKeyboardLayoutChange() {
         // Type something
         _ = composer.handle(makeKeyEvent(char: "r", keyCode: 15)!, delegate: delegate)
