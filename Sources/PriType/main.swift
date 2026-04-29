@@ -26,6 +26,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Setup Right Command toggle via IOKit
         setupIOKit()
         
+        // Pre-load Hanja dictionary in background for instant lookup
+        DispatchQueue.global(qos: .utility).async {
+            HanjaManager.shared.loadIfNeeded()
+        }
+        
         // Setup update notifications
         UpdateNotifier.shared.setup()
         

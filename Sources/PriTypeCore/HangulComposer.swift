@@ -490,8 +490,17 @@ public class HangulComposer {
     /// Trigger Hanja lookup externally (called by RightCommandSuppressor via CGEventTap)
     ///
     /// This is the public entry point for Hanja conversion.
-    /// Uses the last delegate to perform text operations.
+    /// Acts as a toggle: dismisses if already visible, opens if not.
     public func triggerHanjaLookup() {
+        // Toggle behavior: if already showing, dismiss
+        if HanjaCandidateWindow.shared.isVisible {
+            HanjaCandidateWindow.shared.dismiss()
+            hanjaMode = false
+            hanjaKey = ""
+            DebugLogger.log("Hanja: Toggled off")
+            return
+        }
+        
         guard let delegate = lastDelegate else {
             DebugLogger.log("Hanja: No delegate available")
             return
@@ -506,12 +515,14 @@ public class HangulComposer {
         
         // Get the search key: prefer current preedit, fallback to last character in buffer
         var searchKey = ""
+        var hadPreedit = false
         
         let preedit = context.getPreeditString()
         let preeditStr = CompositionHelpers.convertToString(preedit).precomposedStringWithCanonicalMapping
         
         if !preeditStr.isEmpty {
             searchKey = preeditStr
+            hadPreedit = true
         } else if let lastChar = localTextBuffer.last, lastChar.isHangulChar {
             searchKey = String(lastChar)
         } else {
@@ -539,17 +550,13 @@ public class HangulComposer {
         hanjaKey = searchKey
         
         // Commit preedit if it exists (so we can replace the committed character later)
-        if !preeditStr.isEmpty {
+        if hadPreedit {
             commitComposition(delegate: delegate)
         }
         
         // Get cursor position for window placement
-        // IMK guarantees main thread execution, so direct call is safe
-        
-        // Default position near mouse cursor if we can't get text cursor
         var cursorRect = NSRect(x: NSEvent.mouseLocation.x, y: NSEvent.mouseLocation.y, width: 0, height: 20)
         
-        // Try to get cursor position from the active input controller
         if let controller = PriTypeInputController.sharedController,
            let client = controller.client() as? IMKTextInput {
             var actualRange = NSRange()
@@ -559,13 +566,28 @@ public class HangulComposer {
             }
         }
         
+        // Capture the hanjaKey length for use in the callback
+        let replacementLength = searchKey.utf16.count
+        
         HanjaCandidateWindow.shared.show(
             entries: entries,
             cursorRect: cursorRect,
             onSelect: { [weak self] entry in
                 guard let self = self else { return }
-                // Replace the last Hangul character with the selected Hanja
-                delegate.replaceTextBeforeCursor(length: self.hanjaKey.utf16.count, with: entry.hanja)
+                
+                // Use the current active client directly for reliable text replacement
+                if let controller = PriTypeInputController.sharedController,
+                   let client = controller.client() as? IMKTextInput {
+                    let selRange = client.selectedRange()
+                    if selRange.location != NSNotFound && selRange.location >= replacementLength {
+                        let replaceRange = NSRange(location: selRange.location - replacementLength, length: replacementLength)
+                        client.insertText(entry.hanja, replacementRange: replaceRange)
+                    } else {
+                        // Fallback: just insert
+                        client.insertText(entry.hanja, replacementRange: NSRange(location: NSNotFound, length: NSNotFound))
+                    }
+                }
+                
                 self.localTextBuffer = String(self.localTextBuffer.dropLast(self.hanjaKey.count)) + entry.hanja
                 self.hanjaMode = false
                 self.hanjaKey = ""
