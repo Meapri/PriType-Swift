@@ -270,7 +270,7 @@ struct SettingsView: View {
                         
                         // System Section
                         SettingsSection(
-                            title: NSLocalizedString("system.title", comment: ""),
+                            title: L10n.system.title,
                             icon: "gearshape.2"
                         ) {
                             VStack(spacing: 0) {
@@ -282,19 +282,19 @@ struct SettingsView: View {
                                         .frame(width: 28, height: 28)
                                         .background(Circle().fill(.primary.opacity(0.06)))
                                     
-                                    Text(NSLocalizedString("system.accessibility", comment: ""))
+                                    Text(L10n.system.accessibility)
                                         .font(.system(size: 14, weight: .regular, design: .rounded))
                                         .foregroundStyle(.primary)
                                     
                                     Spacer()
                                     
                                     if isAccessibilityGranted {
-                                        Text(NSLocalizedString("system.accessibilityGranted", comment: ""))
+                                        Text(L10n.system.accessibilityGranted)
                                             .font(.system(size: 12, weight: .semibold, design: .rounded))
                                             .foregroundStyle(.green)
                                     } else {
                                         Button(action: { requestAccessibility() }) {
-                                            Text(NSLocalizedString("system.accessibilityRequest", comment: ""))
+                                            Text(L10n.system.accessibilityRequest)
                                                 .font(.system(size: 12, weight: .medium, design: .rounded))
                                                 .padding(.horizontal, 10)
                                                 .padding(.vertical, 4)
@@ -318,18 +318,18 @@ struct SettingsView: View {
                                         .frame(width: 28, height: 28)
                                         .background(Circle().fill(.primary.opacity(0.06)))
                                     
-                                    Text(NSLocalizedString("system.removeABC", comment: ""))
+                                    Text(L10n.system.removeABC)
                                         .font(.system(size: 14, weight: .regular, design: .rounded))
                                         .foregroundStyle(.primary)
                                     
                                     Spacer()
                                     
                                     if removeABCStatus == .success {
-                                        Text(NSLocalizedString("system.removeABCSuccess", comment: ""))
+                                        Text(L10n.system.removeABCSuccess)
                                             .font(.system(size: 12, weight: .semibold, design: .rounded))
                                             .foregroundStyle(.green)
                                     } else if removeABCStatus == .error {
-                                        Text(NSLocalizedString("system.removeABCFailed", comment: ""))
+                                        Text(L10n.system.removeABCFailed)
                                             .font(.system(size: 12, weight: .semibold, design: .rounded))
                                             .foregroundStyle(.orange)
                                     } else {
@@ -488,26 +488,34 @@ struct SettingsView: View {
     }
     
     private func removeABCKeyboard() {
-        guard let sources = TISCreateInputSourceList(nil, false)?.takeRetainedValue() as? [TISInputSource] else {
+        guard let defaults = UserDefaults(suiteName: "com.apple.HIToolbox"),
+              var sources = defaults.array(forKey: "AppleEnabledInputSources") as? [[String: Any]] else {
             removeABCStatus = .error
             return
         }
         
-        var foundAndDisabled = false
-        for source in sources {
-            if let idPtr = TISGetInputSourceProperty(source, kTISPropertyInputSourceID) {
-                let id = Unmanaged<CFString>.fromOpaque(idPtr).takeUnretainedValue() as String
-                if id == "com.apple.keylayout.ABC" {
-                    let status = TISDisableInputSource(source)
-                    if status == noErr {
-                        foundAndDisabled = true
-                    }
-                }
+        let originalCount = sources.count
+        sources.removeAll { source in
+            if let name = source["KeyboardLayout Name"] as? String, name == "ABC" {
+                return true
             }
+            return false
         }
         
-        withAnimation {
-            removeABCStatus = foundAndDisabled ? .success : .error
+        if sources.count < originalCount {
+            defaults.set(sources, forKey: "AppleEnabledInputSources")
+            let _ = CFPreferencesAppSynchronize("com.apple.HIToolbox" as CFString)
+            
+            // Restart TextInputMenuAgent to apply changes immediately
+            let task = Process()
+            task.launchPath = "/usr/bin/killall"
+            task.arguments = ["TextInputMenuAgent"]
+            try? task.run()
+            
+            withAnimation { removeABCStatus = .success }
+        } else {
+            // Already removed or not found
+            withAnimation { removeABCStatus = .success }
         }
         
         // Auto-reset status message after 3 seconds

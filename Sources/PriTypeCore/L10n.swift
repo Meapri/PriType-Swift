@@ -98,4 +98,16 @@ public enum L10n {
         public static var notificationBody: String { localized("update.notificationBody") }
         public static var autoCheck: String { localized("update.autoCheck") }
     }
+    
+    // MARK: - System
+    
+    public enum system {
+        public static var title: String { localized("system.title") }
+        public static var accessibility: String { localized("system.accessibility") }
+        public static var accessibilityGranted: String { localized("system.accessibilityGranted") }
+        public static var accessibilityRequest: String { localized("system.accessibilityRequest") }
+        public static var removeABC: String { localized("system.removeABC") }
+        public static var removeABCSuccess: String { localized("system.removeABCSuccess") }
+        public static var removeABCFailed: String { localized("system.removeABCFailed") }
+    }
 }
