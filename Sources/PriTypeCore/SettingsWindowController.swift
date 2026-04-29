@@ -93,15 +93,15 @@ struct SettingsView: View {
     
     var body: some View {
         ZStack {
-            // Translucent glass window background
+            // Single translucent background — no additional GlassEffectContainer
             VisualEffectView(material: .hudWindow, blendingMode: .behindWindow)
                 .edgesIgnoringSafeArea(.all)
             
-            GlassEffectContainer {
+            VStack(spacing: 0) {
+                // ── Header (fixed, not scrollable) ──
                 VStack(spacing: 0) {
-                    // ── Header ──
                     HStack(spacing: 12) {
-                        // App icon badge
+                        // App icon badge — only glass element in header
                         Text("ㅎ")
                             .font(.system(size: 28, weight: .bold, design: .rounded))
                             .foregroundStyle(
@@ -126,153 +126,156 @@ struct SettingsView: View {
                         Spacer()
                     }
                     .padding(.top, 24)
-                    .padding(.bottom, 20)
+                    .padding(.bottom, 16)
                     .padding(.horizontal, 28)
                     
                     // Thin separator
                     Divider()
                         .opacity(0.3)
                         .padding(.horizontal, 20)
-                    
-                    // ── Scrollable Content ──
-                    ScrollView(.vertical, showsIndicators: false) {
-                        VStack(alignment: .leading, spacing: 28) {
-                            
-                            // Keyboard Layout Section
-                            LiquidGlassSection(
-                                title: L10n.keyboard.title,
-                                icon: "keyboard"
-                            ) {
-                                VStack(spacing: 2) {
-                                    ForEach(keyboardOptions, id: \.0) { option in
-                                        LiquidSelectionRow(
-                                            title: option.1,
-                                            isSelected: selectedKeyboard == option.0,
-                                            action: { selectedKeyboard = option.0 }
-                                        )
-                                    }
-                                }
-                            }
-                            .onChange(of: selectedKeyboard) { _, newValue in
-                                ConfigurationManager.shared.keyboardId = newValue
-                            }
-                            
-                            // Toggle Key Section
-                            LiquidGlassSection(
-                                title: L10n.toggle.title,
-                                icon: "globe"
-                            ) {
-                                VStack(spacing: 2) {
-                                    ForEach(ToggleKey.allCases, id: \.self) { key in
-                                        LiquidSelectionRow(
-                                            title: key.displayName,
-                                            isSelected: selectedToggleKey == key,
-                                            action: { selectedToggleKey = key }
-                                        )
-                                    }
-                                }
-                            }
-                            .onChange(of: selectedToggleKey) { _, newValue in
-                                ConfigurationManager.shared.toggleKey = newValue
-                            }
-                            
-                            // Text Input Options Section
-                            LiquidGlassSection(
-                                title: L10n.textInput.title,
-                                icon: "text.cursor"
-                            ) {
-                                VStack(spacing: 0) {
-                                    LiquidToggleRow(
-                                        title: L10n.textInput.autoCapitalize,
-                                        icon: "textformat.size.larger",
-                                        isOn: $autoCapitalizeEnabled
-                                    )
-                                    Divider()
-                                        .opacity(0.3)
-                                        .padding(.horizontal, 12)
-                                    LiquidToggleRow(
-                                        title: L10n.textInput.doubleSpacePeriod,
-                                        icon: "period",
-                                        isOn: $doubleSpacePeriodEnabled
+                }
+                .zIndex(1) // Header stays above scroll content
+                
+                // ── Scrollable Content (clipped to prevent bleed-through) ──
+                ScrollView(.vertical, showsIndicators: false) {
+                    VStack(alignment: .leading, spacing: 24) {
+                        
+                        // Keyboard Layout Section
+                        SettingsSection(
+                            title: L10n.keyboard.title,
+                            icon: "keyboard"
+                        ) {
+                            VStack(spacing: 2) {
+                                ForEach(keyboardOptions, id: \.0) { option in
+                                    SelectionRow(
+                                        title: option.1,
+                                        isSelected: selectedKeyboard == option.0,
+                                        action: { selectedKeyboard = option.0 }
                                     )
                                 }
-                            }
-                            .onChange(of: autoCapitalizeEnabled) { _, newValue in
-                                ConfigurationManager.shared.autoCapitalizeEnabled = newValue
-                            }
-                            .onChange(of: doubleSpacePeriodEnabled) { _, newValue in
-                                ConfigurationManager.shared.doubleSpacePeriodEnabled = newValue
-                            }
-                            
-                            // Update Section
-                            LiquidGlassSection(
-                                title: L10n.update.title,
-                                icon: "arrow.triangle.2.circlepath"
-                            ) {
-                                VStack(spacing: 0) {
-                                    LiquidToggleRow(
-                                        title: L10n.update.autoCheck,
-                                        icon: "clock.arrow.2.circlepath",
-                                        isOn: $autoUpdateCheckEnabled
-                                    )
-                                    
-                                    Divider()
-                                        .opacity(0.3)
-                                        .padding(.horizontal, 12)
-                                    
-                                    // Manual check button + status
-                                    HStack(spacing: 10) {
-                                        Button(action: { checkForUpdates() }) {
-                                            HStack(spacing: 6) {
-                                                if updateStatus == .checking {
-                                                    ProgressView()
-                                                        .controlSize(.small)
-                                                } else {
-                                                    Image(systemName: "arrow.clockwise")
-                                                        .font(.system(size: 12, weight: .medium))
-                                                }
-                                                Text(L10n.update.checkButton)
-                                                    .font(.system(size: 13, weight: .medium, design: .rounded))
-                                            }
-                                            .padding(.horizontal, 14)
-                                            .padding(.vertical, 8)
-                                            .glassEffect(.regular, in: .capsule)
-                                        }
-                                        .buttonStyle(.plain)
-                                        .disabled(updateStatus == .checking)
-                                        
-                                        Spacer()
-                                        
-                                        // Status indicator
-                                        updateStatusView
-                                    }
-                                    .padding(.vertical, 10)
-                                    .padding(.horizontal, 12)
-                                }
-                            }
-                            .onChange(of: autoUpdateCheckEnabled) { _, newValue in
-                                ConfigurationManager.shared.autoUpdateCheckEnabled = newValue
                             }
                         }
-                        .padding(.top, 20)
-                        .padding(.bottom, 16)
-                        .padding(.horizontal, 4)
+                        .onChange(of: selectedKeyboard) { _, newValue in
+                            ConfigurationManager.shared.keyboardId = newValue
+                        }
+                        
+                        // Toggle Key Section
+                        SettingsSection(
+                            title: L10n.toggle.title,
+                            icon: "globe"
+                        ) {
+                            VStack(spacing: 2) {
+                                ForEach(ToggleKey.allCases, id: \.self) { key in
+                                    SelectionRow(
+                                        title: key.displayName,
+                                        isSelected: selectedToggleKey == key,
+                                        action: { selectedToggleKey = key }
+                                    )
+                                }
+                            }
+                        }
+                        .onChange(of: selectedToggleKey) { _, newValue in
+                            ConfigurationManager.shared.toggleKey = newValue
+                        }
+                        
+                        // Text Input Options Section
+                        SettingsSection(
+                            title: L10n.textInput.title,
+                            icon: "text.cursor"
+                        ) {
+                            VStack(spacing: 0) {
+                                SettingsToggleRow(
+                                    title: L10n.textInput.autoCapitalize,
+                                    icon: "textformat.size.larger",
+                                    isOn: $autoCapitalizeEnabled
+                                )
+                                Divider()
+                                    .opacity(0.2)
+                                    .padding(.horizontal, 12)
+                                SettingsToggleRow(
+                                    title: L10n.textInput.doubleSpacePeriod,
+                                    icon: "period",
+                                    isOn: $doubleSpacePeriodEnabled
+                                )
+                            }
+                        }
+                        .onChange(of: autoCapitalizeEnabled) { _, newValue in
+                            ConfigurationManager.shared.autoCapitalizeEnabled = newValue
+                        }
+                        .onChange(of: doubleSpacePeriodEnabled) { _, newValue in
+                            ConfigurationManager.shared.doubleSpacePeriodEnabled = newValue
+                        }
+                        
+                        // Update Section
+                        SettingsSection(
+                            title: L10n.update.title,
+                            icon: "arrow.triangle.2.circlepath"
+                        ) {
+                            VStack(spacing: 0) {
+                                SettingsToggleRow(
+                                    title: L10n.update.autoCheck,
+                                    icon: "clock.arrow.2.circlepath",
+                                    isOn: $autoUpdateCheckEnabled
+                                )
+                                
+                                Divider()
+                                    .opacity(0.2)
+                                    .padding(.horizontal, 12)
+                                
+                                // Manual check button + status
+                                HStack(spacing: 10) {
+                                    Button(action: { checkForUpdates() }) {
+                                        HStack(spacing: 6) {
+                                            if updateStatus == .checking {
+                                                ProgressView()
+                                                    .controlSize(.small)
+                                            } else {
+                                                Image(systemName: "arrow.clockwise")
+                                                    .font(.system(size: 12, weight: .medium))
+                                            }
+                                            Text(L10n.update.checkButton)
+                                                .font(.system(size: 13, weight: .medium, design: .rounded))
+                                        }
+                                        .padding(.horizontal, 14)
+                                        .padding(.vertical, 8)
+                                        .background(
+                                            Capsule()
+                                                .fill(.primary.opacity(0.06))
+                                        )
+                                    }
+                                    .buttonStyle(.plain)
+                                    .disabled(updateStatus == .checking)
+                                    
+                                    Spacer()
+                                    
+                                    // Status indicator
+                                    updateStatusView
+                                }
+                                .padding(.vertical, 10)
+                                .padding(.horizontal, 12)
+                            }
+                        }
+                        .onChange(of: autoUpdateCheckEnabled) { _, newValue in
+                            ConfigurationManager.shared.autoUpdateCheckEnabled = newValue
+                        }
                     }
-                    .padding(.horizontal, 24)
-                    
-                    // ── Footer ──
-                    HStack {
-                        Spacer()
-                        Text("v\(AboutInfo.version)")
-                            .font(.system(size: 11, weight: .semibold, design: .monospaced))
-                            .foregroundStyle(.secondary)
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 6)
-                            .glassEffect(.regular, in: .capsule)
-                        Spacer()
-                    }
-                    .padding(.vertical, 12)
+                    .padding(.top, 16)
+                    .padding(.bottom, 16)
+                    .padding(.horizontal, 28)
                 }
+                .clipped() // Prevent content from bleeding into header
+                
+                // ── Footer ──
+                HStack {
+                    Spacer()
+                    Text("v\(AboutInfo.version)")
+                        .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                        .foregroundStyle(.tertiary)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 6)
+                    Spacer()
+                }
+                .padding(.vertical, 8)
             }
         }
         .frame(width: PriTypeConfig.settingsWindowWidth, height: PriTypeConfig.settingsWindowHeight)
@@ -392,27 +395,11 @@ struct VisualEffectView: NSViewRepresentable {
     }
 }
 
-// MARK: - Conditional Glass Modifier
+// MARK: - Settings Components (Minimal Glass)
 
-/// Applies `.glassEffect()` only when `isActive` is true.
-/// Works around the limitation that GlassEffect styles cannot be used in ternary expressions.
-struct ConditionalGlass<S: InsettableShape>: ViewModifier {
-    let isActive: Bool
-    let shape: S
-    
-    func body(content: Content) -> some View {
-        if isActive {
-            content.glassEffect(.regular, in: shape)
-        } else {
-            content
-        }
-    }
-}
-
-// MARK: - Liquid Glass Components
-
-/// A section card with an icon, title label, and native Liquid Glass content area
-struct LiquidGlassSection<Content: View>: View {
+/// A section with a label and a single glass card for its content.
+/// Only ONE `.glassEffect` per section — on the card itself.
+struct SettingsSection<Content: View>: View {
     let title: String
     let icon: String
     let content: Content
@@ -424,35 +411,33 @@ struct LiquidGlassSection<Content: View>: View {
     }
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            // Section header with icon
+        VStack(alignment: .leading, spacing: 8) {
+            // Section header — plain text, no glass
             HStack(spacing: 6) {
                 Image(systemName: icon)
                     .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.tertiary)
                 Text(title)
                     .font(.system(size: 12, weight: .semibold, design: .rounded))
                     .foregroundStyle(.secondary)
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 5)
-            .glassEffect(.regular, in: .capsule)
+            .padding(.horizontal, 4)
             
-            // Glass card
+            // Glass card — single glass layer for the entire section content
             VStack {
                 content
             }
             .padding(.vertical, 6)
             .padding(.horizontal, 4)
-            .glassEffect(.regular, in: .rect(cornerRadius: 16))
+            .glassEffect(.regular, in: .rect(cornerRadius: 14))
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel(title)
     }
 }
 
-/// A selection row with polished hover and selected states
-struct LiquidSelectionRow: View {
+/// A selection row — uses solid fill instead of nested glass
+struct SelectionRow: View {
     let title: String
     let isSelected: Bool
     let action: () -> Void
@@ -465,14 +450,13 @@ struct LiquidSelectionRow: View {
             }
         }) {
             HStack(spacing: 10) {
-                // Selection indicator
+                // Selection indicator — simple circle, no glass
                 Circle()
                     .fill(isSelected
                           ? AnyShapeStyle(LinearGradient(colors: [.cyan, .blue], startPoint: .top, endPoint: .bottom))
-                          : AnyShapeStyle(Color.primary.opacity(0.12)))
+                          : AnyShapeStyle(Color.primary.opacity(0.10)))
                     .frame(width: 7, height: 7)
                     .padding(6)
-                    .modifier(ConditionalGlass(isActive: isSelected, shape: .circle))
                 
                 Text(title)
                     .font(.system(size: 14, weight: isSelected ? .semibold : .regular, design: .rounded))
@@ -489,13 +473,12 @@ struct LiquidSelectionRow: View {
             }
             .padding(.vertical, 8)
             .padding(.horizontal, 10)
-            .background {
-                if isHovering && !isSelected {
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(.primary.opacity(0.04))
-                }
-            }
-            .modifier(ConditionalGlass(isActive: isSelected, shape: .rect(cornerRadius: 10)))
+            .background(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(isSelected
+                          ? Color.primary.opacity(0.06)
+                          : isHovering ? Color.primary.opacity(0.03) : Color.clear)
+            )
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -510,8 +493,8 @@ struct LiquidSelectionRow: View {
     }
 }
 
-/// A toggle row with an icon for on/off settings
-struct LiquidToggleRow: View {
+/// A toggle row — icon uses plain background instead of glass
+struct SettingsToggleRow: View {
     let title: String
     let icon: String
     @Binding var isOn: Bool
@@ -522,7 +505,10 @@ struct LiquidToggleRow: View {
                 .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(.secondary)
                 .frame(width: 28, height: 28)
-                .glassEffect(.regular, in: .circle)
+                .background(
+                    Circle()
+                        .fill(.primary.opacity(0.06))
+                )
             
             Text(title)
                 .font(.system(size: 14, weight: .regular, design: .rounded))
