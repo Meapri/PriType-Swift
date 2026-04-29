@@ -20,3 +20,4 @@ Packaging/Payload/
 
 # Temporary files
 test*.swift
+Sources/PriTypeCore/Resources/hanja.txt

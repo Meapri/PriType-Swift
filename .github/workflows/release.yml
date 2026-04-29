@@ -1,0 +1,135 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build, Sign, Notarize & Release
+    runs-on: macos-15
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    
+    - name: Setup Swift
+      uses: swift-actions/setup-swift@v2
+      with:
+        swift-version: "6.2"
+    
+    - name: Extract version from tag
+      id: version
+      run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+    
+    - name: Build Release
+      run: swift build -c release
+    
+    - name: Create App Bundle
+      run: |
+        APP_NAME="PriTypeV2"
+        BUILD_DIR=".build/release"
+        PAYLOAD_DIR="Packaging/Payload"
+        CONTENTS_DIR="${PAYLOAD_DIR}/${APP_NAME}.app/Contents"
+        MACOS_DIR="${CONTENTS_DIR}/MacOS"
+        RESOURCES_DIR="${CONTENTS_DIR}/Resources"
+        
+        rm -rf "$PAYLOAD_DIR"
+        mkdir -p "$MACOS_DIR" "$RESOURCES_DIR"
+        
+        cp "$BUILD_DIR/PriType" "$MACOS_DIR/$APP_NAME"
+        cp Info.plist "$CONTENTS_DIR/"
+        cp -R Resources/* "$RESOURCES_DIR/" 2>/dev/null || true
+        cp "AppIcon.icns" "$RESOURCES_DIR/" 2>/dev/null || true
+        cp "icon.tiff" "$RESOURCES_DIR/" 2>/dev/null || true
+        if [ -d "$BUILD_DIR/PriType_PriTypeCore.bundle" ]; then
+            cp -R "$BUILD_DIR/PriType_PriTypeCore.bundle" "$RESOURCES_DIR/"
+        fi
+    
+    - name: Import Certificates
+      env:
+        DEV_ID_APP_P12: ${{ secrets.DEVELOPER_ID_APPLICATION_P12 }}
+        DEV_ID_INSTALLER_P12: ${{ secrets.DEVELOPER_ID_INSTALLER_P12 }}
+        P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
+      run: |
+        # Create temporary keychain
+        KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+        KEYCHAIN_PASSWORD=$(openssl rand -hex 12)
+        
+        security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+        security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+        security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+        
+        # Import Developer ID Application certificate
+        echo "$DEV_ID_APP_P12" | base64 --decode > $RUNNER_TEMP/dev_app.p12
+        security import $RUNNER_TEMP/dev_app.p12 -P "$P12_PASSWORD" \
+          -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+        
+        # Import Developer ID Installer certificate
+        echo "$DEV_ID_INSTALLER_P12" | base64 --decode > $RUNNER_TEMP/dev_installer.p12
+        security import $RUNNER_TEMP/dev_installer.p12 -P "$P12_PASSWORD" \
+          -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+        
+        security list-keychain -d user -s "$KEYCHAIN_PATH"
+        
+        # Allow codesign to access the keychain
+        security set-key-partition-list -S apple-tool:,apple:,codesign: \
+          -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+    
+    - name: Code Sign App Bundle
+      run: |
+        APP_SIGN_IDENTITY=$(security find-identity -v -p codesigning | grep "Developer ID Application:" | head -n 1 | awk -F'"' '{print $2}')
+        echo "Signing with: $APP_SIGN_IDENTITY"
+        codesign --force --options runtime --timestamp --sign "$APP_SIGN_IDENTITY" "Packaging/Payload/PriTypeV2.app"
+    
+    - name: Build & Sign PKG
+      run: |
+        PKG_SIGN_IDENTITY=$(security find-identity -v | grep "Developer ID Installer:" | head -n 1 | awk -F'"' '{print $2}')
+        
+        pkgbuild --analyze --root Packaging/Payload PriTypeV2_components.plist
+        plutil -replace 0.BundleIsRelocatable -bool NO PriTypeV2_components.plist
+        
+        pkgbuild --root Packaging/Payload \
+                 --component-plist PriTypeV2_components.plist \
+                 --install-location "/Library/Input Methods" \
+                 --scripts Packaging/scripts \
+                 --identifier "com.meapri.PriTypeV2" \
+                 --version "${{ steps.version.outputs.VERSION }}" \
+                 --sign "$PKG_SIGN_IDENTITY" \
+                 PriTypeV2_Release.pkg
+        
+        rm PriTypeV2_components.plist
+    
+    - name: Notarize PKG
+      env:
+        APPLE_ID: ${{ secrets.APPLE_ID }}
+        APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+      run: |
+        xcrun notarytool store-credentials "CI_NOTARY" \
+          --apple-id "$APPLE_ID" \
+          --team-id "$APPLE_TEAM_ID" \
+          --password "$APPLE_APP_PASSWORD"
+        
+        xcrun notarytool submit PriTypeV2_Release.pkg \
+          --keychain-profile "CI_NOTARY" \
+          --wait
+        
+        xcrun stapler staple PriTypeV2_Release.pkg
+    
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v2
+      with:
+        name: "PriType ${{ steps.version.outputs.VERSION }}"
+        generate_release_notes: true
+        files: PriTypeV2_Release.pkg
+    
+    - name: Cleanup
+      if: always()
+      run: |
+        security delete-keychain $RUNNER_TEMP/app-signing.keychain-db 2>/dev/null || true
+        rm -f $RUNNER_TEMP/dev_app.p12 $RUNNER_TEMP/dev_installer.p12

@@ -1,5 +1,6 @@
 import Cocoa
 import LibHangul
+import InputMethodKit
 
 // Protocol and InputMode are now in HangulComposerTypes.swift
 // Helper functions are now in CompositionHelpers.swift
@@ -47,6 +48,12 @@ public class HangulComposer {
     
     /// Track last delegate for external toggle calls
     private weak var lastDelegate: (any HangulComposerDelegate)?
+    
+    /// Whether Hanja candidate mode is currently active
+    private var hanjaMode = false
+    
+    /// The Hangul key currently being looked up for Hanja conversion
+    private var hanjaKey: String = ""
     
     /// Local cache of recently typed text (English mode primarily) to avoid IPC calls
     /// Maintains the last 15 characters to support auto-capitalization and double-space detection
@@ -319,10 +326,25 @@ public class HangulComposer {
             return result == .handled
         }
         
-        // Pass through if modifiers (Command, Control, Option) are present
-        // This ensures system shortcuts work correctly without interference
+        // If Hanja candidate window is visible, forward keys to it
+        if hanjaMode {
+            let consumed = HanjaCandidateWindow.shared.handleKey(event)
+            if !HanjaCandidateWindow.shared.isVisible {
+                hanjaMode = false
+                hanjaKey = ""
+            }
+            return consumed
+        }
+        
+        // Option key: trigger Hanja lookup for current composition or last character
         let significantModifiers: NSEvent.ModifierFlags = [.command, .control, .option]
-        if !event.modifierFlags.intersection(significantModifiers).isEmpty {
+        if event.modifierFlags.contains(.option) && !event.modifierFlags.contains(.command) && !event.modifierFlags.contains(.control) {
+            return handleHanjaLookup(delegate: delegate)
+        }
+        
+        // Pass through if modifiers (Command, Control) are present
+        // This ensures system shortcuts work correctly without interference
+        if !event.modifierFlags.intersection([.command, .control]).isEmpty {
              // Commit any in-progress composition first. Otherwise marked text stays
              // live and the host app ignores or misapplies the shortcut (e.g. Cmd+←).
              if !context.isEmpty() {
@@ -465,5 +487,103 @@ public class HangulComposer {
         delegate.setMarkedText("")
         delegate.insertText("") 
         localTextBuffer = ""
+    }
+    
+    // MARK: - Hanja Lookup
+    
+    /// Handle Option key to trigger Hanja candidate lookup
+    /// Searches based on the current preedit (composing) text, or the last committed Hangul character
+    private func handleHanjaLookup(delegate: HangulComposerDelegate) -> Bool {
+        guard inputMode == .korean else { return false }
+        
+        // Get the search key: prefer current preedit, fallback to last character in buffer
+        var searchKey = ""
+        
+        let preedit = context.getPreeditString()
+        let preeditStr = CompositionHelpers.convertToString(preedit).precomposedStringWithCanonicalMapping
+        
+        if !preeditStr.isEmpty {
+            searchKey = preeditStr
+        } else if let lastChar = localTextBuffer.last, lastChar.isHangulChar {
+            searchKey = String(lastChar)
+        } else {
+            // Try to read from the text field
+            if let textBefore = delegate.textBeforeCursor(length: 1), !textBefore.isEmpty,
+               let lastChar = textBefore.last, lastChar.isHangulChar {
+                searchKey = String(lastChar)
+            }
+        }
+        
+        guard !searchKey.isEmpty else {
+            DebugLogger.log("Hanja: No Hangul text to look up")
+            return true // Consume the Option key
+        }
+        
+        let entries = HanjaManager.shared.search(key: searchKey)
+        guard !entries.isEmpty else {
+            DebugLogger.log("Hanja: No results for '\(searchKey)'")
+            return true
+        }
+        
+        DebugLogger.log("Hanja: Found \(entries.count) entries for '\(searchKey)'")
+        
+        hanjaMode = true
+        hanjaKey = searchKey
+        
+        // Commit preedit if it exists (so we can replace the committed character later)
+        if !preeditStr.isEmpty {
+            commitComposition(delegate: delegate)
+        }
+        
+        // Get cursor position for window placement
+        // IMK guarantees main thread execution, so direct call is safe
+        
+        // Default position near mouse cursor if we can't get text cursor
+        var cursorRect = NSRect(x: NSEvent.mouseLocation.x, y: NSEvent.mouseLocation.y, width: 0, height: 20)
+        
+        // Try to get cursor position from the active input controller
+        if let controller = PriTypeInputController.sharedController,
+           let client = controller.client() as? IMKTextInput {
+            var actualRange = NSRange()
+            let rect = client.firstRect(forCharacterRange: client.selectedRange(), actualRange: &actualRange)
+            if rect.origin.x != 0 || rect.origin.y != 0 {
+                cursorRect = rect
+            }
+        }
+        
+        HanjaCandidateWindow.shared.show(
+            entries: entries,
+            cursorRect: cursorRect,
+            onSelect: { [weak self] entry in
+                guard let self = self else { return }
+                // Replace the last Hangul character with the selected Hanja
+                delegate.replaceTextBeforeCursor(length: self.hanjaKey.utf16.count, with: entry.hanja)
+                self.localTextBuffer = String(self.localTextBuffer.dropLast(self.hanjaKey.count)) + entry.hanja
+                self.hanjaMode = false
+                self.hanjaKey = ""
+                DebugLogger.log("Hanja: Selected '\(entry.hanja)' (\(entry.meaning))")
+            },
+            onDismiss: { [weak self] in
+                self?.hanjaMode = false
+                self?.hanjaKey = ""
+                DebugLogger.log("Hanja: Dismissed")
+            }
+        )
+        
+        return true
+    }
+}
+
+// MARK: - Character Extension for Hangul detection
+extension Character {
+    var isHangulChar: Bool {
+        guard let scalar = unicodeScalars.first else { return false }
+        // Hangul Syllables: U+AC00 - U+D7A3
+        // Hangul Jamo: U+1100 - U+11FF
+        // Hangul Compatibility Jamo: U+3130 - U+318F
+        let v = scalar.value
+        return (v >= 0xAC00 && v <= 0xD7A3) ||
+               (v >= 0x1100 && v <= 0x11FF) ||
+               (v >= 0x3130 && v <= 0x318F)
     }
 }
