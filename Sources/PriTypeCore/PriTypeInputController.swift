@@ -35,7 +35,7 @@ public class PriTypeInputController: IMKInputController {
     private var lastClient: IMKTextInput?
     
     // Keep adapter alive for external toggle calls
-    private var lastAdapter: (any HangulComposerDelegate)?
+    public private(set) var currentAdapter: (any HangulComposerDelegate)?
     
     // MARK: - Adapter Classes
     
@@ -108,7 +108,7 @@ public class PriTypeInputController: IMKInputController {
         // 클라이언트 저장
         if let client = sender as? IMKTextInput {
             lastClient = client
-            lastAdapter = ClientAdapter(client: client)
+            currentAdapter = ClientAdapter(client: client)
             
             // PERFORMANCE: Analyze context ONCE per session and cache it.
             // This avoids heavy IPC calls (bundleId check, coordinate calculation) on every keystroke.
@@ -139,7 +139,7 @@ public class PriTypeInputController: IMKInputController {
         super.deactivateServer(sender)
         // 클라이언트 참조 해제 (메모리 누수 방지)
         lastClient = nil
-        lastAdapter = nil
+        currentAdapter = nil
         // Clear cached context to prevent stale state
         cachedContext = nil
         NotificationCenter.default.removeObserver(self, name: .keyboardLayoutChanged, object: nil)
@@ -191,14 +191,14 @@ public class PriTypeInputController: IMKInputController {
         if context.shouldUseImmediateMode {
             DebugLogger.log("Finder: ImmediateMode (context=\(context))")
             lastClient = client
-            lastAdapter = ImmediateModeAdapter(client: client)
-            return composer.handle(event, delegate: lastAdapter!)
+            currentAdapter = ImmediateModeAdapter(client: client)
+            return composer.handle(event, delegate: currentAdapter!)
         }
         
         lastClient = client
-        lastAdapter = ClientAdapter(client: client)
+        currentAdapter = ClientAdapter(client: client)
         
-        return composer.handle(event, delegate: lastAdapter!)
+        return composer.handle(event, delegate: currentAdapter!)
     }
     
     // 마우스 클릭 등으로 조합 영역 외부 클릭 시 조합 커밋

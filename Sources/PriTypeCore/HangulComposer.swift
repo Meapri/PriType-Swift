@@ -501,7 +501,9 @@ public class HangulComposer {
             return
         }
         
-        guard let delegate = lastDelegate else {
+        // Use the active controller's current adapter, fallback to lastDelegate
+        let activeDelegate = PriTypeInputController.sharedController?.currentAdapter ?? lastDelegate
+        guard let delegate = activeDelegate else {
             DebugLogger.log("Hanja: No delegate available")
             return
         }
