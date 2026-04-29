@@ -53,7 +53,7 @@ fi
 
 if [ -n "$APP_SIGN_IDENTITY" ]; then
     echo "Using App Identity: $APP_SIGN_IDENTITY"
-    codesign --force --timestamp --sign "$APP_SIGN_IDENTITY" "$PAYLOAD_DIR/$APP_BUNDLE"
+    codesign --force --options runtime --timestamp --sign "$APP_SIGN_IDENTITY" "$PAYLOAD_DIR/$APP_BUNDLE"
 else
     echo "Warning: No valid Developer ID Application or Apple Development certificate found."
     echo "Using ad-hoc signing for the .app (Not suitable for external distribution)."
@@ -71,12 +71,12 @@ plutil -replace 0.BundleIsRelocatable -bool NO "PriTypeV2_components.plist"
 
 PKG_SIGN_IDENTITY=""
 # Try to find Developer ID Installer first
-DEV_ID_INSTALLER=$(security find-identity -v -p codesigning | grep "Developer ID Installer:" | head -n 1 | awk -F'"' '{print $2}')
+DEV_ID_INSTALLER=$(security find-identity -v | grep "Developer ID Installer:" | head -n 1 | awk -F'"' '{print $2}')
 if [ -n "$DEV_ID_INSTALLER" ]; then
     PKG_SIGN_IDENTITY="$DEV_ID_INSTALLER"
 else
     # Mac Installer Distribution (Mac App Store) could also be checked, but usually it's Developer ID
-    MAC_INSTALLER=$(security find-identity -v -p codesigning | grep "Mac Installer Distribution:" | head -n 1 | awk -F'"' '{print $2}')
+    MAC_INSTALLER=$(security find-identity -v | grep "Mac Installer Distribution:" | head -n 1 | awk -F'"' '{print $2}')
     if [ -n "$MAC_INSTALLER" ]; then
         PKG_SIGN_IDENTITY="$MAC_INSTALLER"
     fi
