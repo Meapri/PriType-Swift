@@ -89,7 +89,7 @@ if [ -n "$PKG_SIGN_IDENTITY" ]; then
              --install-location "$INSTALL_DIR" \
              --scripts "Packaging/scripts" \
              --identifier "com.meapri.PriTypeV2" \
-             --version "2.1.0" \
+             --version "2.1.1" \
              --sign "$PKG_SIGN_IDENTITY" \
              "$PKG_OUTPUT"
 else
@@ -100,7 +100,7 @@ else
              --install-location "$INSTALL_DIR" \
              --scripts "Packaging/scripts" \
              --identifier "com.meapri.PriTypeV2" \
-             --version "2.1.0" \
+             --version "2.1.1" \
              "$PKG_OUTPUT"
 fi
 
