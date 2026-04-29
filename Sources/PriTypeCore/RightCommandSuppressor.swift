@@ -39,6 +39,9 @@ public final class RightCommandSuppressor: @unchecked Sendable {
     /// Track Right Option state
     private var rightOptionIsDown = false
     
+    /// Debounce timer for Hanja trigger to prevent double-fire
+    private var lastHanjaTriggerTime: DispatchTime = .init(uptimeNanoseconds: 0)
+    
     // Key codes are centralized in KeyCode enum
     
     /// Track Control state for Control+Space
@@ -151,6 +154,17 @@ public final class RightCommandSuppressor: @unchecked Sendable {
                 
                 if optionPressed && !rightOptionIsDown {
                     rightOptionIsDown = true
+                    
+                    // Debounce: ignore if last trigger was within 500ms
+                    let now = DispatchTime.now()
+                    let elapsed = now.uptimeNanoseconds - lastHanjaTriggerTime.uptimeNanoseconds
+                    let elapsedMs = elapsed / 1_000_000
+                    if elapsedMs < 500 {
+                        DebugLogger.log("RightCommandSuppressor: Right Option DOWN - DEBOUNCED (\(elapsedMs)ms)")
+                        return nil
+                    }
+                    lastHanjaTriggerTime = now
+                    
                     DebugLogger.log("RightCommandSuppressor: Right Option DOWN - HANJA")
                     triggerHanjaLookup()
                     return nil  // Suppress

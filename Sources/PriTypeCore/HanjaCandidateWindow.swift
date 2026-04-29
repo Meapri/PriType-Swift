@@ -34,6 +34,12 @@ public final class HanjaCandidateWindow: @unchecked Sendable {
         onSelect: @escaping (HanjaEntry) -> Void,
         onDismiss: @escaping () -> Void
     ) {
+        // Dismiss any existing window first
+        if let existingWindow = window {
+            existingWindow.orderOut(nil)
+            self.window = nil
+        }
+        
         self.candidates = entries
         self.currentPage = 0
         self.onSelect = onSelect
@@ -53,15 +59,23 @@ public final class HanjaCandidateWindow: @unchecked Sendable {
         panel.isOpaque = false
         panel.backgroundColor = .clear
         panel.hasShadow = true
-        panel.level = .popUpMenu
+        // Use a very high window level to ensure visibility over Electron apps
+        // .popUpMenu (101) can be hidden by some Electron renderers
+        // NSWindow.Level(rawValue: 200) is above all standard levels
+        panel.level = NSWindow.Level(rawValue: NSWindow.Level.screenSaver.rawValue + 1)
         panel.isMovable = false
         panel.hidesOnDeactivate = false
-        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
+        panel.isReleasedWhenClosed = false
         
         self.window = panel
         updateContent()
         positionWindow(near: cursorRect)
-        panel.orderFront(nil)
+        
+        // Use orderFrontRegardless to force visibility even when app is not active
+        panel.orderFrontRegardless()
+        
+        DebugLogger.log("Hanja: Window shown at \(panel.frame), level=\(panel.level.rawValue)")
     }
     
     /// Dismiss the candidate window

@@ -170,10 +170,21 @@ public class PriTypeInputController: IMKInputController {
         DebugLogger.log("InputController.handle() event type: \(event.type.rawValue) keyCode: \(event.keyCode)")
         
         // DYNAMIC CHECK: Secure Input (password fields)
-        // Checked dynamically on every event to handle rapid focus changes between normal/secure fields without activateServer calls.
+        // IsSecureEventInputEnabled() is a GLOBAL flag - other apps (KakaoTalk, browsers)
+        // may enable it for password fields and forget to disable it, affecting ALL apps.
+        // Only pass through if the global flag is set AND the current client's bundle
+        // matches known secure contexts (SecurityAgent, loginwindow, etc.)
         if IsSecureEventInputEnabled() {
-            DebugLogger.log("Secure Input Mode active, passing through")
-            return false
+            let bundleId = cachedContext?.bundleId ?? ""
+            let isActualSecureClient = bundleId == "com.apple.SecurityAgent" ||
+                                       bundleId == "com.apple.loginwindow" ||
+                                       bundleId == "com.apple.screencaptureui"
+            if isActualSecureClient {
+                DebugLogger.log("Secure Input: Actual secure client (\(bundleId)), passing through")
+                return false
+            } else {
+                DebugLogger.log("Secure Input: Global flag set but client is '\(bundleId)' - ignoring (likely stale)")
+            }
         }
         
         // PERFORMANCE: Use cached context if available, otherwise analyze (fallback)

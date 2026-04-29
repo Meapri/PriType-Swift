@@ -614,14 +614,25 @@ public class HangulComposer {
         }
         
         // Get cursor position for window placement
-        var cursorRect = NSRect(x: NSEvent.mouseLocation.x, y: NSEvent.mouseLocation.y, width: 0, height: 20)
+        var cursorRect = NSRect(x: NSEvent.mouseLocation.x, y: NSEvent.mouseLocation.y - 20, width: 0, height: 20)
         
         if let controller = PriTypeInputController.sharedController,
            let client = controller.client() as? IMKTextInput {
             var actualRange = NSRange()
             let rect = client.firstRect(forCharacterRange: client.selectedRange(), actualRange: &actualRange)
-            if rect.origin.x != 0 || rect.origin.y != 0 {
+            
+            // Validate: check that the rect is within any screen bounds
+            // Electron apps can return absurd values like y=11460
+            let isValidRect = rect.origin.x != 0 || rect.origin.y != 0
+            let isOnScreen = NSScreen.screens.contains { screen in
+                screen.frame.contains(NSPoint(x: rect.origin.x, y: rect.origin.y))
+            }
+            
+            if isValidRect && isOnScreen {
                 cursorRect = rect
+                DebugLogger.log("Hanja: cursor from firstRect: \(rect)")
+            } else {
+                DebugLogger.log("Hanja: firstRect invalid (\(rect)), using mouse location")
             }
         }
         
