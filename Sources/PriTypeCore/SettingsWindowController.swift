@@ -203,7 +203,7 @@ struct SettingsView: View {
                                     .padding(.horizontal, 12)
                                 SettingsToggleRow(
                                     title: L10n.textInput.doubleSpacePeriod,
-                                    icon: "period",
+                                    icon: "ellipsis.rectangle",
                                     isOn: $doubleSpacePeriodEnabled
                                 )
                             }
@@ -312,7 +312,7 @@ struct SettingsView: View {
                                 
                                 // Remove ABC Keyboard
                                 HStack(spacing: 10) {
-                                    Image(systemName: "keyboard.badge.minus")
+                                    Image(systemName: "minus.square")
                                         .font(.system(size: 12, weight: .medium))
                                         .foregroundStyle(.secondary)
                                         .frame(width: 28, height: 28)
