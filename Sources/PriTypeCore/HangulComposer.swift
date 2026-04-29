@@ -49,6 +49,12 @@ public class HangulComposer {
     /// Track last delegate for external toggle calls
     private weak var lastDelegate: (any HangulComposerDelegate)?
     
+    /// Strong reference to the most recent adapter for Hanja lookup.
+    /// Unlike lastDelegate (weak) and PriTypeInputController.currentAdapter,
+    /// this survives IMK controller deallocation which happens frequently
+    /// in Electron apps (Chrome, VS Code).
+    private var lastStrongDelegate: (any HangulComposerDelegate)?
+    
     /// Whether Hanja candidate mode is currently active
     private var hanjaMode = false
     
@@ -283,6 +289,7 @@ public class HangulComposer {
     public func handle(_ event: NSEvent, delegate: HangulComposerDelegate) -> Bool {
         // Track delegate for external toggle calls
         self.lastDelegate = delegate
+        self.lastStrongDelegate = delegate
         
         // Only handle key down events for actual typing
         if event.type != .keyDown {
@@ -519,8 +526,10 @@ public class HangulComposer {
             return
         }
         
-        // Use the active controller's current adapter, fallback to lastDelegate
-        let activeDelegate = PriTypeInputController.sharedController?.currentAdapter ?? lastDelegate
+        // Use the active controller's current adapter, fallback to strong delegate on composer
+        let activeDelegate = PriTypeInputController.sharedController?.currentAdapter
+            ?? lastStrongDelegate
+            ?? lastDelegate
         guard let delegate = activeDelegate else {
             DebugLogger.log("Hanja: No delegate available")
             return

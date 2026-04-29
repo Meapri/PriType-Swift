@@ -1,69 +1,52 @@
-# PriType (프리타입)
+# PriType
 
-**macOS의 한계를 넘어선 차세대 네이티브 한글 입력기**
+macOS용 한글 입력기. InputMethodKit 기반, Swift로 작성.
 
-PriType은 macOS 환경에서 가장 빠르고, 안정적이며, 아름다운 한글 입력 경험을 제공하기 위해 설계된 InputMethodKit 기반의 최신 입력기입니다. 기존 입력기들이 안고 있던 고질적인 메모리 누수와 지연 시간(Latency), 그리고 한영 전환 충돌 문제를 Swift 6의 강력한 동시성 모델과 혁신적인 캐싱 아키텍처로 완벽하게 해결했습니다.
+## 기능
 
----
+- **한글 입력**: [libhangul-swift](https://github.com/Meapri/libhangul-swift) 엔진 사용. 두벌식/세벌식 지원.
+- **한/영 전환**: 우측 Command, Control+Space
+- **한자 변환**: 우측 Option 키로 한자 후보창 호출
+- **편의 기능**: 스페이스 두 번으로 마침표 입력
+- **Finder 대응**: 바탕화면/파일 이름 변경 시 입력 간섭 없음
+- **보안**: Secure Input(암호 입력) 감지 시 자동 비활성화
 
-## 🚀 왜 PriType인가요?
+## 설치
 
-### 1. 지연 시간 제로(Zero-Latency)의 혁신적 구조
-입력기에서 키스트로크 사이의 IPC(프로세스 간 통신) 병목은 타이핑 체감 속도를 떨어뜨리는 주범입니다.
-- **Context 1회 캐싱**: PriType은 입력창이 활성화되는 순간 단 1회만 컨텍스트를 분석 및 캐싱합니다. 이후 타이핑 중 발생하는 수많은 `handle()` 호출에서는 **Zero-IPC**로 동작하여, 다른 어떤 입력기보다도 즉각적이고 매끄러운 반응 속도를 보장합니다.
+[Releases](https://github.com/Meapri/PriType-Swift/releases)에서 `PriTypeV2_Release.pkg` 다운로드 후 설치.
 
-### 2. 완벽한 스레드 안전성과 메모리 최적화
-Apple의 `InputMethodKit` 콜백은 여러 스레드에서 무작위로 발생할 수 있습니다. 
-- **Swift 6 Strict Concurrency**: PriType은 최신 Swift 6의 엄격한 동시성 검사를 완벽히 통과한 아키텍처를 자랑합니다.
-- **메모리 릭 원천 차단**: 기존 C/Objective-C 기반 입력기들에서 자주 발생하는 `CGEventTap` 포인터 유지(retain cycle) 관련 메모리 누수를 순수 Swift 기반의 철저한 수명 주기(Lifecycle) 관리로 해결했습니다.
+Apple 공증(Notarization) 완료되어 있어 Gatekeeper 경고 없이 설치 가능.
 
-### 3. 가장 똑똑한 컨텍스트 감지 (Context Detector)
-바탕화면에서 단축키를 눌렀는데 알림음이 울리거나 파일 이름 검색이 먹통이 된 적 있으신가요?
-- **좌표 기반 휴리스틱 엔진**: 단순한 앱 ID 검사를 넘어, Finder 내 바탕화면과 실제 입력창을 좌표(`y < 50`) 기반으로 정밀하게 구분해냅니다.
-- 바탕화면 등 텍스트 입력이 불필요한 상황(비 텍스트 영역)에서는 입력을 가로채지 않고 시스템(Pass-through)으로 즉시 넘겨주어, 네비게이션과 단축키 사용이 전혀 방해받지 않습니다.
+### 설치 후
 
-### 4. 시선을 사로잡는 Liquid Glass UI
-백그라운드에서 조용히 도는 입력기라도, 설정 창은 아름다워야 합니다.
-- **macOS 최적화**: 반투명 유리 효과(Translucent) UI를 적용해, Apple 생태계에 완벽히 녹아드는 우아한 설정 화면을 제공합니다.
-- **편리한 시스템 제어**: 앱 설정 창 내에서 **손쉬운 사용 권한**을 실시간으로 확인 및 요청할 수 있으며, 번거로운 **기본 영어 입력기(ABC) 제거** 역시 원클릭으로 안전하게 처리합니다.
+1. `시스템 설정 > 키보드 > 입력 소스 편집`에서 PriType 추가
+2. 최초 설치 시 로그아웃 1회 필요할 수 있음
+3. 업데이트 시에는 PKG 설치만 하면 재시작 없이 적용
 
-### 5. 빈틈없는 보안 및 배포 (Secure & Notarized)
-사용자의 모든 키 입력은 가장 민감한 개인정보입니다.
-- **Secure Input 지원**: 암호 입력창 등 텍스트 보호가 켜진 환경에서는 즉시 키 후킹과 로깅을 중단합니다.
-- **Apple 공증 완료**: `Hardened Runtime` 적용 및 Apple 서버 공증(Notarization)을 완벽히 통과하여, Gatekeeper 경고 없이 어떤 Mac에서든 즉시 안전하게 설치 가능합니다.
+### 직접 빌드
 
----
-
-## 🛠 아키텍처 & 엔진 (Under the Hood)
-
-PriType은 자체 개발한 고성능 코어 엔진인 `libhangul-swift`를 심장으로 사용합니다.
-
-- **어댑터 패턴(Adapter Pattern)**: `ClientContext`를 통해 각기 다른 앱(Xcode, Safari, Finder 등)의 특이한 입력 텍스트 필드 환경을 일관된 인터페이스로 래핑하여 대응합니다.
-- **Trie 기반 한자 사전**: 기존 해시맵 방식 대신 Prefix Tree(Trie) 자료구조를 도입해, 수만 개의 한자 DB를 **O(m)**의 시간 복잡도로 즉시 검색합니다.
-- **우측 Command 특수 맵핑**: 로우 레벨 `CGEventTap`을 통해, 우측 Command를 눌렀을 때 간섭 없이 오직 '한/영 전환'으로만 작동하도록 완벽히 제어합니다.
-
----
-
-## 📦 설치 방법
-
-최신 macOS 환경에 맞춰 `pkgbuild`와 `Notarization(공증)`이 자동화된 배포 시스템을 제공합니다.
-
-### 추천 설치 (안전한 배포용 PKG)
-GitHub Release에서 제공하는 `PriTypeV2_Release.pkg`를 다운로드하여 설치합니다. 
-
-- **최초 설치 시**: 패키지 설치 후, `시스템 설정 > 키보드 > 입력 소스 편집`에서 `PriType`을 추가해주세요. (시스템의 첫 인식을 위해 로그아웃 1회가 권장될 수 있습니다)
-- **업데이트 시 (심리스 업데이트)**: 기존 버전이 켜져 있어도, PKG 설치 시 구버전을 자동으로 종료하고 새 버전의 프로세스를 즉시 백그라운드에서 실행합니다. **재부팅이나 로그아웃 없이** 즉시 새 버전이 적용됩니다!
-
-### 로컬 빌드 및 패키징
 ```bash
 ./build_release.sh
 ```
-> 스크립트를 통해 코드를 컴파일하고, Developer ID로 서명한 뒤 시스템 영역(`/Library/Input Methods`)에 안전하게 PKG 형태로 빌드할 수 있습니다.
 
----
+## 구조
 
-## ⚖️ 라이선스 (License)
+```
+Sources/
+├── PriType/              # 앱 진입점 (main.swift)
+└── PriTypeCore/          # 핵심 로직
+    ├── HangulComposer    # 한글 조합 엔진 래퍼
+    ├── PriTypeInputController  # IMKInputController 구현
+    ├── RightCommandSuppressor  # CGEventTap 기반 키 처리
+    ├── HanjaCandidateWindow    # 한자 후보창
+    └── ConfigurationManager    # 설정 관리
+```
 
-**MIT License**
-Copyright © 2026 PriType Team.
-사용된 `libhangul-swift` 코어 엔진 역시 동일한 오픈소스 라이선스를 따릅니다.
+## 요구사항
+
+- macOS 14.0+
+- Xcode 15+ / Swift 5.9+
+
+## 라이선스
+
+MIT License
