@@ -1,5 +1,6 @@
 import Cocoa
 import SwiftUI
+import Carbon
 
 /// Manages the settings window for the input method
 @MainActor
@@ -72,6 +73,8 @@ struct SettingsView: View {
     @State private var autoCapitalizeEnabled = ConfigurationManager.shared.autoCapitalizeEnabled
     @State private var doubleSpacePeriodEnabled = ConfigurationManager.shared.doubleSpacePeriodEnabled
     @State private var autoUpdateCheckEnabled = ConfigurationManager.shared.autoUpdateCheckEnabled
+    @State private var isAccessibilityGranted = false
+    @State private var removeABCStatus: RemoveABCStatus = .idle
     
     // Update check state
     @State private var updateStatus: UpdateStatus = .idle
@@ -81,6 +84,12 @@ struct SettingsView: View {
         case checking
         case upToDate
         case available(String)  // version string
+        case error
+    }
+    
+    private enum RemoveABCStatus: Equatable {
+        case idle
+        case success
         case error
     }
     
@@ -258,6 +267,84 @@ struct SettingsView: View {
                         .onChange(of: autoUpdateCheckEnabled) { _, newValue in
                             ConfigurationManager.shared.autoUpdateCheckEnabled = newValue
                         }
+                        
+                        // System Section
+                        SettingsSection(
+                            title: NSLocalizedString("system.title", comment: ""),
+                            icon: "gearshape.2"
+                        ) {
+                            VStack(spacing: 0) {
+                                // Accessibility
+                                HStack(spacing: 10) {
+                                    Image(systemName: "hand.raised")
+                                        .font(.system(size: 12, weight: .medium))
+                                        .foregroundStyle(.secondary)
+                                        .frame(width: 28, height: 28)
+                                        .background(Circle().fill(.primary.opacity(0.06)))
+                                    
+                                    Text(NSLocalizedString("system.accessibility", comment: ""))
+                                        .font(.system(size: 14, weight: .regular, design: .rounded))
+                                        .foregroundStyle(.primary)
+                                    
+                                    Spacer()
+                                    
+                                    if isAccessibilityGranted {
+                                        Text(NSLocalizedString("system.accessibilityGranted", comment: ""))
+                                            .font(.system(size: 12, weight: .semibold, design: .rounded))
+                                            .foregroundStyle(.green)
+                                    } else {
+                                        Button(action: { requestAccessibility() }) {
+                                            Text(NSLocalizedString("system.accessibilityRequest", comment: ""))
+                                                .font(.system(size: 12, weight: .medium, design: .rounded))
+                                                .padding(.horizontal, 10)
+                                                .padding(.vertical, 4)
+                                                .background(Capsule().fill(.primary.opacity(0.1)))
+                                        }
+                                        .buttonStyle(.plain)
+                                    }
+                                }
+                                .padding(.vertical, 10)
+                                .padding(.horizontal, 12)
+                                
+                                Divider()
+                                    .opacity(0.2)
+                                    .padding(.horizontal, 12)
+                                
+                                // Remove ABC Keyboard
+                                HStack(spacing: 10) {
+                                    Image(systemName: "keyboard.badge.minus")
+                                        .font(.system(size: 12, weight: .medium))
+                                        .foregroundStyle(.secondary)
+                                        .frame(width: 28, height: 28)
+                                        .background(Circle().fill(.primary.opacity(0.06)))
+                                    
+                                    Text(NSLocalizedString("system.removeABC", comment: ""))
+                                        .font(.system(size: 14, weight: .regular, design: .rounded))
+                                        .foregroundStyle(.primary)
+                                    
+                                    Spacer()
+                                    
+                                    if removeABCStatus == .success {
+                                        Text(NSLocalizedString("system.removeABCSuccess", comment: ""))
+                                            .font(.system(size: 12, weight: .semibold, design: .rounded))
+                                            .foregroundStyle(.green)
+                                    } else if removeABCStatus == .error {
+                                        Text(NSLocalizedString("system.removeABCFailed", comment: ""))
+                                            .font(.system(size: 12, weight: .semibold, design: .rounded))
+                                            .foregroundStyle(.orange)
+                                    } else {
+                                        Button(action: { removeABCKeyboard() }) {
+                                            Image(systemName: "minus.circle.fill")
+                                                .font(.system(size: 16))
+                                                .foregroundStyle(.red.opacity(0.8))
+                                        }
+                                        .buttonStyle(.plain)
+                                    }
+                                }
+                                .padding(.vertical, 10)
+                                .padding(.horizontal, 12)
+                            }
+                        }
                     }
                     .padding(.top, 16)
                     .padding(.bottom, 16)
@@ -285,6 +372,10 @@ struct SettingsView: View {
             autoCapitalizeEnabled = ConfigurationManager.shared.autoCapitalizeEnabled
             doubleSpacePeriodEnabled = ConfigurationManager.shared.doubleSpacePeriodEnabled
             autoUpdateCheckEnabled = ConfigurationManager.shared.autoUpdateCheckEnabled
+            checkAccessibility()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            checkAccessibility()
         }
     }
     
@@ -372,6 +463,59 @@ struct SettingsView: View {
     private func openLatestRelease() {
         let url = URL(string: "https://github.com/Meapri/PriType-Swift/releases/latest")!
         NSWorkspace.shared.open(url)
+    }
+    
+    // MARK: - System Settings Logic
+    
+    private func checkAccessibility() {
+        isAccessibilityGranted = AXIsProcessTrusted()
+    }
+    
+    private func requestAccessibility() {
+        let options = ["AXTrustedCheckOptionPrompt": true] as CFDictionary
+        let _ = AXIsProcessTrustedWithOptions(options)
+        
+        // Start a timer to poll for changes if user grants it while window is open
+        Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { timer in
+            let granted = AXIsProcessTrusted()
+            if granted {
+                DispatchQueue.main.async {
+                    self.isAccessibilityGranted = true
+                }
+                timer.invalidate()
+            }
+        }
+    }
+    
+    private func removeABCKeyboard() {
+        guard let sources = TISCreateInputSourceList(nil, false)?.takeRetainedValue() as? [TISInputSource] else {
+            removeABCStatus = .error
+            return
+        }
+        
+        var foundAndDisabled = false
+        for source in sources {
+            if let idPtr = TISGetInputSourceProperty(source, kTISPropertyInputSourceID) {
+                let id = Unmanaged<CFString>.fromOpaque(idPtr).takeUnretainedValue() as String
+                if id == "com.apple.keylayout.ABC" {
+                    let status = TISDisableInputSource(source)
+                    if status == noErr {
+                        foundAndDisabled = true
+                    }
+                }
+            }
+        }
+        
+        withAnimation {
+            removeABCStatus = foundAndDisabled ? .success : .error
+        }
+        
+        // Auto-reset status message after 3 seconds
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+            withAnimation {
+                self.removeABCStatus = .idle
+            }
+        }
     }
 }
 

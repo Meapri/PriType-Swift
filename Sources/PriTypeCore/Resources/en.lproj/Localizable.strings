@@ -42,3 +42,12 @@
 "update.notificationTitle" = "PriType Update Available";
 "update.notificationBody" = "PriType %@ is now available. Click to download.";
 "update.autoCheck" = "Automatically check for updates";
+
+/* System */
+"system.title" = "System Options";
+"system.accessibility" = "Accessibility Permission";
+"system.accessibilityGranted" = "Granted";
+"system.accessibilityRequest" = "Request Permission";
+"system.removeABC" = "Disable Default English Keyboard (ABC)";
+"system.removeABCSuccess" = "Disabled";
+"system.removeABCFailed" = "Failed to Disable";

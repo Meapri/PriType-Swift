@@ -42,3 +42,12 @@
 "update.notificationTitle" = "PriType 업데이트 사용 가능";
 "update.notificationBody" = "PriType %@이(가) 출시되었습니다. 클릭하여 다운로드하세요.";
 "update.autoCheck" = "자동으로 업데이트 확인";
+
+/* System */
+"system.title" = "시스템 옵션";
+"system.accessibility" = "손쉬운 사용 권한";
+"system.accessibilityGranted" = "허용됨";
+"system.accessibilityRequest" = "권한 요청";
+"system.removeABC" = "기본 영어 입력기(ABC) 비활성화";
+"system.removeABCSuccess" = "비활성화 완료";
+"system.removeABCFailed" = "비활성화 실패";
