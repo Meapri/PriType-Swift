@@ -132,14 +132,18 @@ public class PriTypeInputController: IMKInputController {
     
     override public func deactivateServer(_ sender: Any!) {
         // 반드시 조합 중인 내용을 커밋
-        if let client = sender as? IMKTextInput ?? lastClient {
+        // Use the existing currentAdapter if available (not a stale temp adapter)
+        if let adapter = currentAdapter {
+            composer.forceCommit(delegate: adapter)
+        } else if let client = sender as? IMKTextInput ?? lastClient {
             let adapter = ClientAdapter(client: client)
             composer.forceCommit(delegate: adapter)
         }
         super.deactivateServer(sender)
-        // 클라이언트 참조 해제 (메모리 누수 방지)
+        // Do NOT clear currentAdapter here.
+        // CGEventTap triggerHanjaLookup() is dispatched async and needs a valid adapter.
+        // The next activateServer() will replace it with the new client's adapter.
         lastClient = nil
-        currentAdapter = nil
         // Clear cached context to prevent stale state
         cachedContext = nil
         NotificationCenter.default.removeObserver(self, name: .keyboardLayoutChanged, object: nil)

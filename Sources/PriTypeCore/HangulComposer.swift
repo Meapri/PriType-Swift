@@ -62,6 +62,7 @@ public class HangulComposer {
     // MARK: - libhangul Context
     // ThreadSafeHangulInputContext is thread-safe and supports synchronous calls.
     // It uses NSLock internally for synchronization.
+    private var currentKeyboardId: String = PriTypeConfig.defaultKeyboardId
     private var context: ThreadSafeHangulInputContext = {
        let ctx = ThreadSafeHangulInputContext(keyboard: PriTypeConfig.defaultKeyboardId)
        DebugLogger.log("Configured context with 2-set (id: '\(PriTypeConfig.defaultKeyboardId)')")
@@ -97,13 +98,23 @@ public class HangulComposer {
     ///
     /// - Parameter id: The keyboard layout identifier (e.g., "2" for 두벌식, "3" for 세벌식)
     public func updateKeyboardLayout(id: String) {
-        DebugLogger.log("HangulComposer: Updating keyboard layout to '\(id)'")
+        // Only re-create context if layout actually changed.
+        // Electron apps trigger activateServer frequently, and re-creating
+        // the context every time resets the composition state, causing the
+        // first character to appear in English.
+        guard currentKeyboardId != id else {
+            DebugLogger.log("HangulComposer: Layout '\(id)' unchanged, skipping")
+            return
+        }
+        
+        DebugLogger.log("HangulComposer: Updating keyboard layout '\(currentKeyboardId)' -> '\(id)'")
         // Commit existing text before switching to avoid corruption
         if let delegate = lastDelegate, !context.isEmpty() {
             commitComposition(delegate: delegate)
         }
         
         // Re-initialize context with new keyboard ID
+        currentKeyboardId = id
         context = ThreadSafeHangulInputContext(keyboard: id)
         localTextBuffer = ""
     }
