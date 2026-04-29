@@ -16,6 +16,14 @@ public struct CompositionHelpers: Sendable {
         return String(codePoints.compactMap { UnicodeScalar($0) }.map { Character($0) })
     }
     
+    /// Convert UCSChar array to NFC-normalized Swift String
+    /// Combines conversion and `.precomposedStringWithCanonicalMapping` in one step.
+    /// - Parameter codePoints: Array of UInt32 Unicode code points (UCSChar)
+    /// - Returns: NFC-normalized string
+    public static func convertAndNormalize(_ codePoints: [UInt32]) -> String {
+        return convertToString(codePoints).precomposedStringWithCanonicalMapping
+    }
+    
     // MARK: - Jamo Normalization
     
     /// Normalize Jamo characters to Compatibility Jamo for display

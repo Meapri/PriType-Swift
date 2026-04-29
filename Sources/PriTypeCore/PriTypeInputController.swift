@@ -172,19 +172,28 @@ public class PriTypeInputController: IMKInputController {
         // DYNAMIC CHECK: Secure Input (password fields)
         // IsSecureEventInputEnabled() is a GLOBAL flag - other apps (KakaoTalk, browsers)
         // may enable it for password fields and forget to disable it, affecting ALL apps.
-        // Only pass through if the global flag is set AND the current client's bundle
-        // matches known secure contexts (SecurityAgent, loginwindow, etc.)
+        // Two-tier validation:
+        // 1. System security clients (SecurityAgent, loginwindow) → always pass through
+        // 2. Other apps with global flag on → check if current field supports marked text
+        //    (password fields typically don't support marked text attributes)
         if IsSecureEventInputEnabled() {
             let bundleId = cachedContext?.bundleId ?? ""
-            let isActualSecureClient = bundleId == "com.apple.SecurityAgent" ||
+            let isSystemSecureClient = bundleId == "com.apple.SecurityAgent" ||
                                        bundleId == "com.apple.loginwindow" ||
                                        bundleId == "com.apple.screencaptureui"
-            if isActualSecureClient {
-                DebugLogger.log("Secure Input: Actual secure client (\(bundleId)), passing through")
+            if isSystemSecureClient {
+                DebugLogger.log("Secure Input: System secure client (\(bundleId)), passing through")
                 return false
-            } else {
-                DebugLogger.log("Secure Input: Global flag set but client is '\(bundleId)' - ignoring (likely stale)")
             }
+            
+            // Secondary check: if the field doesn't support marked text, treat as secure
+            let validAttrs = client.validAttributesForMarkedText() ?? []
+            if validAttrs.isEmpty {
+                DebugLogger.log("Secure Input: Global flag + no markedText support in '\(bundleId)' → likely password field, passing through")
+                return false
+            }
+            
+            DebugLogger.log("Secure Input: Global flag set but '\(bundleId)' supports markedText — ignoring stale flag")
         }
         
         // PERFORMANCE: Use cached context if available, otherwise analyze (fallback)
@@ -205,13 +214,20 @@ public class PriTypeInputController: IMKInputController {
         // Finder-specific handling
         if context.shouldUseImmediateMode {
             DebugLogger.log("Finder: ImmediateMode (context=\(context))")
-            lastClient = client
-            currentAdapter = ImmediateModeAdapter(client: client)
+            // Only recreate adapter if client changed or type mismatch
+            if lastClient !== client || !(currentAdapter is ImmediateModeAdapter) {
+                lastClient = client
+                currentAdapter = ImmediateModeAdapter(client: client)
+            }
             return composer.handle(event, delegate: currentAdapter!)
         }
         
-        lastClient = client
-        currentAdapter = ClientAdapter(client: client)
+        // Reuse adapter from activateServer if client hasn't changed
+        // This avoids ~20 heap allocations/second during fast typing
+        if lastClient !== client || currentAdapter == nil {
+            lastClient = client
+            currentAdapter = ClientAdapter(client: client)
+        }
         
         return composer.handle(event, delegate: currentAdapter!)
     }

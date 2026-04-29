@@ -46,10 +46,25 @@ public final class HanjaManager: @unchecked Sendable {
         }
     }
     
+    /// Simple LRU cache for search results (dictionary doesn't change at runtime)
+    private var searchCache: [String: [HanjaEntry]] = [:]
+    private var cacheOrder: [String] = []
+    private let cacheMaxSize = 32
+    
     /// Search for Hanja entries matching the given Hangul key (exact match)
     /// - Parameter key: Hangul text to search for (e.g., "가")
     /// - Returns: Array of Hanja entries, empty if no results
     public func search(key: String) -> [HanjaEntry] {
+        // Check cache first
+        if let cached = searchCache[key] {
+            // Move to end (most recently used)
+            if let idx = cacheOrder.firstIndex(of: key) {
+                cacheOrder.remove(at: idx)
+                cacheOrder.append(key)
+            }
+            return cached
+        }
+        
         loadIfNeeded()
         
         guard let table = table else { return [] }
@@ -65,6 +80,17 @@ public final class HanjaManager: @unchecked Sendable {
                 ))
             }
         }
+        
+        // Store in cache
+        searchCache[key] = results
+        cacheOrder.append(key)
+        
+        // Evict oldest if over capacity
+        if cacheOrder.count > cacheMaxSize {
+            let evicted = cacheOrder.removeFirst()
+            searchCache.removeValue(forKey: evicted)
+        }
+        
         return results
     }
     

@@ -160,25 +160,25 @@ public final class DebugLogger: @unchecked Sendable {
     // MARK: - Release Build (No-op implementations)
     // =========================================================================
     
-    /// No-op in release builds - does nothing
-    /// - Parameter msg: Ignored in release builds
+    /// No-op in release builds - string argument is never evaluated
+    /// - Parameter msg: Autoclosure - never evaluated in release builds
     @inlinable
-    public static func log(_ msg: String) {
+    public static func log(_ msg: @autoclosure () -> String) {
         // Explicitly empty for zero overhead in release
     }
     
-    /// No-op in release builds - does nothing
+    /// No-op in release builds - arguments are never evaluated
     @inlinable
-    public static func logSensitive(_ msg: String, sensitiveContent: String) {
+    public static func logSensitive(_ msg: @autoclosure () -> String, sensitiveContent: @autoclosure () -> String) {
         // Explicitly empty for zero overhead in release
     }
     
-    /// No-op in release builds - does nothing
+    /// No-op in release builds - arguments are never evaluated
     /// - Parameters:
-    ///   - error: Ignored in release builds
-    ///   - context: Ignored in release builds
+    ///   - error: Autoclosure - never evaluated in release builds
+    ///   - context: Autoclosure - never evaluated in release builds
     @inlinable
-    public static func logError(_ error: Error, context: String) {
+    public static func logError(_ error: @autoclosure () -> Error, context: @autoclosure () -> String) {
         // Intentionally empty - no logging in release builds for security
     }
     

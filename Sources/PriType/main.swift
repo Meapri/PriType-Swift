@@ -81,12 +81,25 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // IOKit backup: Only start and activate actual toggle if CGEventTap failed
         if eventTapStarted {
             DebugLogger.log("Primary: CGEventTap started successfully")
-            // Do NOT start IOKit if CGEventTap is working, to minimize privacy/security footprint
+            // Register fallback: if CGEventTap dies repeatedly, switch to IOKit
+            RightCommandSuppressor.shared.onTapFailed = {
+                DebugLogger.log("CGEventTap failed repeatedly — activating IOKit fallback")
+                IOKitManager.shared.onRightCommandToggle = {
+                    PriTypeInputController.sharedComposer.toggleInputMode()
+                }
+                IOKitManager.shared.onRightOptionHanja = {
+                    PriTypeInputController.sharedComposer.triggerHanjaLookup()
+                }
+                IOKitManager.shared.start()
+            }
         } else {
             DebugLogger.log("Primary: CGEventTap FAILED - IOKit taking over as primary")
             // IOKit takes over as primary toggle handler
             IOKitManager.shared.onRightCommandToggle = {
                 PriTypeInputController.sharedComposer.toggleInputMode()
+            }
+            IOKitManager.shared.onRightOptionHanja = {
+                PriTypeInputController.sharedComposer.triggerHanjaLookup()
             }
             IOKitManager.shared.start()
         }

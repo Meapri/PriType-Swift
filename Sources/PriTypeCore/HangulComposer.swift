@@ -53,7 +53,11 @@ public class HangulComposer {
     /// Unlike lastDelegate (weak) and PriTypeInputController.currentAdapter,
     /// this survives IMK controller deallocation which happens frequently
     /// in Electron apps (Chrome, VS Code).
+    /// Released with a 2-second delay when replaced, to allow async Hanja callbacks to finish.
     private var lastStrongDelegate: (any HangulComposerDelegate)?
+    
+    /// Pending release of previous strong delegate (delayed to allow async callbacks)
+    private var pendingDelegateRelease: DispatchWorkItem?
     
     /// Whether Hanja candidate mode is currently active
     private var hanjaMode = false
@@ -64,6 +68,17 @@ public class HangulComposer {
     /// Local cache of recently typed text (English mode primarily) to avoid IPC calls
     /// Maintains the last 15 characters to support auto-capitalization and double-space detection
     public private(set) var localTextBuffer: String = ""
+    
+    /// Maximum buffer size for local text tracking
+    private let bufferMaxLength = 15
+    
+    /// Append text to the local buffer, trimming to max length
+    private func appendToBuffer(_ text: String) {
+        localTextBuffer.append(text)
+        if localTextBuffer.count > bufferMaxLength {
+            localTextBuffer = String(localTextBuffer.suffix(bufferMaxLength))
+        }
+    }
     
     // MARK: - libhangul Context
     // ThreadSafeHangulInputContext is thread-safe and supports synchronous calls.
@@ -184,8 +199,7 @@ public class HangulComposer {
                 return true
             }
             DebugLogger.log("Space -> flush and space")
-            localTextBuffer.append(" ")
-            if localTextBuffer.count > 15 { localTextBuffer = String(localTextBuffer.suffix(15)) }
+            appendToBuffer(" ")
             return false
         }
         
@@ -267,8 +281,7 @@ public class HangulComposer {
         if KeyCode.isPrintableASCII(charCode) {
             DebugLogger.log("Retry failed, inserting printable char")
             delegate.insertText(String(char))
-            localTextBuffer.append(Character(char))
-            if localTextBuffer.count > 15 { localTextBuffer = String(localTextBuffer.suffix(15)) }
+            appendToBuffer(String(char))
             return true
         }
         
@@ -289,7 +302,23 @@ public class HangulComposer {
     public func handle(_ event: NSEvent, delegate: HangulComposerDelegate) -> Bool {
         // Track delegate for external toggle calls
         self.lastDelegate = delegate
-        self.lastStrongDelegate = delegate
+        
+        // Delayed release of previous strong delegate to prevent indefinite retention
+        // while keeping it alive long enough for async Hanja callbacks (2s window)
+        if lastStrongDelegate !== (delegate as AnyObject) {
+            pendingDelegateRelease?.cancel()
+            let oldDelegate = lastStrongDelegate
+            let releaseWork = DispatchWorkItem { [weak self] in
+                // Only release if we still hold the same old delegate
+                if self?.lastStrongDelegate === (oldDelegate as AnyObject?) {
+                    // Don't release - it's still the current one
+                } 
+                // Otherwise the old one is already replaced and will be released naturally
+            }
+            pendingDelegateRelease = releaseWork
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0, execute: releaseWork)
+            self.lastStrongDelegate = delegate
+        }
         
         // Only handle key down events for actual typing
         if event.type != .keyDown {
@@ -338,8 +367,7 @@ public class HangulComposer {
             
             // If passThrough, we still need to track it in our buffer
             if result == .passThrough {
-                localTextBuffer.append(char)
-                if localTextBuffer.count > 15 { localTextBuffer = String(localTextBuffer.suffix(15)) }
+                appendToBuffer(String(char))
             }
             return result == .handled
         }
@@ -427,11 +455,9 @@ public class HangulComposer {
         
         // If there is committed text, insert it first
         if !commit.isEmpty {
-            let commitStr = CompositionHelpers.convertToString(commit)
-            let finalStr = commitStr.precomposedStringWithCanonicalMapping
+            let finalStr = CompositionHelpers.convertAndNormalize(commit)
             delegate.insertText(finalStr)
-            localTextBuffer.append(finalStr)
-            if localTextBuffer.count > 15 { localTextBuffer = String(localTextBuffer.suffix(15)) }
+            appendToBuffer(finalStr)
         }
         
         // Update preedit text
@@ -459,10 +485,9 @@ public class HangulComposer {
         
         if !commitStr.isEmpty {
             // insertText replaces the marked text automatically
-            let finalStr = commitStr.precomposedStringWithCanonicalMapping
+            let finalStr = CompositionHelpers.convertAndNormalize(flushed)
             delegate.insertText(finalStr)
-            localTextBuffer.append(finalStr)
-            if localTextBuffer.count > 15 { localTextBuffer = String(localTextBuffer.suffix(15)) }
+            appendToBuffer(finalStr)
             DebugLogger.logSensitive("commitComposition inserted", sensitiveContent: "'\(commitStr)'")
         }
     }
@@ -553,7 +578,7 @@ public class HangulComposer {
         
         // Strategy 1: Current preedit (composing text)
         let preedit = context.getPreeditString()
-        let preeditStr = CompositionHelpers.convertToString(preedit).precomposedStringWithCanonicalMapping
+        let preeditStr = CompositionHelpers.convertAndNormalize(preedit)
         
         if !preeditStr.isEmpty {
             searchKey = preeditStr

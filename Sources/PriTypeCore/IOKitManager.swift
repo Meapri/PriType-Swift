@@ -34,8 +34,20 @@ public final class IOKitManager: @unchecked Sendable {
     private var rightCommandIsDown = false
     private var anyOtherKeyPressed = false
     
+    /// Track Right Option state for Hanja lookup
+    private var rightOptionIsDown = false
+    
+    /// Debounce for Hanja trigger
+    private var lastHanjaTriggerTime: DispatchTime = .init(uptimeNanoseconds: 0)
+    
     /// Right Command usage constant (kHIDUsage_KeyboardRightGUI = 0xE7 = 231)
     private let rightCommandUsage: UInt32 = 0xE7  // kHIDUsage_KeyboardRightGUI
+    
+    /// Right Option usage constant (kHIDUsage_KeyboardRightAlt = 0xE6 = 230)
+    private let rightOptionUsage: UInt32 = 0xE6  // kHIDUsage_KeyboardRightAlt
+    
+    /// Callback when Right Option is pressed (Hanja lookup)
+    public var onRightOptionHanja: (@Sendable () -> Void)?
     
     private init() {}
     
@@ -153,6 +165,30 @@ public final class IOKitManager: @unchecked Sendable {
                 }
                 rightCommandIsDown = false
                 anyOtherKeyPressed = false
+            }
+        } else if usage == rightOptionUsage {
+            // Right Option key → Hanja lookup
+            if pressed && !rightOptionIsDown {
+                rightOptionIsDown = true
+                
+                // Debounce: ignore if last trigger was within 500ms
+                let now = DispatchTime.now()
+                let elapsed = now.uptimeNanoseconds - lastHanjaTriggerTime.uptimeNanoseconds
+                let elapsedMs = elapsed / 1_000_000
+                if elapsedMs < 500 {
+                    DebugLogger.log("IOKitManager: Right Option DEBOUNCED (\(elapsedMs)ms)")
+                    return
+                }
+                lastHanjaTriggerTime = now
+                
+                DebugLogger.log("IOKitManager: Right Option DOWN - HANJA")
+                let callback = onRightOptionHanja
+                DispatchQueue.main.async {
+                    callback?()
+                }
+            } else if !pressed && rightOptionIsDown {
+                rightOptionIsDown = false
+                DebugLogger.log("IOKitManager: Right Option UP")
             }
         } else if rightCommandIsDown && pressed && usage > 0 && usage < 0xE0 {
             // Non-modifier key pressed while Right Command is down

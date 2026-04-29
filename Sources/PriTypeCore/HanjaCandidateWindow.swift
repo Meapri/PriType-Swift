@@ -34,12 +34,6 @@ public final class HanjaCandidateWindow: @unchecked Sendable {
         onSelect: @escaping (HanjaEntry) -> Void,
         onDismiss: @escaping () -> Void
     ) {
-        // Dismiss any existing window first
-        if let existingWindow = window {
-            existingWindow.orderOut(nil)
-            self.window = nil
-        }
-        
         self.candidates = entries
         self.currentPage = 0
         self.onSelect = onSelect
@@ -50,42 +44,43 @@ public final class HanjaCandidateWindow: @unchecked Sendable {
             return
         }
         
-        let panel = NSPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 320, height: 0),
-            styleMask: [.nonactivatingPanel, .fullSizeContentView],
-            backing: .buffered,
-            defer: false
-        )
-        panel.isOpaque = false
-        panel.backgroundColor = .clear
-        panel.hasShadow = true
-        // Use a very high window level to ensure visibility over Electron apps
-        // .popUpMenu (101) can be hidden by some Electron renderers
-        // NSWindow.Level(rawValue: 200) is above all standard levels
-        panel.level = NSWindow.Level(rawValue: NSWindow.Level.screenSaver.rawValue + 1)
-        panel.isMovable = false
-        panel.hidesOnDeactivate = false
-        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
-        panel.isReleasedWhenClosed = false
+        // Reuse existing panel or create a new one
+        let panel: NSPanel
+        if let existing = window as? NSPanel {
+            panel = existing
+        } else {
+            panel = NSPanel(
+                contentRect: NSRect(x: 0, y: 0, width: 320, height: 0),
+                styleMask: [.nonactivatingPanel, .fullSizeContentView],
+                backing: .buffered,
+                defer: false
+            )
+            panel.isOpaque = false
+            panel.backgroundColor = .clear
+            panel.hasShadow = true
+            panel.level = NSWindow.Level(rawValue: NSWindow.Level.screenSaver.rawValue + 1)
+            panel.isMovable = false
+            panel.hidesOnDeactivate = false
+            panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
+            panel.isReleasedWhenClosed = false
+            self.window = panel
+        }
         
-        self.window = panel
         updateContent()
         positionWindow(near: cursorRect)
-        
-        // Use orderFrontRegardless to force visibility even when app is not active
         panel.orderFrontRegardless()
         
         DebugLogger.log("Hanja: Window shown at \(panel.frame), level=\(panel.level.rawValue)")
     }
     
-    /// Dismiss the candidate window
+    /// Dismiss the candidate window (hides without destroying)
     public func dismiss() {
         window?.orderOut(nil)
-        window = nil
         candidates = []
-        onDismiss?()
+        let dismissCallback = onDismiss
         onDismiss = nil
         onSelect = nil
+        dismissCallback?()
     }
     
     /// Handle a key event while the candidate window is visible
@@ -199,7 +194,12 @@ public final class HanjaCandidateWindow: @unchecked Sendable {
     }
     
     private func positionWindow(near cursorRect: NSRect) {
-        guard let window = window, let screen = NSScreen.main else { return }
+        guard let window = window else { return }
+        
+        // Find the screen containing the cursor position (supports multi-monitor)
+        let cursorPoint = NSPoint(x: cursorRect.origin.x, y: cursorRect.origin.y)
+        let screen = NSScreen.screens.first { $0.frame.contains(cursorPoint) } ?? NSScreen.main
+        guard let activeScreen = screen else { return }
         
         let windowSize = window.frame.size
         var origin = NSPoint(
@@ -208,9 +208,12 @@ public final class HanjaCandidateWindow: @unchecked Sendable {
         )
         
         // Ensure window stays on screen
-        let screenFrame = screen.visibleFrame
+        let screenFrame = activeScreen.visibleFrame
         if origin.x + windowSize.width > screenFrame.maxX {
             origin.x = screenFrame.maxX - windowSize.width
+        }
+        if origin.x < screenFrame.minX {
+            origin.x = screenFrame.minX
         }
         if origin.y < screenFrame.minY {
             origin.y = cursorRect.maxY + 4

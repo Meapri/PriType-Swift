@@ -107,7 +107,9 @@ public final class UpdateChecker: @unchecked Sendable {
     ///
     /// - Returns: The result of the update check
     public func checkForUpdatesIfNeeded() async -> CheckResult {
-        // Check if enough time has passed since last check
+        // Check if enough time has passed since last SUCCESSFUL check.
+        // lastUpdateCheck is only set on success, so failed checks will always be retried
+        // on the next app launch (no throttle applied to failures).
         if let lastCheck = ConfigurationManager.shared.lastUpdateCheck {
             let elapsed = Date().timeIntervalSince(lastCheck)
             if elapsed < checkInterval {

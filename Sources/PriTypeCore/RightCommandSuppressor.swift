@@ -47,6 +47,15 @@ public final class RightCommandSuppressor: @unchecked Sendable {
     /// Track Control state for Control+Space
     private var controlIsDown = false
     
+    /// Track CGEventTap disable events for auto-recovery
+    private var tapDisableCount = 0
+    private var lastTapDisableTime: CFAbsoluteTime = 0
+    private let maxTapDisableRetries = 3
+    private let tapDisableResetInterval: CFAbsoluteTime = 60  // Reset counter after 60s of stability
+    
+    /// Callback for when CGEventTap permanently fails and IOKit should take over
+    public var onTapFailed: (@Sendable () -> Void)?
+    
     private init() {}
     
     // MARK: - Start/Stop
@@ -114,6 +123,27 @@ public final class RightCommandSuppressor: @unchecked Sendable {
     private func handleEvent(proxy: CGEventTapProxy, type: CGEventType, event: CGEvent) -> Unmanaged<CGEvent>? {
         // Re-enable tap if disabled by system
         if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
+            let now = CFAbsoluteTimeGetCurrent()
+            
+            // Reset counter if stable for 60+ seconds
+            if now - lastTapDisableTime > tapDisableResetInterval {
+                tapDisableCount = 0
+            }
+            lastTapDisableTime = now
+            tapDisableCount += 1
+            
+            if tapDisableCount >= maxTapDisableRetries {
+                // CGEventTap is repeatedly failing — switch to IOKit backup
+                DebugLogger.log("RightCommandSuppressor: Tap disabled \(tapDisableCount) times, switching to IOKit fallback")
+                let callback = onTapFailed
+                DispatchQueue.main.async {
+                    callback?()
+                }
+                // Still try to re-enable in case IOKit also needs it
+            } else {
+                DebugLogger.log("RightCommandSuppressor: Tap disabled (\(tapDisableCount)/\(maxTapDisableRetries)), re-enabling")
+            }
+            
             if let tap = eventTap {
                 CGEvent.tapEnable(tap: tap, enable: true)
             }
