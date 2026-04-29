@@ -1,0 +1,461 @@
+Timestamp                       Thread     Type        Activity             PID    TTL  
+2026-04-21 15:03:10.780803+0900 0x16b5     Default     0x0                  439    7    PriTypeV2: (SkyLight) [com.apple.SkyLight:default] [439] CGSDisplayNotifyProc: got notification kCGSDisplayDisplaySystemStateChanged
+2026-04-21 15:03:10.780805+0900 0x16b5     Default     0x0                  439    7    PriTypeV2: (SkyLight) [com.apple.SkyLight:default] [439] CGSDisplayNotifyProc: display system state seed 16 -> 17
+2026-04-21 15:03:10.784102+0900 0x16b5     Default     0x0                  439    7    PriTypeV2: (SkyLight) [com.apple.SkyLight:default] [439] CGSDisplayNotifyProc: got notification kCGSDisplayDidWake
+2026-04-21 15:03:14.067139+0900 0x16b5     Activity    0x3fed4              439    0    PriTypeV2: (InputMethodKit) Activate Server
+2026-04-21 15:03:14.067141+0900 0x16b5     Activity    0x3fed5              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:03:14.067155+0900 0x16b5     Activity    0x3fed6              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:03:14.067157+0900 0x16b5     Activity    0x3fed7              439    0    PriTypeV2: (InputMethodKit) Get valid marked text attributes
+2026-04-21 15:03:14.067580+0900 0x16b5     Default     0x0                  439    0    PriTypeV2: (InputMethodKit) <private>
+2026-04-21 15:03:14.067581+0900 0x16b5     Activity    0x3fed8              439    0    PriTypeV2: (InputMethodKit) Set value for tag
+2026-04-21 15:03:14.073508+0900 0x16b5     Activity    0x3fed9              439    0    PriTypeV2: (InputMethodKit) Menu
+2026-04-21 15:03:14.073618+0900 0x16b5     Activity    0x3feda              439    0    PriTypeV2: (CoreFoundation) Loading Preferences From User CFPrefsD
+2026-04-21 15:03:14.323828+0900 0x1932c    Default     0x0                  439    0    PriTypeV2: (libxpc.dylib) [com.apple.xpc:connection] [0x87297df80] invalidated because the client process (pid 171) either cancelled the connection or exited
+2026-04-21 15:03:19.571833+0900 0x16b5     Activity    0x3fedb              439    0    PriTypeV2: (InputMethodKit) Deactivate Server
+2026-04-21 15:03:19.571837+0900 0x16b5     Activity    0x3fedc              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:03:19.572233+0900 0x16b5     Activity    0x3fedd              439    0    PriTypeV2: (InputMethodKit) Activate Server
+2026-04-21 15:03:19.572235+0900 0x16b5     Activity    0x3fede              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:03:19.572249+0900 0x16b5     Activity    0x3fedf              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:03:19.572253+0900 0x16b5     Activity    0x5b600              439    0    PriTypeV2: (InputMethodKit) Get valid marked text attributes
+2026-04-21 15:03:19.572854+0900 0x16b5     Default     0x0                  439    0    PriTypeV2: (InputMethodKit) <private>
+2026-04-21 15:03:19.572856+0900 0x16b5     Activity    0x5b601              439    0    PriTypeV2: (InputMethodKit) Set value for tag
+2026-04-21 15:03:19.573331+0900 0x16b5     Activity    0x5b602              439    0    PriTypeV2: (InputMethodKit) Deactivate Server
+2026-04-21 15:03:19.573333+0900 0x16b5     Activity    0x5b603              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:03:19.824209+0900 0x16b5     Activity    0x5b604              439    0    PriTypeV2: (InputMethodKit) Activate Server
+2026-04-21 15:03:19.824214+0900 0x16b5     Activity    0x5b605              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:03:19.824238+0900 0x16b5     Activity    0x5b606              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:03:19.824243+0900 0x16b5     Activity    0x5b607              439    0    PriTypeV2: (InputMethodKit) Get valid marked text attributes
+2026-04-21 15:03:19.824872+0900 0x16b5     Default     0x0                  439    0    PriTypeV2: (InputMethodKit) <private>
+2026-04-21 15:03:19.824875+0900 0x16b5     Activity    0x5b608              439    0    PriTypeV2: (InputMethodKit) Set value for tag
+2026-04-21 15:03:19.825452+0900 0x16b5     Activity    0x5b609              439    0    PriTypeV2: (InputMethodKit) Menu
+2026-04-21 15:03:21.125974+0900 0x16b5     Activity    0x5b60a              439    0    PriTypeV2: (InputMethodKit) Deactivate Server
+2026-04-21 15:03:21.125977+0900 0x16b5     Activity    0x5b60b              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:03:21.126208+0900 0x16b5     Activity    0x5b60c              439    0    PriTypeV2: (InputMethodKit) Activate Server
+2026-04-21 15:03:21.126209+0900 0x16b5     Activity    0x5b60d              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:03:21.126215+0900 0x16b5     Activity    0x5b60e              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:03:21.126218+0900 0x16b5     Activity    0x5b60f              439    0    PriTypeV2: (InputMethodKit) Get valid marked text attributes
+2026-04-21 15:03:21.126561+0900 0x16b5     Default     0x0                  439    0    PriTypeV2: (InputMethodKit) <private>
+2026-04-21 15:03:21.126563+0900 0x16b5     Activity    0x5b710              439    0    PriTypeV2: (InputMethodKit) Set value for tag
+2026-04-21 15:03:21.134819+0900 0x16b5     Activity    0x5b711              439    0    PriTypeV2: (InputMethodKit) Menu
+2026-04-21 15:03:23.394170+0900 0x16b5     Activity    0x5b712              439    0    PriTypeV2: (InputMethodKit) Deactivate Server
+2026-04-21 15:03:23.394175+0900 0x16b5     Activity    0x5b713              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:03:23.405413+0900 0x16b5     Activity    0x5b714              439    0    PriTypeV2: (InputMethodKit) Activate Server
+2026-04-21 15:03:23.405415+0900 0x16b5     Activity    0x5b715              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:03:23.405491+0900 0x16b5     Activity    0x5b716              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:03:23.405494+0900 0x16b5     Activity    0x5b717              439    0    PriTypeV2: (InputMethodKit) Get valid marked text attributes
+2026-04-21 15:03:23.405979+0900 0x16b5     Default     0x0                  439    0    PriTypeV2: (InputMethodKit) <private>
+2026-04-21 15:03:23.405983+0900 0x16b5     Activity    0x5b718              439    0    PriTypeV2: (InputMethodKit) Set value for tag
+2026-04-21 15:03:23.406410+0900 0x16b5     Activity    0x5b719              439    0    PriTypeV2: (InputMethodKit) Menu
+2026-04-21 15:03:24.538607+0900 0x16b5     Activity    0x5b71a              439    0    PriTypeV2: (InputMethodKit) Deactivate Server
+2026-04-21 15:03:24.538613+0900 0x16b5     Activity    0x5b71b              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:03:24.539094+0900 0x16b5     Activity    0x5b71c              439    0    PriTypeV2: (InputMethodKit) Activate Server
+2026-04-21 15:03:24.539096+0900 0x16b5     Activity    0x5b71d              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:03:24.539106+0900 0x16b5     Activity    0x5b71e              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:03:24.539111+0900 0x16b5     Activity    0x5b71f              439    0    PriTypeV2: (InputMethodKit) Get valid marked text attributes
+2026-04-21 15:03:24.540063+0900 0x16b5     Default     0x0                  439    0    PriTypeV2: (libxpc.dylib) [com.apple.xpc:connection] [0x87297e400] invalidated because the current process cancelled the connection by calling xpc_connection_cancel()
+2026-04-21 15:03:24.540108+0900 0x16b5     Activity    0x5bb30              439    0    PriTypeV2: (InputMethodKit) Deactivate Server
+2026-04-21 15:03:24.540111+0900 0x16b5     Activity    0x5bb31              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:03:24.540423+0900 0x1c9e0    Default     0x0                  439    0    PriTypeV2: (libxpc.dylib) [com.apple.xpc:connection] [0x87297ee80] activating connection: mach=false listener=false peer=true name=com.apple.xpc.anonymous.0x872c64dc0.peer[537].0x87297ee80
+2026-04-21 15:03:24.550577+0900 0x16b5     Activity    0x5bb32              439    0    PriTypeV2: (InputMethodKit) Activate Server
+2026-04-21 15:03:24.550583+0900 0x16b5     Activity    0x5bb33              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:03:24.550602+0900 0x16b5     Activity    0x5bb34              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:03:24.550604+0900 0x16b5     Activity    0x5bb35              439    0    PriTypeV2: (InputMethodKit) Get valid marked text attributes
+2026-04-21 15:03:24.551102+0900 0x16b5     Default     0x0                  439    0    PriTypeV2: (InputMethodKit) <private>
+2026-04-21 15:03:24.551104+0900 0x16b5     Activity    0x5bb36              439    0    PriTypeV2: (InputMethodKit) Set value for tag
+2026-04-21 15:03:24.555411+0900 0x16b5     Activity    0x5bb37              439    0    PriTypeV2: (InputMethodKit) Menu
+2026-04-21 15:03:24.961965+0900 0x16b5     Activity    0x5bb38              439    0    PriTypeV2: (InputMethodKit) Setting marked text
+2026-04-21 15:03:24.979022+0900 0x16b5     Activity    0x5bb39              439    0    PriTypeV2: (InputMethodKit) Menu
+2026-04-21 15:03:25.437506+0900 0x16b5     Activity    0x5bb3a              439    0    PriTypeV2: (InputMethodKit) Setting marked text
+2026-04-21 15:03:25.439605+0900 0x16b5     Activity    0x5bb3b              439    0    PriTypeV2: (InputMethodKit) Menu
+2026-04-21 15:03:25.902543+0900 0x16b5     Activity    0x5bb3c              439    0    PriTypeV2: (InputMethodKit) Setting marked text
+2026-04-21 15:03:25.910690+0900 0x16b5     Activity    0x5bb3d              439    0    PriTypeV2: (InputMethodKit) Menu
+2026-04-21 15:03:26.122682+0900 0x16b5     Activity    0x5bb3e              439    0    PriTypeV2: (InputMethodKit) Setting marked text
+2026-04-21 15:03:26.123846+0900 0x16b5     Activity    0x5bb3f              439    0    PriTypeV2: (InputMethodKit) Menu
+2026-04-21 15:03:26.768237+0900 0x16b5     Activity    0x5bcb0              439    0    PriTypeV2: (InputMethodKit) Setting marked text
+2026-04-21 15:03:26.782369+0900 0x16b5     Activity    0x5bcb1              439    0    PriTypeV2: (InputMethodKit) Menu
+2026-04-21 15:03:26.851266+0900 0x16b5     Activity    0x5bcb2              439    0    PriTypeV2: (InputMethodKit) Setting marked text
+2026-04-21 15:03:26.867359+0900 0x16b5     Activity    0x5bcb3              439    0    PriTypeV2: (InputMethodKit) Menu
+2026-04-21 15:03:26.968185+0900 0x16b5     Activity    0x5bcb4              439    0    PriTypeV2: (InputMethodKit) Setting marked text
+2026-04-21 15:03:26.981325+0900 0x16b5     Activity    0x5bcb5              439    0    PriTypeV2: (InputMethodKit) Menu
+2026-04-21 15:03:27.064216+0900 0x16b5     Activity    0x5bcb6              439    0    PriTypeV2: (InputMethodKit) Inserting text
+2026-04-21 15:03:27.072204+0900 0x16b5     Activity    0x5bcb7              439    0    PriTypeV2: (InputMethodKit) Setting marked text
+2026-04-21 15:03:27.092277+0900 0x16b5     Activity    0x5bcb8              439    0    PriTypeV2: (InputMethodKit) Menu
+2026-04-21 15:03:27.093913+0900 0x16b5     Activity    0x5bcb9              439    0    PriTypeV2: (InputMethodKit) Inserting text
+2026-04-21 15:03:27.098592+0900 0x16b5     Activity    0x5bcba              439    0    PriTypeV2: (InputMethodKit) Setting marked text
+2026-04-21 15:03:27.109389+0900 0x16b5     Activity    0x5bcbb              439    0    PriTypeV2: (InputMethodKit) Menu
+2026-04-21 15:03:27.125897+0900 0x16b5     Activity    0x5bcbc              439    0    PriTypeV2: (InputMethodKit) Setting marked text
+2026-04-21 15:03:27.132888+0900 0x16b5     Activity    0x5bcbd              439    0    PriTypeV2: (InputMethodKit) Menu
+2026-04-21 15:03:27.409553+0900 0x16b5     Activity    0x5bcbe              439    0    PriTypeV2: (InputMethodKit) Setting marked text
+2026-04-21 15:03:27.418169+0900 0x16b5     Activity    0x5bcbf              439    0    PriTypeV2: (InputMethodKit) Menu
+2026-04-21 15:03:27.660801+0900 0x16b5     Activity    0x5bd10              439    0    PriTypeV2: (InputMethodKit) Setting marked text
+2026-04-21 15:03:27.676991+0900 0x16b5     Activity    0x5bd11              439    0    PriTypeV2: (InputMethodKit) Menu
+2026-04-21 15:03:28.185001+0900 0x16b5     Activity    0x5bd12              439    0    PriTypeV2: (InputMethodKit) Setting marked text
+2026-04-21 15:03:28.196257+0900 0x16b5     Activity    0x5bd13              439    0    PriTypeV2: (InputMethodKit) Menu
+2026-04-21 15:03:28.251492+0900 0x16b5     Activity    0x5bd14              439    0    PriTypeV2: (InputMethodKit) Setting marked text
+2026-04-21 15:03:28.266990+0900 0x16b5     Activity    0x5bd15              439    0    PriTypeV2: (InputMethodKit) Menu
+2026-04-21 15:03:28.359797+0900 0x16b5     Activity    0x5bd16              439    0    PriTypeV2: (InputMethodKit) Setting marked text
+2026-04-21 15:03:28.376988+0900 0x16b5     Activity    0x5bd17              439    0    PriTypeV2: (InputMethodKit) Menu
+2026-04-21 15:03:28.559708+0900 0x16b5     Activity    0x5bd18              439    0    PriTypeV2: (InputMethodKit) Setting marked text
+2026-04-21 15:03:28.576040+0900 0x16b5     Activity    0x5bd19              439    0    PriTypeV2: (InputMethodKit) Menu
+2026-04-21 15:03:28.617916+0900 0x16b5     Activity    0x5bd1a              439    0    PriTypeV2: (InputMethodKit) Inserting text
+2026-04-21 15:03:28.623830+0900 0x16b5     Activity    0x5bd1b              439    0    PriTypeV2: (InputMethodKit) Setting marked text
+2026-04-21 15:03:28.630960+0900 0x16b5     Activity    0x5bd1c              439    0    PriTypeV2: (InputMethodKit) Menu
+2026-04-21 15:03:28.759784+0900 0x16b5     Activity    0x5bd1d              439    0    PriTypeV2: (InputMethodKit) Inserting text
+2026-04-21 15:03:28.770231+0900 0x16b5     Activity    0x5bd1e              439    0    PriTypeV2: (InputMethodKit) Menu
+2026-04-21 15:03:29.518147+0900 0x16b5     Activity    0x5bd1f              439    0    PriTypeV2: (InputMethodKit) Setting marked text
+2026-04-21 15:03:29.529934+0900 0x16b5     Activity    0x5bd80              439    0    PriTypeV2: (InputMethodKit) Menu
+2026-04-21 15:03:29.645792+0900 0x16b5     Activity    0x5bd81              439    0    PriTypeV2: (InputMethodKit) Setting marked text
+2026-04-21 15:03:29.654786+0900 0x16b5     Activity    0x5bd82              439    0    PriTypeV2: (InputMethodKit) Menu
+2026-04-21 15:03:29.734749+0900 0x16b5     Activity    0x5bd83              439    0    PriTypeV2: (InputMethodKit) Setting marked text
+2026-04-21 15:03:29.739412+0900 0x16b5     Activity    0x5bd84              439    0    PriTypeV2: (InputMethodKit) Menu
+2026-04-21 15:03:29.893052+0900 0x16b5     Activity    0x5bd85              439    0    PriTypeV2: (InputMethodKit) Inserting text
+2026-04-21 15:03:29.896199+0900 0x16b5     Activity    0x5bd86              439    0    PriTypeV2: (InputMethodKit) Setting marked text
+2026-04-21 15:03:29.903712+0900 0x16b5     Activity    0x5bd87              439    0    PriTypeV2: (InputMethodKit) Menu
+2026-04-21 15:03:29.934641+0900 0x16b5     Activity    0x5bd88              439    0    PriTypeV2: (InputMethodKit) Setting marked text
+2026-04-21 15:03:29.939377+0900 0x16b5     Activity    0x5bd89              439    0    PriTypeV2: (InputMethodKit) Menu
+2026-04-21 15:03:30.123873+0900 0x16b5     Activity    0x5bd8a              439    0    PriTypeV2: (InputMethodKit) Setting marked text
+2026-04-21 15:03:30.131157+0900 0x16b5     Activity    0x5bd8b              439    0    PriTypeV2: (InputMethodKit) Menu
+2026-04-21 15:03:30.184737+0900 0x16b5     Activity    0x5bd8c              439    0    PriTypeV2: (InputMethodKit) Inserting text
+2026-04-21 15:03:30.196849+0900 0x16b5     Activity    0x5bd8d              439    0    PriTypeV2: (InputMethodKit) Menu
+2026-04-21 15:03:30.322940+0900 0x16b5     Activity    0x5bd8e              439    0    PriTypeV2: (InputMethodKit) Setting marked text
+2026-04-21 15:03:30.329555+0900 0x16b5     Activity    0x5bd8f              439    0    PriTypeV2: (InputMethodKit) Menu
+2026-04-21 15:03:30.442978+0900 0x16b5     Activity    0x5bdb0              439    0    PriTypeV2: (InputMethodKit) Setting marked text
+2026-04-21 15:03:30.448423+0900 0x16b5     Activity    0x5bdb1              439    0    PriTypeV2: (InputMethodKit) Menu
+2026-04-21 15:03:30.518060+0900 0x16b5     Activity    0x5bdb2              439    0    PriTypeV2: (InputMethodKit) Setting marked text
+2026-04-21 15:03:30.523799+0900 0x16b5     Activity    0x5bdb3              439    0    PriTypeV2: (InputMethodKit) Menu
+2026-04-21 15:03:30.651347+0900 0x16b5     Activity    0x5bdb4              439    0    PriTypeV2: (InputMethodKit) Inserting text
+2026-04-21 15:03:30.655428+0900 0x16b5     Activity    0x5bdb5              439    0    PriTypeV2: (InputMethodKit) Setting marked text
+2026-04-21 15:03:30.663864+0900 0x16b5     Activity    0x5bdb6              439    0    PriTypeV2: (InputMethodKit) Menu
+2026-04-21 15:03:30.709635+0900 0x16b5     Activity    0x5bdb7              439    0    PriTypeV2: (InputMethodKit) Setting marked text
+2026-04-21 15:03:30.714773+0900 0x16b5     Activity    0x5bdb8              439    0    PriTypeV2: (InputMethodKit) Menu
+2026-04-21 15:03:30.776112+0900 0x16b5     Activity    0x5bdb9              439    0    PriTypeV2: (InputMethodKit) Setting marked text
+2026-04-21 15:03:30.780816+0900 0x16b5     Activity    0x5bdba              439    0    PriTypeV2: (InputMethodKit) Menu
+2026-04-21 15:03:30.926369+0900 0x16b5     Activity    0x5bdbb              439    0    PriTypeV2: (InputMethodKit) Setting marked text
+2026-04-21 15:03:30.933003+0900 0x16b5     Activity    0x5bdbc              439    0    PriTypeV2: (InputMethodKit) Menu
+2026-04-21 15:03:30.959637+0900 0x16b5     Activity    0x5bdbd              439    0    PriTypeV2: (InputMethodKit) Inserting text
+2026-04-21 15:03:30.963916+0900 0x16b5     Activity    0x5bdbe              439    0    PriTypeV2: (InputMethodKit) Setting marked text
+2026-04-21 15:03:30.971171+0900 0x16b5     Activity    0x5bdbf              439    0    PriTypeV2: (InputMethodKit) Menu
+2026-04-21 15:03:31.059666+0900 0x16b5     Activity    0x5bdc0              439    0    PriTypeV2: (InputMethodKit) Inserting text
+2026-04-21 15:03:31.073749+0900 0x16b5     Activity    0x5bdc1              439    0    PriTypeV2: (InputMethodKit) Deactivate Server
+2026-04-21 15:03:31.073755+0900 0x16b5     Activity    0x5bdc2              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:03:31.324920+0900 0x16b5     Activity    0x5bdc3              439    0    PriTypeV2: (InputMethodKit) Activate Server
+2026-04-21 15:03:31.324924+0900 0x16b5     Activity    0x5bdc4              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:03:31.324943+0900 0x16b5     Activity    0x5bdc5              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:03:31.324948+0900 0x16b5     Activity    0x5bdc6              439    0    PriTypeV2: (InputMethodKit) Get valid marked text attributes
+2026-04-21 15:03:31.325500+0900 0x16b5     Default     0x0                  439    0    PriTypeV2: (InputMethodKit) <private>
+2026-04-21 15:03:31.325501+0900 0x16b5     Activity    0x5bdc7              439    0    PriTypeV2: (InputMethodKit) Set value for tag
+2026-04-21 15:03:31.325711+0900 0x16b5     Activity    0x5bdc8              439    0    PriTypeV2: (InputMethodKit) Menu
+2026-04-21 15:03:36.484697+0900 0x16b5     Activity    0x5bdc9              439    0    PriTypeV2: (InputMethodKit) Deactivate Server
+2026-04-21 15:03:36.484704+0900 0x16b5     Activity    0x5bdca              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:03:36.485239+0900 0x16b5     Activity    0x5bdcb              439    0    PriTypeV2: (InputMethodKit) Activate Server
+2026-04-21 15:03:36.485241+0900 0x16b5     Activity    0x5bdcc              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:03:36.485251+0900 0x16b5     Activity    0x5bdcd              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:03:36.485254+0900 0x16b5     Activity    0x5bdce              439    0    PriTypeV2: (InputMethodKit) Get valid marked text attributes
+2026-04-21 15:03:36.485837+0900 0x16b5     Default     0x0                  439    0    PriTypeV2: (InputMethodKit) <private>
+2026-04-21 15:03:36.485840+0900 0x16b5     Activity    0x5bdcf              439    0    PriTypeV2: (InputMethodKit) Set value for tag
+2026-04-21 15:03:36.488899+0900 0x16b5     Activity    0x5c140              439    0    PriTypeV2: (InputMethodKit) Menu
+2026-04-21 15:03:37.058503+0900 0x16b5     Activity    0x5c141              439    0    PriTypeV2: (InputMethodKit) Deactivate Server
+2026-04-21 15:03:37.058507+0900 0x16b5     Activity    0x5c142              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:03:37.309410+0900 0x16b5     Activity    0x5c143              439    0    PriTypeV2: (InputMethodKit) Activate Server
+2026-04-21 15:03:37.309413+0900 0x16b5     Activity    0x5c144              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:03:37.309430+0900 0x16b5     Activity    0x5c145              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:03:37.309433+0900 0x16b5     Activity    0x5c146              439    0    PriTypeV2: (InputMethodKit) Get valid marked text attributes
+2026-04-21 15:03:37.309787+0900 0x16b5     Default     0x0                  439    0    PriTypeV2: (InputMethodKit) <private>
+2026-04-21 15:03:37.309788+0900 0x16b5     Activity    0x5c147              439    0    PriTypeV2: (InputMethodKit) Set value for tag
+2026-04-21 15:03:37.309952+0900 0x16b5     Activity    0x5c148              439    0    PriTypeV2: (InputMethodKit) Menu
+2026-04-21 15:03:50.386548+0900 0x16b5     Activity    0x5c149              439    0    PriTypeV2: (InputMethodKit) Deactivate Server
+2026-04-21 15:03:50.386553+0900 0x16b5     Activity    0x5c14a              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:03:50.387026+0900 0x1ce25    Default     0x0                  439    0    PriTypeV2: (libxpc.dylib) [com.apple.xpc:connection] [0x87297ed00] activating connection: mach=false listener=false peer=true name=com.apple.xpc.anonymous.0x872c64dc0.peer[922].0x87297ed00
+2026-04-21 15:03:50.387184+0900 0x16b5     Activity    0x5c14b              439    0    PriTypeV2: (InputMethodKit) Activate Server
+2026-04-21 15:03:50.387186+0900 0x16b5     Activity    0x5c14c              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:03:50.387808+0900 0x16b5     Activity    0x5c14d              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:03:50.387813+0900 0x16b5     Activity    0x5c14e              439    0    PriTypeV2: (InputMethodKit) Get valid marked text attributes
+2026-04-21 15:03:50.388326+0900 0x16b5     Default     0x0                  439    0    PriTypeV2: (InputMethodKit) <private>
+2026-04-21 15:03:50.388328+0900 0x16b5     Activity    0x5c14f              439    0    PriTypeV2: (InputMethodKit) Set value for tag
+2026-04-21 15:03:50.388592+0900 0x16b5     Activity    0x5c380              439    0    PriTypeV2: (InputMethodKit) Menu
+2026-04-21 15:03:51.466548+0900 0x16b5     Activity    0x5c381              439    0    PriTypeV2: (InputMethodKit) Deactivate Server
+2026-04-21 15:03:51.466551+0900 0x16b5     Activity    0x5c382              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:03:51.473520+0900 0x16b5     Activity    0x5c383              439    0    PriTypeV2: (InputMethodKit) Activate Server
+2026-04-21 15:03:51.473522+0900 0x16b5     Activity    0x5c384              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:03:51.473541+0900 0x16b5     Activity    0x5c385              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:03:51.473543+0900 0x16b5     Activity    0x5c386              439    0    PriTypeV2: (InputMethodKit) Get valid marked text attributes
+2026-04-21 15:03:51.474112+0900 0x16b5     Default     0x0                  439    0    PriTypeV2: (InputMethodKit) <private>
+2026-04-21 15:03:51.474113+0900 0x16b5     Activity    0x5c387              439    0    PriTypeV2: (InputMethodKit) Set value for tag
+2026-04-21 15:03:51.485026+0900 0x16b5     Activity    0x5c388              439    0    PriTypeV2: (InputMethodKit) Menu
+2026-04-21 15:03:53.306436+0900 0x16b5     Activity    0x5c389              439    0    PriTypeV2: (InputMethodKit) Activate Server
+2026-04-21 15:03:53.306442+0900 0x16b5     Activity    0x5c38a              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:03:53.306469+0900 0x16b5     Activity    0x5c38b              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:03:53.306473+0900 0x16b5     Activity    0x5c38c              439    0    PriTypeV2: (InputMethodKit) Get valid marked text attributes
+2026-04-21 15:03:53.307356+0900 0x16b5     Default     0x0                  439    0    PriTypeV2: (libxpc.dylib) [com.apple.xpc:connection] [0x87297d200] invalidated because the current process cancelled the connection by calling xpc_connection_cancel()
+2026-04-21 15:03:53.307417+0900 0x16b5     Activity    0x5c38d              439    0    PriTypeV2: (InputMethodKit) Deactivate Server
+2026-04-21 15:03:53.307419+0900 0x16b5     Activity    0x5c38e              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:03:53.307808+0900 0x1ce25    Default     0x0                  439    0    PriTypeV2: (libxpc.dylib) [com.apple.xpc:connection] [0x87297e880] activating connection: mach=false listener=false peer=true name=com.apple.xpc.anonymous.0x872c64dc0.peer[922].0x87297e880
+2026-04-21 15:03:53.307931+0900 0x16b5     Activity    0x5c38f              439    0    PriTypeV2: (InputMethodKit) Deactivate Server
+2026-04-21 15:03:53.307932+0900 0x16b5     Activity    0x5c440              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:03:53.316181+0900 0x16b5     Activity    0x5c441              439    0    PriTypeV2: (InputMethodKit) Deactivate Server
+2026-04-21 15:03:53.316184+0900 0x16b5     Activity    0x5c442              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:04:31.380363+0900 0x1cf1d    Default     0x0                  439    0    PriTypeV2: (libxpc.dylib) [com.apple.xpc:connection] [0x87297e280] activating connection: mach=false listener=false peer=true name=com.apple.xpc.anonymous.0x872c64dc0.peer[922].0x87297e280
+2026-04-21 15:04:31.381231+0900 0x16b5     Activity    0x5c443              439    0    PriTypeV2: (InputMethodKit) Activate Server
+2026-04-21 15:04:31.381237+0900 0x16b5     Activity    0x5c444              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:04:31.382062+0900 0x16b5     Activity    0x5c445              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:04:31.382066+0900 0x16b5     Activity    0x5c446              439    0    PriTypeV2: (InputMethodKit) Get valid marked text attributes
+2026-04-21 15:04:31.384103+0900 0x16b5     Default     0x0                  439    0    PriTypeV2: (InputMethodKit) <private>
+2026-04-21 15:04:31.384106+0900 0x16b5     Activity    0x5c447              439    0    PriTypeV2: (InputMethodKit) Set value for tag
+2026-04-21 15:04:31.384523+0900 0x16b5     Activity    0x5c448              439    0    PriTypeV2: (InputMethodKit) Menu
+2026-04-21 15:04:31.384664+0900 0x16b5     Activity    0x5c449              439    0    PriTypeV2: (CoreFoundation) Loading Preferences From User CFPrefsD
+2026-04-21 15:04:33.594867+0900 0x16b5     Activity    0x5c44a              439    0    PriTypeV2: (InputMethodKit) Deactivate Server
+2026-04-21 15:04:33.594873+0900 0x16b5     Activity    0x5c44b              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:04:33.845978+0900 0x16b5     Activity    0x5c44c              439    0    PriTypeV2: (InputMethodKit) Activate Server
+2026-04-21 15:04:33.845985+0900 0x16b5     Activity    0x5c44d              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:04:33.846015+0900 0x16b5     Activity    0x5c44e              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:04:33.846022+0900 0x16b5     Activity    0x5c44f              439    0    PriTypeV2: (InputMethodKit) Get valid marked text attributes
+2026-04-21 15:04:33.846847+0900 0x16b5     Default     0x0                  439    0    PriTypeV2: (InputMethodKit) <private>
+2026-04-21 15:04:33.846849+0900 0x16b5     Activity    0x5caf0              439    0    PriTypeV2: (InputMethodKit) Set value for tag
+2026-04-21 15:04:33.847725+0900 0x16b5     Activity    0x5caf1              439    0    PriTypeV2: (InputMethodKit) Menu
+2026-04-21 15:04:37.701276+0900 0x16b5     Activity    0x5caf2              439    0    PriTypeV2: (InputMethodKit) Deactivate Server
+2026-04-21 15:04:37.701280+0900 0x16b5     Activity    0x5caf3              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:04:37.701678+0900 0x16b5     Activity    0x5caf4              439    0    PriTypeV2: (InputMethodKit) Activate Server
+2026-04-21 15:04:37.701679+0900 0x16b5     Activity    0x5caf5              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:04:37.701687+0900 0x16b5     Activity    0x5caf6              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:04:37.701690+0900 0x16b5     Activity    0x5caf7              439    0    PriTypeV2: (InputMethodKit) Get valid marked text attributes
+2026-04-21 15:04:37.702296+0900 0x16b5     Default     0x0                  439    0    PriTypeV2: (InputMethodKit) <private>
+2026-04-21 15:04:37.702299+0900 0x16b5     Activity    0x5caf8              439    0    PriTypeV2: (InputMethodKit) Set value for tag
+2026-04-21 15:04:37.706195+0900 0x16b5     Activity    0x5caf9              439    0    PriTypeV2: (InputMethodKit) Menu
+2026-04-21 15:04:39.443672+0900 0x16b5     Activity    0x5cafa              439    0    PriTypeV2: (InputMethodKit) Deactivate Server
+2026-04-21 15:04:39.443676+0900 0x16b5     Activity    0x5cafb              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:04:39.695566+0900 0x16b5     Activity    0x5cafc              439    0    PriTypeV2: (InputMethodKit) Activate Server
+2026-04-21 15:04:39.695573+0900 0x16b5     Activity    0x5cafd              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:04:39.695619+0900 0x16b5     Activity    0x5cafe              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:04:39.695626+0900 0x16b5     Activity    0x5caff              439    0    PriTypeV2: (InputMethodKit) Get valid marked text attributes
+2026-04-21 15:04:39.696466+0900 0x16b5     Default     0x0                  439    0    PriTypeV2: (InputMethodKit) <private>
+2026-04-21 15:04:39.696469+0900 0x16b5     Activity    0x5cb70              439    0    PriTypeV2: (InputMethodKit) Set value for tag
+2026-04-21 15:04:39.696834+0900 0x16b5     Activity    0x5cb71              439    0    PriTypeV2: (InputMethodKit) Menu
+2026-04-21 15:04:40.942962+0900 0x16b5     Activity    0x5cb72              439    0    PriTypeV2: (InputMethodKit) Deactivate Server
+2026-04-21 15:04:40.942965+0900 0x16b5     Activity    0x5cb73              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:04:40.943264+0900 0x16b5     Activity    0x5cb74              439    0    PriTypeV2: (InputMethodKit) Activate Server
+2026-04-21 15:04:40.943265+0900 0x16b5     Activity    0x5cb75              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:04:40.943273+0900 0x16b5     Activity    0x5cb76              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:04:40.943275+0900 0x16b5     Activity    0x5cb77              439    0    PriTypeV2: (InputMethodKit) Get valid marked text attributes
+2026-04-21 15:04:40.943701+0900 0x16b5     Default     0x0                  439    0    PriTypeV2: (InputMethodKit) <private>
+2026-04-21 15:04:40.943702+0900 0x16b5     Activity    0x5cb78              439    0    PriTypeV2: (InputMethodKit) Set value for tag
+2026-04-21 15:04:40.946334+0900 0x16b5     Activity    0x5cb79              439    0    PriTypeV2: (InputMethodKit) Menu
+2026-04-21 15:04:42.179794+0900 0x16b5     Activity    0x5cb7a              439    0    PriTypeV2: (InputMethodKit) Deactivate Server
+2026-04-21 15:04:42.179800+0900 0x16b5     Activity    0x5cb7b              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:04:42.431617+0900 0x16b5     Activity    0x5cb7c              439    0    PriTypeV2: (InputMethodKit) Activate Server
+2026-04-21 15:04:42.431621+0900 0x16b5     Activity    0x5cb7d              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:04:42.431646+0900 0x16b5     Activity    0x5cb7e              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:04:42.431650+0900 0x16b5     Activity    0x5cb7f              439    0    PriTypeV2: (InputMethodKit) Get valid marked text attributes
+2026-04-21 15:04:42.432425+0900 0x16b5     Default     0x0                  439    0    PriTypeV2: (InputMethodKit) <private>
+2026-04-21 15:04:42.432427+0900 0x16b5     Activity    0x5cbc0              439    0    PriTypeV2: (InputMethodKit) Set value for tag
+2026-04-21 15:04:42.432716+0900 0x16b5     Activity    0x5cbc1              439    0    PriTypeV2: (InputMethodKit) Menu
+2026-04-21 15:04:46.547318+0900 0x16b5     Activity    0x5cbc2              439    0    PriTypeV2: (InputMethodKit) Deactivate Server
+2026-04-21 15:04:46.547327+0900 0x16b5     Activity    0x5cbc3              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:04:46.548008+0900 0x16b5     Activity    0x5cbc4              439    0    PriTypeV2: (InputMethodKit) Activate Server
+2026-04-21 15:04:46.548012+0900 0x16b5     Activity    0x5cbc5              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:04:46.548031+0900 0x16b5     Activity    0x5cbc6              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:04:46.548043+0900 0x16b5     Activity    0x5cbc7              439    0    PriTypeV2: (InputMethodKit) Get valid marked text attributes
+2026-04-21 15:04:46.548749+0900 0x16b5     Default     0x0                  439    0    PriTypeV2: (InputMethodKit) <private>
+2026-04-21 15:04:46.548751+0900 0x16b5     Activity    0x5cbc8              439    0    PriTypeV2: (InputMethodKit) Set value for tag
+2026-04-21 15:04:46.549384+0900 0x16b5     Activity    0x5cbc9              439    0    PriTypeV2: (InputMethodKit) Menu
+2026-04-21 15:04:48.283957+0900 0x16b5     Activity    0x5cbca              439    0    PriTypeV2: (InputMethodKit) Deactivate Server
+2026-04-21 15:04:48.283960+0900 0x16b5     Activity    0x5cbcb              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:04:48.535359+0900 0x16b5     Activity    0x5cbcc              439    0    PriTypeV2: (InputMethodKit) Activate Server
+2026-04-21 15:04:48.535365+0900 0x16b5     Activity    0x5cbcd              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:04:48.535392+0900 0x16b5     Activity    0x5cbce              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:04:48.535399+0900 0x16b5     Activity    0x5cbcf              439    0    PriTypeV2: (InputMethodKit) Get valid marked text attributes
+2026-04-21 15:04:48.536233+0900 0x16b5     Default     0x0                  439    0    PriTypeV2: (InputMethodKit) <private>
+2026-04-21 15:04:48.536235+0900 0x16b5     Activity    0x5cd80              439    0    PriTypeV2: (InputMethodKit) Set value for tag
+2026-04-21 15:04:48.536674+0900 0x16b5     Activity    0x5cd81              439    0    PriTypeV2: (InputMethodKit) Menu
+2026-04-21 15:05:17.242775+0900 0x16b5     Activity    0x5cd82              439    0    PriTypeV2: (InputMethodKit) Deactivate Server
+2026-04-21 15:05:17.242781+0900 0x16b5     Activity    0x5cd83              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:05:17.243319+0900 0x16b5     Activity    0x5cd84              439    0    PriTypeV2: (InputMethodKit) Activate Server
+2026-04-21 15:05:17.243321+0900 0x16b5     Activity    0x5cd85              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:05:17.243331+0900 0x16b5     Activity    0x5cd86              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:05:17.243335+0900 0x16b5     Activity    0x5cd87              439    0    PriTypeV2: (InputMethodKit) Get valid marked text attributes
+2026-04-21 15:05:17.244137+0900 0x16b5     Default     0x0                  439    0    PriTypeV2: (InputMethodKit) <private>
+2026-04-21 15:05:17.244139+0900 0x16b5     Activity    0x5cd88              439    0    PriTypeV2: (InputMethodKit) Set value for tag
+2026-04-21 15:05:17.244668+0900 0x16b5     Activity    0x5cd89              439    0    PriTypeV2: (InputMethodKit) Menu
+2026-04-21 15:05:18.156262+0900 0x16b5     Activity    0x5cd8a              439    0    PriTypeV2: (InputMethodKit) Deactivate Server
+2026-04-21 15:05:18.156270+0900 0x16b5     Activity    0x5cd8b              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:05:18.407798+0900 0x16b5     Activity    0x5cd8c              439    0    PriTypeV2: (InputMethodKit) Activate Server
+2026-04-21 15:05:18.407805+0900 0x16b5     Activity    0x5cd8d              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:05:18.407833+0900 0x16b5     Activity    0x5cd8e              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:05:18.407839+0900 0x16b5     Activity    0x5cd8f              439    0    PriTypeV2: (InputMethodKit) Get valid marked text attributes
+2026-04-21 15:05:18.408504+0900 0x16b5     Default     0x0                  439    0    PriTypeV2: (InputMethodKit) <private>
+2026-04-21 15:05:18.408506+0900 0x16b5     Activity    0x5d060              439    0    PriTypeV2: (InputMethodKit) Set value for tag
+2026-04-21 15:05:18.408751+0900 0x16b5     Activity    0x5d061              439    0    PriTypeV2: (InputMethodKit) Menu
+2026-04-21 15:05:19.501098+0900 0x16b5     Activity    0x5d062              439    0    PriTypeV2: (InputMethodKit) Deactivate Server
+2026-04-21 15:05:19.501103+0900 0x16b5     Activity    0x5d063              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:05:19.501554+0900 0x16b5     Activity    0x5d064              439    0    PriTypeV2: (InputMethodKit) Activate Server
+2026-04-21 15:05:19.501557+0900 0x16b5     Activity    0x5d065              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:05:19.501568+0900 0x16b5     Activity    0x5d066              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:05:19.501572+0900 0x16b5     Activity    0x5d067              439    0    PriTypeV2: (InputMethodKit) Get valid marked text attributes
+2026-04-21 15:05:19.502172+0900 0x16b5     Default     0x0                  439    0    PriTypeV2: (InputMethodKit) <private>
+2026-04-21 15:05:19.502181+0900 0x16b5     Activity    0x5d068              439    0    PriTypeV2: (InputMethodKit) Set value for tag
+2026-04-21 15:05:19.506252+0900 0x16b5     Activity    0x5d069              439    0    PriTypeV2: (InputMethodKit) Menu
+2026-04-21 15:05:21.321678+0900 0x16b5     Activity    0x5d06a              439    0    PriTypeV2: (InputMethodKit) Deactivate Server
+2026-04-21 15:05:21.321685+0900 0x16b5     Activity    0x5d06b              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:05:21.572931+0900 0x16b5     Activity    0x5d06c              439    0    PriTypeV2: (InputMethodKit) Activate Server
+2026-04-21 15:05:21.572938+0900 0x16b5     Activity    0x5d06d              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:05:21.572973+0900 0x16b5     Activity    0x5d06e              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:05:21.572980+0900 0x16b5     Activity    0x5d06f              439    0    PriTypeV2: (InputMethodKit) Get valid marked text attributes
+2026-04-21 15:05:21.573840+0900 0x16b5     Default     0x0                  439    0    PriTypeV2: (InputMethodKit) <private>
+2026-04-21 15:05:21.573843+0900 0x16b5     Activity    0x5d090              439    0    PriTypeV2: (InputMethodKit) Set value for tag
+2026-04-21 15:05:21.574223+0900 0x16b5     Activity    0x5d091              439    0    PriTypeV2: (InputMethodKit) Menu
+2026-04-21 15:05:25.154287+0900 0x16b5     Activity    0x5d092              439    0    PriTypeV2: (InputMethodKit) Deactivate Server
+2026-04-21 15:05:25.154294+0900 0x16b5     Activity    0x5d093              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:05:25.155034+0900 0x16b5     Activity    0x5d094              439    0    PriTypeV2: (InputMethodKit) Activate Server
+2026-04-21 15:05:25.155038+0900 0x16b5     Activity    0x5d095              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:05:25.155055+0900 0x16b5     Activity    0x5d096              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:05:25.155061+0900 0x16b5     Activity    0x5d097              439    0    PriTypeV2: (InputMethodKit) Get valid marked text attributes
+2026-04-21 15:05:25.155960+0900 0x16b5     Default     0x0                  439    0    PriTypeV2: (InputMethodKit) <private>
+2026-04-21 15:05:25.155963+0900 0x16b5     Activity    0x5d098              439    0    PriTypeV2: (InputMethodKit) Set value for tag
+2026-04-21 15:05:25.156573+0900 0x16b5     Activity    0x5d099              439    0    PriTypeV2: (InputMethodKit) Menu
+2026-04-21 15:05:26.242830+0900 0x16b5     Activity    0x5d09a              439    0    PriTypeV2: (InputMethodKit) Deactivate Server
+2026-04-21 15:05:26.242835+0900 0x16b5     Activity    0x5d09b              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:05:26.494141+0900 0x16b5     Activity    0x5d09c              439    0    PriTypeV2: (InputMethodKit) Activate Server
+2026-04-21 15:05:26.494148+0900 0x16b5     Activity    0x5d09d              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:05:26.494180+0900 0x16b5     Activity    0x5d09e              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:05:26.494187+0900 0x16b5     Activity    0x5d09f              439    0    PriTypeV2: (InputMethodKit) Get valid marked text attributes
+2026-04-21 15:05:26.495068+0900 0x16b5     Default     0x0                  439    0    PriTypeV2: (InputMethodKit) <private>
+2026-04-21 15:05:26.495070+0900 0x16b5     Activity    0x5d0e0              439    0    PriTypeV2: (InputMethodKit) Set value for tag
+2026-04-21 15:05:26.495351+0900 0x16b5     Activity    0x5d0e1              439    0    PriTypeV2: (InputMethodKit) Menu
+2026-04-21 15:05:58.086941+0900 0x16b5     Default     0x0                  439    0    PriTypeV2: (libxpc.dylib) [com.apple.xpc:connection] [0x87297e880] invalidated because the current process cancelled the connection by calling xpc_connection_cancel()
+2026-04-21 15:05:58.087255+0900 0x16b5     Activity    0x5d0e2              439    0    PriTypeV2: (InputMethodKit) Deactivate Server
+2026-04-21 15:05:58.087261+0900 0x16b5     Activity    0x5d0e3              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:05:58.087692+0900 0x1daf1    Default     0x0                  439    0    PriTypeV2: (libxpc.dylib) [com.apple.xpc:connection] [0x87297f000] activating connection: mach=false listener=false peer=true name=com.apple.xpc.anonymous.0x872c64dc0.peer[922].0x87297f000
+2026-04-21 15:05:58.089124+0900 0x16b5     Activity    0x5d0e4              439    0    PriTypeV2: (InputMethodKit) Deactivate Server
+2026-04-21 15:05:58.089127+0900 0x16b5     Activity    0x5d0e5              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:06:11.102376+0900 0x16b5     Activity    0x5d0e6              439    0    PriTypeV2: (InputMethodKit) Activate Server
+2026-04-21 15:06:11.102384+0900 0x16b5     Activity    0x5d0e7              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:06:11.102419+0900 0x16b5     Activity    0x5d0e8              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:06:11.102425+0900 0x16b5     Activity    0x5d0e9              439    0    PriTypeV2: (InputMethodKit) Get valid marked text attributes
+2026-04-21 15:06:11.104351+0900 0x16b5     Default     0x0                  439    0    PriTypeV2: (libxpc.dylib) [com.apple.xpc:connection] [0x87234dc80] invalidated because the current process cancelled the connection by calling xpc_connection_cancel()
+2026-04-21 15:06:11.104426+0900 0x16b5     Activity    0x5d0ea              439    0    PriTypeV2: (InputMethodKit) Deactivate Server
+2026-04-21 15:06:11.104430+0900 0x16b5     Activity    0x5d0eb              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:06:11.104816+0900 0x1d736    Default     0x0                  439    0    PriTypeV2: (libxpc.dylib) [com.apple.xpc:connection] [0x87297f180] activating connection: mach=false listener=false peer=true name=com.apple.xpc.anonymous.0x872c64dc0.peer[1286].0x87297f180
+2026-04-21 15:06:11.104946+0900 0x16b5     Activity    0x5d0ec              439    0    PriTypeV2: (InputMethodKit) Deactivate Server
+2026-04-21 15:06:11.104947+0900 0x16b5     Activity    0x5d0ed              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:06:13.533779+0900 0x1d736    Default     0x0                  439    0    PriTypeV2: (libxpc.dylib) [com.apple.xpc:connection] [0x87297f180] invalidated because the client process (pid 1286) either cancelled the connection or exited
+2026-04-21 15:06:48.204642+0900 0x16b5     Activity    0x5d0ee              439    0    PriTypeV2: (InputMethodKit) Activate Server
+2026-04-21 15:06:48.204644+0900 0x16b5     Activity    0x5d0ef              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:06:48.204807+0900 0x16b5     Activity    0x60640              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:06:48.204810+0900 0x16b5     Activity    0x60641              439    0    PriTypeV2: (InputMethodKit) Get valid marked text attributes
+2026-04-21 15:06:48.205745+0900 0x16b5     Default     0x0                  439    0    PriTypeV2: (libxpc.dylib) [com.apple.xpc:connection] [0x87297ee80] invalidated because the current process cancelled the connection by calling xpc_connection_cancel()
+2026-04-21 15:06:48.205789+0900 0x16b5     Activity    0x60642              439    0    PriTypeV2: (InputMethodKit) Deactivate Server
+2026-04-21 15:06:48.205791+0900 0x16b5     Activity    0x60643              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:06:48.205991+0900 0x1d736    Default     0x0                  439    0    PriTypeV2: (libxpc.dylib) [com.apple.xpc:connection] [0x87297f180] activating connection: mach=false listener=false peer=true name=com.apple.xpc.anonymous.0x872c64dc0.peer[537].0x87297f180
+2026-04-21 15:06:48.206107+0900 0x16b5     Activity    0x60644              439    0    PriTypeV2: (InputMethodKit) Deactivate Server
+2026-04-21 15:06:48.206112+0900 0x16b5     Activity    0x60645              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:07:15.451142+0900 0x16b5     Activity    0x60646              439    0    PriTypeV2: (InputMethodKit) Activate Server
+2026-04-21 15:07:15.451148+0900 0x16b5     Activity    0x60647              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:07:15.451177+0900 0x16b5     Activity    0x60648              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:07:15.451182+0900 0x16b5     Activity    0x60649              439    0    PriTypeV2: (InputMethodKit) Get valid marked text attributes
+2026-04-21 15:07:15.452403+0900 0x16b5     Default     0x0                  439    0    PriTypeV2: (libxpc.dylib) [com.apple.xpc:connection] [0x87234df80] invalidated because the current process cancelled the connection by calling xpc_connection_cancel()
+2026-04-21 15:07:15.452475+0900 0x16b5     Activity    0x6064a              439    0    PriTypeV2: (InputMethodKit) Deactivate Server
+2026-04-21 15:07:15.452477+0900 0x16b5     Activity    0x6064b              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:07:15.452799+0900 0x1e426    Default     0x0                  439    0    PriTypeV2: (libxpc.dylib) [com.apple.xpc:connection] [0x87297f300] activating connection: mach=false listener=false peer=true name=com.apple.xpc.anonymous.0x872c64dc0.peer[922].0x87297f300
+2026-04-21 15:07:15.452917+0900 0x16b5     Activity    0x6064c              439    0    PriTypeV2: (InputMethodKit) Deactivate Server
+2026-04-21 15:07:15.452919+0900 0x16b5     Activity    0x6064d              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:09:06.870973+0900 0x1e61f    Default     0x0                  439    0    PriTypeV2: (libxpc.dylib) [com.apple.xpc:connection] [0x87297ed00] invalidated because the client process (pid 922) either cancelled the connection or exited
+2026-04-21 15:09:06.871084+0900 0x1e61f    Default     0x0                  439    0    PriTypeV2: (libxpc.dylib) [com.apple.xpc:connection] [0x87297e280] invalidated because the client process (pid 922) either cancelled the connection or exited
+2026-04-21 15:12:44.429927+0900 0x16b5     Default     0x0                  439    0    PriTypeV2: (FrontBoardServices) [com.apple.FrontBoard:SceneClient] [com.apple.controlcenter:22C58A71-1196-436B-AB45-98B20043F9DE] Sending action(s) in update: NSSceneFenceAction
+2026-04-21 15:12:45.263449+0900 0x16b5     Default     0x0                  439    0    PriTypeV2: (FrontBoardServices) [com.apple.FrontBoard:SceneClient] [com.apple.controlcenter:22C58A71-1196-436B-AB45-98B20043F9DE] Sending action(s) in update: NSSceneFenceAction
+2026-04-21 15:12:54.031075+0900 0x16b5     Activity    0x6064e              439    0    PriTypeV2: (CoreFoundation) Loading Preferences From User CFPrefsD
+2026-04-21 15:12:54.042108+0900 0x16b5     Default     0x0                  439    0    PriTypeV2: (FrontBoardServices) [com.apple.FrontBoard:SceneClient] [com.apple.controlcenter:22C58A71-1196-436B-AB45-98B20043F9DE] Sending action(s) in update: NSSceneFenceAction
+2026-04-21 15:12:54.091694+0900 0x1eb48    Activity    0x62890              439    0    PriTypeV2: (RunningBoardServices) didChangeInheritances
+2026-04-21 15:12:54.142670+0900 0x1f925    Activity    0x62891              439    0    PriTypeV2: (CoreSpotlight) end-index-batch
+2026-04-21 15:12:54.142905+0900 0x1f925    Activity    0x62892              439    0    PriTypeV2: (CoreSpotlight) index-items
+2026-04-21 15:12:54.143169+0900 0x1f925    Default     0x62892              439    0    PriTypeV2: (CoreSpotlight) [com.apple.corespotlight:index] CSInlineDonation:<private>: Skipping donation (feature flag disabled)
+2026-04-21 15:12:55.091167+0900 0x16b5     Default     0x0                  439    0    PriTypeV2: (FrontBoardServices) [com.apple.FrontBoard:SceneClient] [com.apple.controlcenter:22C58A71-1196-436B-AB45-98B20043F9DE] Sending action(s) in update: NSSceneFenceAction
+2026-04-21 15:12:55.189299+0900 0x1f927    Activity    0x628b1              439    0    PriTypeV2: (CoreSpotlight) end-index-batch
+2026-04-21 15:12:55.189445+0900 0x1f927    Activity    0x628b2              439    0    PriTypeV2: (CoreSpotlight) index-items
+2026-04-21 15:12:55.189548+0900 0x1f927    Default     0x628b2              439    0    PriTypeV2: (CoreSpotlight) [com.apple.corespotlight:index] CSInlineDonation:<private>: Skipping donation (feature flag disabled)
+2026-04-21 15:12:55.202525+0900 0x1f925    Activity    0x628b3              439    0    PriTypeV2: (RunningBoardServices) didChangeInheritances
+2026-04-21 15:12:59.056014+0900 0x16b5     Activity    0x628b4              439    0    PriTypeV2: (InputMethodKit) Activate Server
+2026-04-21 15:12:59.056020+0900 0x16b5     Activity    0x628b5              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:12:59.056049+0900 0x16b5     Activity    0x628b6              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:12:59.056054+0900 0x16b5     Activity    0x628b7              439    0    PriTypeV2: (InputMethodKit) Get valid marked text attributes
+2026-04-21 15:12:59.056411+0900 0x16b5     Activity    0x628b8              439    0    PriTypeV2: (InputMethodKit) First character rect
+2026-04-21 15:12:59.058227+0900 0x16b5     Default     0x0                  439    0    PriTypeV2: (libxpc.dylib) [com.apple.xpc:connection] [0x872d48f00] invalidated because the current process cancelled the connection by calling xpc_connection_cancel()
+2026-04-21 15:12:59.058295+0900 0x16b5     Activity    0x628b9              439    0    PriTypeV2: (InputMethodKit) Deactivate Server
+2026-04-21 15:12:59.058297+0900 0x16b5     Activity    0x628ba              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:12:59.058682+0900 0x1f925    Default     0x0                  439    0    PriTypeV2: (libxpc.dylib) [com.apple.xpc:connection] [0x87297ed00] activating connection: mach=false listener=false peer=true name=com.apple.xpc.anonymous.0x872c64dc0.peer[445].0x87297ed00
+2026-04-21 15:12:59.058782+0900 0x16b5     Activity    0x628bb              439    0    PriTypeV2: (InputMethodKit) Deactivate Server
+2026-04-21 15:12:59.058783+0900 0x16b5     Activity    0x628bc              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:13:01.554985+0900 0x16b5     Default     0x0                  439    0    PriTypeV2: (FrontBoardServices) [com.apple.FrontBoard:SceneClient] [com.apple.controlcenter:22C58A71-1196-436B-AB45-98B20043F9DE] Sending action(s) in update: NSSceneFenceAction
+2026-04-21 15:13:01.598822+0900 0x1f927    Activity    0x628be              439    0    PriTypeV2: (RunningBoardServices) didChangeInheritances
+2026-04-21 15:13:01.649181+0900 0x1f925    Activity    0x628bf              439    0    PriTypeV2: (CoreSpotlight) end-index-batch
+2026-04-21 15:13:01.649380+0900 0x1f925    Activity    0x62cc0              439    0    PriTypeV2: (CoreSpotlight) index-items
+2026-04-21 15:13:01.649507+0900 0x1f925    Default     0x62cc0              439    0    PriTypeV2: (CoreSpotlight) [com.apple.corespotlight:index] CSInlineDonation:<private>: Skipping donation (feature flag disabled)
+2026-04-21 15:13:02.548587+0900 0x16b5     Activity    0x62cde              439    0    PriTypeV2: (AppKit) perform action for menu item
+2026-04-21 15:13:02.548744+0900 0x16b5     Activity    0x62cdf              439    0    PriTypeV2: (AppKit) sendAction:
+2026-04-21 15:13:02.554868+0900 0x16b5     Default     0x0                  439    0    PriTypeV2: (FrontBoardServices) [com.apple.FrontBoard:SceneClient] [com.apple.controlcenter:22C58A71-1196-436B-AB45-98B20043F9DE] Sending action(s) in update: NSSceneFenceAction
+2026-04-21 15:13:02.574430+0900 0x16b5     Fault       0x62ce1              439    14   PriTypeV2: (SwiftUICore) [com.apple.SwiftUI:Invalid Configuration] No symbol named 'period' found in system symbol set
+2026-04-21 15:13:02.574432+0900 0x16b5     Activity    0x62ce1              439    0    PriTypeV2: (libsystem_trace.dylib) Activity for state dumps
+2026-04-21 15:13:02.593699+0900 0x16b5     Fault       0x62ce2              439    14   PriTypeV2: (SwiftUICore) [com.apple.SwiftUI:Invalid Configuration] No symbol named 'period' found in system symbol set
+2026-04-21 15:13:02.593700+0900 0x16b5     Activity    0x62ce2              439    0    PriTypeV2: (libsystem_trace.dylib) Activity for state dumps
+2026-04-21 15:13:02.611292+0900 0x1f927    Default     0x62cdf              439    0    PriTypeV2: (UIIntelligenceSupport) [com.apple.UIIntelligenceSupport:xpc] establishing connection to agent
+2026-04-21 15:13:02.611304+0900 0x1f927    Default     0x62cdf              439    0    PriTypeV2: (libxpc.dylib) [com.apple.xpc:session] [0x8721a6940] Session created.
+2026-04-21 15:13:02.611305+0900 0x1f927    Default     0x62cdf              439    0    PriTypeV2: (libxpc.dylib) [com.apple.xpc:session] [0x8721a6940] Session created from connection [0x871334640]
+2026-04-21 15:13:02.611311+0900 0x1f927    Default     0x62cdf              439    0    PriTypeV2: (libxpc.dylib) [com.apple.xpc:connection] [0x871334640] activating connection: mach=true listener=false peer=false name=com.apple.uiintelligencesupport.agent
+2026-04-21 15:13:02.611476+0900 0x1f927    Default     0x62cdf              439    0    PriTypeV2: (libxpc.dylib) [com.apple.xpc:session] [0x8721a6940] Session activated
+2026-04-21 15:13:02.611822+0900 0x1f925    Default     0x62cdf              439    0    PriTypeV2: (UIIntelligenceSupport) [com.apple.UIIntelligenceSupport:xpc] Connection established with agent PID: 770
+2026-04-21 15:13:02.612953+0900 0x1f925    Activity    0x62ce4              439    0    PriTypeV2: (RunningBoardServices) didChangeInheritances
+2026-04-21 15:13:02.626759+0900 0x0        State       0x62ce1              439    14   PriTypeV2: (59E23BD5-D01E-305A-B96F-A5790356049A) com.apple.appkit:StatusBar
+{
+    0 =     {
+        activeState = 1;
+        appearance = NSAppearanceNameDarkAqua;
+        autosaveName = PriTypeInputModeIndicator;
+        auxiliaryViews =         {
+            NSStatusItemView = "22C58A71-1196-436B-AB45-98B20043F9DE-Aux[1]-NSStatusItemView";
+        };
+        class = NSSceneStatusItem;
+        isVisible = 1;
+        sceneIdentifier = "22C58A71-1196-436B-AB45-98B20043F9DE";
+        windowNumber = 100000000;
+        windowWidth = 38;
+    };
+}
+2026-04-21 15:13:02.662997+0900 0x1f928    Activity    0x62ceb              439    0    PriTypeV2: (RunningBoardServices) didChangeInheritances
+2026-04-21 15:13:02.663260+0900 0x1f9fe    Activity    0x62cec              439    0    PriTypeV2: (RunningBoardServices) didChangeInheritances
+2026-04-21 15:13:02.685117+0900 0x1f928    Activity    0x62cef              439    0    PriTypeV2: (CoreSpotlight) end-index-batch
+2026-04-21 15:13:02.685222+0900 0x1f928    Activity    0x62d30              439    0    PriTypeV2: (CoreSpotlight) index-items
+2026-04-21 15:13:02.685290+0900 0x1f928    Default     0x62d30              439    0    PriTypeV2: (CoreSpotlight) [com.apple.corespotlight:index] CSInlineDonation:<private>: Skipping donation (feature flag disabled)
+2026-04-21 15:13:02.865718+0900 0x16b5     Activity    0x62d58              439    0    PriTypeV2: (InputMethodKit) Activate Server
+2026-04-21 15:13:02.865728+0900 0x16b5     Activity    0x62d59              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:13:02.865740+0900 0x16b5     Activity    0x62d5a              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:13:02.865743+0900 0x16b5     Activity    0x62d5b              439    0    PriTypeV2: (InputMethodKit) Get valid marked text attributes
+2026-04-21 15:13:02.866623+0900 0x16b5     Default     0x0                  439    0    PriTypeV2: (libxpc.dylib) [com.apple.xpc:connection] [0x87234c300] invalidated because the current process cancelled the connection by calling xpc_connection_cancel()
+2026-04-21 15:13:02.866652+0900 0x1f928    Default     0x0                  439    0    PriTypeV2: (libxpc.dylib) [com.apple.xpc:connection] [0x872c66a80] Re-initialization successful; calling out to event handler with XPC_ERROR_CONNECTION_INTERRUPTED
+2026-04-21 15:13:02.866842+0900 0x1f927    Default     0x0                  439    0    PriTypeV2: (libxpc.dylib) [com.apple.xpc:connection] [0x87297f780] activating connection: mach=false listener=false peer=true name=com.apple.xpc.anonymous.0x872c64dc0.peer[439].0x87297f780
+2026-04-21 15:13:02.867211+0900 0x16b5     Activity    0x62d5c              439    0    PriTypeV2: (InputMethodKit) Deactivate Server
+2026-04-21 15:13:02.867212+0900 0x16b5     Activity    0x62d5d              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:13:06.543145+0900 0x16b5     Default     0x0                  439    0    PriTypeV2: (AppKit) [com.apple.AppKit:AutomaticTermination] void _updateToReflectAutomaticTerminationState(void) Setting _kLSApplicationWouldBeTerminatedByTALKey=0
+2026-04-21 15:13:06.938129+0900 0x16b5     Activity    0x62d7f              439    0    PriTypeV2: (AppKit) trackMouse send action on mouseUp
+2026-04-21 15:13:06.938134+0900 0x16b5     Activity    0x62db0              439    0    PriTypeV2: (AppKit) sendActionFrom:
+2026-04-21 15:13:06.938236+0900 0x16b5     Activity    0x62db1              439    0    PriTypeV2: (AppKit) sendAction:
+2026-04-21 15:13:06.940421+0900 0x1f928    Default     0x62db1              439    0    PriTypeV2: (libxpc.dylib) [com.apple.xpc:connection] [0x871334640] invalidated because the current process cancelled the connection by calling xpc_connection_cancel()
+2026-04-21 15:13:06.940422+0900 0x1f928    Default     0x62db1              439    0    PriTypeV2: (libxpc.dylib) [com.apple.xpc:session] [0x8721a6940] Session canceled.
+2026-04-21 15:13:06.940475+0900 0x1f925    Default     0x62db1              439    0    PriTypeV2: (UIIntelligenceSupport) [com.apple.UIIntelligenceSupport:xpc] agent connection cancelled (details: Session manually canceled)
+2026-04-21 15:13:06.940486+0900 0x1f925    Default     0x62db1              439    0    PriTypeV2: (libxpc.dylib) [com.apple.xpc:session] [0x8721a6940] Disposing of session
+2026-04-21 15:13:07.320645+0900 0x1f925    Activity    0x62dd5              439    0    PriTypeV2: (RunningBoardServices) didChangeInheritances
+2026-04-21 15:13:07.335107+0900 0x1f9fe    Activity    0x62dd6              439    0    PriTypeV2: (CoreSpotlight) end-index-batch
+2026-04-21 15:13:07.335312+0900 0x1f9fe    Activity    0x62dd7              439    0    PriTypeV2: (CoreSpotlight) index-items
+2026-04-21 15:13:07.335475+0900 0x1f9fe    Default     0x62dd7              439    0    PriTypeV2: (CoreSpotlight) [com.apple.corespotlight:index] CSInlineDonation:<private>: Skipping donation (feature flag disabled)
+2026-04-21 15:13:07.951186+0900 0x16b5     Default     0x0                  439    0    PriTypeV2: (AppKit) [com.apple.AppKit:AutomaticTermination] void _updateToReflectAutomaticTerminationState(void) Setting _kLSApplicationWouldBeTerminatedByTALKey=1
+2026-04-21 15:13:08.034668+0900 0x1f925    Activity    0x62dd8              439    0    PriTypeV2: (RunningBoardServices) didChangeInheritances
+2026-04-21 15:14:14.007925+0900 0x16b5     Activity    0x62dd9              439    0    PriTypeV2: (CoreFoundation) Loading Preferences From User CFPrefsD
+2026-04-21 15:14:16.685491+0900 0x16b5     Activity    0x62dda              439    0    PriTypeV2: (CoreFoundation) Loading Preferences From User CFPrefsD
+2026-04-21 15:15:52.385356+0900 0x16b5     Activity    0x62ddb              439    0    PriTypeV2: (InputMethodKit) Activate Server
+2026-04-21 15:15:52.385359+0900 0x16b5     Activity    0x62ddc              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:15:52.385384+0900 0x16b5     Activity    0x62ddd              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:15:52.385388+0900 0x16b5     Activity    0x62dde              439    0    PriTypeV2: (InputMethodKit) Get valid marked text attributes
+2026-04-21 15:15:52.387831+0900 0x16b5     Default     0x0                  439    0    PriTypeV2: (libxpc.dylib) [com.apple.xpc:connection] [0x872d48180] invalidated because the current process cancelled the connection by calling xpc_connection_cancel()
+2026-04-21 15:15:52.388756+0900 0x16b5     Activity    0x62ddf              439    0    PriTypeV2: (InputMethodKit) Deactivate Server
+2026-04-21 15:15:52.388759+0900 0x16b5     Activity    0x68c90              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+2026-04-21 15:15:52.389138+0900 0x20521    Default     0x687ae              439    0    PriTypeV2: (libxpc.dylib) [com.apple.xpc:connection] [0x87297f600] activating connection: mach=false listener=false peer=true name=com.apple.xpc.anonymous.0x872c64dc0.peer[537].0x87297f600
+2026-04-21 15:15:52.389441+0900 0x16b5     Activity    0x68c91              439    0    PriTypeV2: (InputMethodKit) Deactivate Server
+2026-04-21 15:15:52.389442+0900 0x16b5     Activity    0x68c92              439    0    PriTypeV2: (InputMethodKit) Get bundle identifier
+Timestamp                       Thread     Type        Activity             PID    TTL  

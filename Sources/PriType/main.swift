@@ -26,6 +26,19 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Setup Right Command toggle via IOKit
         setupIOKit()
         
+        // Setup update notifications
+        UpdateNotifier.shared.setup()
+        
+        // Check for updates in background (respects user preference and 24h throttle)
+        if ConfigurationManager.shared.autoUpdateCheckEnabled {
+            Task.detached(priority: .utility) {
+                let result = await UpdateChecker.shared.checkForUpdatesIfNeeded()
+                if case .updateAvailable(let info) = result {
+                    UpdateNotifier.shared.notifyUpdateAvailable(info)
+                }
+            }
+        }
+        
         // Mark as launched (don't show settings on first boot)
         hasLaunchedBefore = true
     }

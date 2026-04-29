@@ -71,6 +71,18 @@ struct SettingsView: View {
     @State private var selectedToggleKey = ConfigurationManager.shared.toggleKey
     @State private var autoCapitalizeEnabled = ConfigurationManager.shared.autoCapitalizeEnabled
     @State private var doubleSpacePeriodEnabled = ConfigurationManager.shared.doubleSpacePeriodEnabled
+    @State private var autoUpdateCheckEnabled = ConfigurationManager.shared.autoUpdateCheckEnabled
+    
+    // Update check state
+    @State private var updateStatus: UpdateStatus = .idle
+    
+    private enum UpdateStatus: Equatable {
+        case idle
+        case checking
+        case upToDate
+        case available(String)  // version string
+        case error
+    }
     
     private let keyboardOptions = [
         ("2", L10n.keyboard.twoSet),
@@ -191,6 +203,56 @@ struct SettingsView: View {
                             .onChange(of: doubleSpacePeriodEnabled) { _, newValue in
                                 ConfigurationManager.shared.doubleSpacePeriodEnabled = newValue
                             }
+                            
+                            // Update Section
+                            LiquidGlassSection(
+                                title: L10n.update.title,
+                                icon: "arrow.triangle.2.circlepath"
+                            ) {
+                                VStack(spacing: 0) {
+                                    LiquidToggleRow(
+                                        title: L10n.update.autoCheck,
+                                        icon: "clock.arrow.2.circlepath",
+                                        isOn: $autoUpdateCheckEnabled
+                                    )
+                                    
+                                    Divider()
+                                        .opacity(0.3)
+                                        .padding(.horizontal, 12)
+                                    
+                                    // Manual check button + status
+                                    HStack(spacing: 10) {
+                                        Button(action: { checkForUpdates() }) {
+                                            HStack(spacing: 6) {
+                                                if updateStatus == .checking {
+                                                    ProgressView()
+                                                        .controlSize(.small)
+                                                } else {
+                                                    Image(systemName: "arrow.clockwise")
+                                                        .font(.system(size: 12, weight: .medium))
+                                                }
+                                                Text(L10n.update.checkButton)
+                                                    .font(.system(size: 13, weight: .medium, design: .rounded))
+                                            }
+                                            .padding(.horizontal, 14)
+                                            .padding(.vertical, 8)
+                                            .glassEffect(.regular, in: .capsule)
+                                        }
+                                        .buttonStyle(.plain)
+                                        .disabled(updateStatus == .checking)
+                                        
+                                        Spacer()
+                                        
+                                        // Status indicator
+                                        updateStatusView
+                                    }
+                                    .padding(.vertical, 10)
+                                    .padding(.horizontal, 12)
+                                }
+                            }
+                            .onChange(of: autoUpdateCheckEnabled) { _, newValue in
+                                ConfigurationManager.shared.autoUpdateCheckEnabled = newValue
+                            }
                         }
                         .padding(.top, 20)
                         .padding(.bottom, 16)
@@ -219,7 +281,94 @@ struct SettingsView: View {
             selectedToggleKey = ConfigurationManager.shared.toggleKey
             autoCapitalizeEnabled = ConfigurationManager.shared.autoCapitalizeEnabled
             doubleSpacePeriodEnabled = ConfigurationManager.shared.doubleSpacePeriodEnabled
+            autoUpdateCheckEnabled = ConfigurationManager.shared.autoUpdateCheckEnabled
         }
+    }
+    
+    // MARK: - Update Status View
+    
+    @ViewBuilder
+    private var updateStatusView: some View {
+        switch updateStatus {
+        case .idle:
+            EmptyView()
+        case .checking:
+            Text(L10n.update.checking)
+                .font(.system(size: 12, weight: .medium, design: .rounded))
+                .foregroundStyle(.secondary)
+        case .upToDate:
+            HStack(spacing: 4) {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.green)
+                Text(L10n.update.upToDate)
+                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                    .foregroundStyle(.secondary)
+            }
+            .transition(.opacity)
+        case .available(let version):
+            Button(action: { openLatestRelease() }) {
+                HStack(spacing: 4) {
+                    Image(systemName: "arrow.down.circle.fill")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.cyan)
+                    Text(String(format: L10n.update.available, version))
+                        .font(.system(size: 12, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.cyan)
+                }
+            }
+            .buttonStyle(.plain)
+            .transition(.opacity)
+        case .error:
+            HStack(spacing: 4) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.orange)
+                Text(L10n.update.error)
+                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                    .foregroundStyle(.secondary)
+            }
+            .transition(.opacity)
+        }
+    }
+    
+    // MARK: - Actions
+    
+    private func checkForUpdates() {
+        withAnimation { updateStatus = .checking }
+        
+        Task {
+            let result = await UpdateChecker.shared.checkForUpdates()
+            await MainActor.run {
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    switch result {
+                    case .updateAvailable(let info):
+                        updateStatus = .available(info.version)
+                    case .upToDate:
+                        updateStatus = .upToDate
+                    case .skipped:
+                        updateStatus = .upToDate
+                    case .error:
+                        updateStatus = .error
+                    }
+                }
+                
+                // Auto-dismiss success/error after 8 seconds
+                if updateStatus == .upToDate || updateStatus == .error {
+                    Task {
+                        try? await Task.sleep(for: .seconds(8))
+                        await MainActor.run {
+                            withAnimation { updateStatus = .idle }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    private func openLatestRelease() {
+        let url = URL(string: "https://github.com/Meapri/PriType-Swift/releases/latest")!
+        NSWorkspace.shared.open(url)
     }
 }
 

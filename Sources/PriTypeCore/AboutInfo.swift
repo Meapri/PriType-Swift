@@ -13,8 +13,10 @@ public struct AboutInfo: Sendable {
     /// Application display name
     public static var appName: String { L10n.app.name }
     
-    /// Current version string
-    public static let version = "2.0.0"
+    /// Current version string (read from Info.plist, fallback to hardcoded)
+    public static let version: String = {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "2.0.0"
+    }()
     
     /// Copyright notice (localized)
     public static var copyright: String { L10n.app.copyright }

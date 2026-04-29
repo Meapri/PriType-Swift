@@ -30,3 +30,15 @@
 /* App */
 "app.copyright" = "© 2025";
 "app.quit" = "Quit PriType";
+
+/* Update */
+"update.title" = "Update";
+"update.checkButton" = "Check for Updates";
+"update.checking" = "Checking...";
+"update.upToDate" = "You're up to date";
+"update.available" = "New version available: %@";
+"update.download" = "Download";
+"update.error" = "Check failed";
+"update.notificationTitle" = "PriType Update Available";
+"update.notificationBody" = "PriType %@ is now available. Click to download.";
+"update.autoCheck" = "Automatically check for updates";

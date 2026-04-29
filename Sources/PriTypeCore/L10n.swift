@@ -83,4 +83,19 @@ public enum L10n {
         public static var copyright: String { localized("app.copyright") }
         public static var quit: String { localized("app.quit") }
     }
+    
+    // MARK: - Update
+    
+    public enum update {
+        public static var title: String { localized("update.title") }
+        public static var checkButton: String { localized("update.checkButton") }
+        public static var checking: String { localized("update.checking") }
+        public static var upToDate: String { localized("update.upToDate") }
+        public static var available: String { localized("update.available") }
+        public static var download: String { localized("update.download") }
+        public static var error: String { localized("update.error") }
+        public static var notificationTitle: String { localized("update.notificationTitle") }
+        public static var notificationBody: String { localized("update.notificationBody") }
+        public static var autoCheck: String { localized("update.autoCheck") }
+    }
 }

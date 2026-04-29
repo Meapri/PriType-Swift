@@ -110,6 +110,8 @@ public final class ConfigurationManager: ConfigurationProviding, @unchecked Send
         static let toggleKey = "com.pritype.toggleKey"
         static let autoCapitalize = "com.pritype.autoCapitalize"
         static let doubleSpacePeriod = "com.pritype.doubleSpacePeriod"
+        static let lastUpdateCheck = "com.pritype.lastUpdateCheck"
+        static let autoUpdateCheck = "com.pritype.autoUpdateCheck"
     }
     
     // MARK: - Keyboard Layout
@@ -197,6 +199,33 @@ public final class ConfigurationManager: ConfigurationProviding, @unchecked Send
         }
         set {
             defaults.set(newValue, forKey: Keys.doubleSpacePeriod)
+        }
+    }
+    
+    // MARK: - Update Settings
+    
+    /// Timestamp of the last successful update check
+    /// Used by `UpdateChecker` to throttle API calls (24-hour interval)
+    public var lastUpdateCheck: Date? {
+        get {
+            defaults.object(forKey: Keys.lastUpdateCheck) as? Date
+        }
+        set {
+            defaults.set(newValue, forKey: Keys.lastUpdateCheck)
+        }
+    }
+    
+    /// Whether automatic update checking is enabled
+    /// Default: enabled
+    public var autoUpdateCheckEnabled: Bool {
+        get {
+            if defaults.object(forKey: Keys.autoUpdateCheck) == nil {
+                return true  // Default enabled
+            }
+            return defaults.bool(forKey: Keys.autoUpdateCheck)
+        }
+        set {
+            defaults.set(newValue, forKey: Keys.autoUpdateCheck)
         }
     }
 }

@@ -30,3 +30,15 @@
 /* App */
 "app.copyright" = "© 2025";
 "app.quit" = "PriType 종료";
+
+/* Update */
+"update.title" = "업데이트";
+"update.checkButton" = "업데이트 확인";
+"update.checking" = "확인 중...";
+"update.upToDate" = "최신 버전입니다";
+"update.available" = "새 버전 사용 가능: %@";
+"update.download" = "다운로드";
+"update.error" = "확인 실패";
+"update.notificationTitle" = "PriType 업데이트 사용 가능";
+"update.notificationBody" = "PriType %@이(가) 출시되었습니다. 클릭하여 다운로드하세요.";
+"update.autoCheck" = "자동으로 업데이트 확인";
