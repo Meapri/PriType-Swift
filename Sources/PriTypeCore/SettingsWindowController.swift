@@ -436,7 +436,7 @@ struct SettingsSection<Content: View>: View {
     }
 }
 
-/// A selection row — uses solid fill instead of nested glass
+/// A selection row — animations scoped to checkmark and background only
 struct SelectionRow: View {
     let title: String
     let isSelected: Bool
@@ -445,22 +445,24 @@ struct SelectionRow: View {
     
     var body: some View {
         Button(action: {
-            withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
-                action()
-            }
+            // No withAnimation here — prevents text from re-rendering with animation
+            action()
         }) {
             HStack(spacing: 10) {
-                // Selection indicator — simple circle, no glass
+                // Selection indicator — simple circle
                 Circle()
                     .fill(isSelected
                           ? AnyShapeStyle(LinearGradient(colors: [.cyan, .blue], startPoint: .top, endPoint: .bottom))
                           : AnyShapeStyle(Color.primary.opacity(0.10)))
                     .frame(width: 7, height: 7)
                     .padding(6)
+                    .animation(.easeOut(duration: 0.2), value: isSelected)
                 
+                // Text — NO animation to prevent Korean glyph flickering
                 Text(title)
                     .font(.system(size: 14, weight: isSelected ? .semibold : .regular, design: .rounded))
                     .foregroundStyle(isSelected ? .primary : .secondary)
+                    .animation(nil, value: isSelected) // Explicitly disable
                 
                 Spacer()
                 
@@ -478,12 +480,12 @@ struct SelectionRow: View {
                     .fill(isSelected
                           ? Color.primary.opacity(0.06)
                           : isHovering ? Color.primary.opacity(0.03) : Color.clear)
+                    .animation(.easeOut(duration: 0.15), value: isHovering)
+                    .animation(.easeOut(duration: 0.2), value: isSelected)
             )
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .animation(.easeOut(duration: 0.15), value: isHovering)
-        .animation(.spring(response: 0.35, dampingFraction: 0.7), value: isSelected)
         .onHover { hover in
             isHovering = hover
         }
