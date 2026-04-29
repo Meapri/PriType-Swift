@@ -163,8 +163,20 @@ public final class HanjaCandidateWindow: @unchecked Sendable {
         guard index < candidates.count else { return }
         let entry = candidates[index]
         let callback = onSelect
-        dismiss()
+        // Fire onSelect BEFORE dismiss to preserve hanjaKey state
         callback?(entry)
+        // Dismiss without calling onDismiss (selection already handled cleanup)
+        dismissWithoutCallback()
+    }
+    
+    /// Hide the window without triggering onDismiss callback
+    /// Used after selection, where the onSelect callback already handles state cleanup
+    private func dismissWithoutCallback() {
+        window?.orderOut(nil)
+        candidates = []
+        onSelect = nil
+        onDismiss = nil
+        currentPage = 0
     }
     
     private func updateContent() {
