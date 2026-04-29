@@ -1,7 +1,14 @@
 #!/bin/bash
 # preinstall for PriTypeV2.pkg
 
-# Remove old installations to ensure a clean install
+# 1. Kill existing PriTypeV2 process first (before deleting)
+#    macOS IMK will auto-relaunch it after postinstall finishes.
+killall PriTypeV2 2>/dev/null || true
+
+# 2. Small delay to ensure the process has fully terminated
+sleep 0.5
+
+# 3. Remove old installations to ensure a clean install
 rm -rf "/Library/Input Methods/PriTypeV2.app"
 rm -rf "/Library/Input Methods/PriType.app"
 

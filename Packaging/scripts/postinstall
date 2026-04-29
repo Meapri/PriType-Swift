@@ -1,10 +1,40 @@
 #!/bin/bash
 # postinstall for PriTypeV2.pkg
 
-# Open the Keyboard Input Sources System Settings
-open "x-apple.systempreferences:com.apple.preference.keyboard?InputSources" || true
+APP_PATH="/Library/Input Methods/PriTypeV2.app"
 
-# Use osascript to show an alert to the user about logging out
-osascript -e 'display dialog "PriType 입력기 설치가 완료되었습니다.\n\n시스템에 입력기를 완전히 인식시키려면 지금 [로그아웃] 후 다시 로그인하거나 [재시동]해야 합니다.\n\n재로그인 후 시스템 설정 > 키보드 > 텍스트 입력의 [입력 소스 편집]에서 PriTypeV2를 추가해 주세요." buttons {"확인"} default button "확인" with title "PriType 설치 완료" with icon note' || true
+# 1. Remove quarantine attribute (prevents Gatekeeper blocking after update)
+xattr -cr "$APP_PATH" 2>/dev/null || true
+
+# 2. Force macOS to re-register the input method
+#    Kill the TextInputMenuAgent so it picks up the new bundle
+killall TextInputMenuAgent 2>/dev/null || true
+
+# 3. Launch the new PriTypeV2 process
+#    macOS InputMethodKit will auto-relaunch if it was previously registered,
+#    but we explicitly launch it to cover first-install and edge cases.
+sleep 0.5
+open "$APP_PATH" || true
+
+# 4. Determine if this is a fresh install or an update
+#    Check if PriTypeV2 is already in the user's input sources
+IS_UPDATE=false
+CURRENT_USER=$(stat -f "%Su" /dev/console 2>/dev/null || echo "")
+if [ -n "$CURRENT_USER" ]; then
+    USER_HOME=$(eval echo "~$CURRENT_USER")
+    # Check if PriType was previously configured
+    if defaults read "$USER_HOME/Library/Preferences/com.apple.HIToolbox" AppleEnabledInputSources 2>/dev/null | grep -q "pritype"; then
+        IS_UPDATE=true
+    fi
+fi
+
+if [ "$IS_UPDATE" = true ]; then
+    # Update: just show a brief success message
+    osascript -e 'display notification "PriType가 최신 버전으로 업데이트되었습니다." with title "PriType 업데이트 완료" sound name "Glass"' || true
+else
+    # Fresh install: guide the user to add the input source
+    open "x-apple.systempreferences:com.apple.preference.keyboard?InputSources" || true
+    osascript -e 'display dialog "PriType 입력기 설치가 완료되었습니다.\n\n시스템 설정 > 키보드 > 텍스트 입력의 [입력 소스 편집]에서 PriTypeV2를 추가해 주세요." buttons {"확인"} default button "확인" with title "PriType 설치 완료" with icon note' || true
+fi
 
 exit 0
