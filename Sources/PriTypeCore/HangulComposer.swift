@@ -266,16 +266,6 @@ public class HangulComposer {
         // Track delegate for external toggle calls
         self.lastDelegate = delegate
         
-        // Critical Fix: Caps Lock Passthrough & Immediate Commit
-        // We check this BEFORE the keyDown check so .flagsChanged can trigger a commit immediately
-        // when the Caps Lock key is pressed during composition.
-        if event.modifierFlags.contains(.capsLock) {
-            if !context.isEmpty() {
-                commitComposition(delegate: delegate)
-            }
-            return false // Let the system handle raw input (Uppercase English)
-        }
-        
         // Only handle key down events for actual typing
         if event.type != .keyDown {
             return false
