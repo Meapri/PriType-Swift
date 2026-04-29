@@ -336,15 +336,11 @@ public class HangulComposer {
             return consumed
         }
         
-        // Option key: trigger Hanja lookup for current composition or last character
-        let significantModifiers: NSEvent.ModifierFlags = [.command, .control, .option]
-        if event.modifierFlags.contains(.option) && !event.modifierFlags.contains(.command) && !event.modifierFlags.contains(.control) {
-            return handleHanjaLookup(delegate: delegate)
-        }
-        
-        // Pass through if modifiers (Command, Control) are present
+        // Option key: no longer intercepted here.
+        // Right Option key is handled via CGEventTap in RightCommandSuppressor.
+        // Pass through if modifiers (Command, Control, Option) are present
         // This ensures system shortcuts work correctly without interference
-        if !event.modifierFlags.intersection([.command, .control]).isEmpty {
+        if !event.modifierFlags.intersection([.command, .control, .option]).isEmpty {
              // Commit any in-progress composition first. Otherwise marked text stays
              // live and the host app ignores or misapplies the shortcut (e.g. Cmd+←).
              if !context.isEmpty() {
@@ -490,6 +486,18 @@ public class HangulComposer {
     }
     
     // MARK: - Hanja Lookup
+    
+    /// Trigger Hanja lookup externally (called by RightCommandSuppressor via CGEventTap)
+    ///
+    /// This is the public entry point for Hanja conversion.
+    /// Uses the last delegate to perform text operations.
+    public func triggerHanjaLookup() {
+        guard let delegate = lastDelegate else {
+            DebugLogger.log("Hanja: No delegate available")
+            return
+        }
+        _ = handleHanjaLookup(delegate: delegate)
+    }
     
     /// Handle Option key to trigger Hanja candidate lookup
     /// Searches based on the current preedit (composing) text, or the last committed Hangul character

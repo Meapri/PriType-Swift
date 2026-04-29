@@ -65,6 +65,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             PriTypeInputController.sharedComposer.toggleInputMode()
         }
         
+        // Set callback for Right Option key → Hanja lookup
+        RightCommandSuppressor.shared.onHanjaLookup = {
+            PriTypeInputController.sharedComposer.triggerHanjaLookup()
+        }
+        
         // Track if CGEventTap started successfully
         let eventTapStarted = RightCommandSuppressor.shared.start()
         

@@ -55,6 +55,9 @@ public enum KeyCode {
     /// Right Control key (62)
     public static let rightControl: Int64 = 62
     
+    /// Right Option key (61)
+    public static let rightOption: Int64 = 61
+    
     /// Space key in Int64 context for CGEventTap (49)
     public static let spaceInt64: Int64 = 49
     

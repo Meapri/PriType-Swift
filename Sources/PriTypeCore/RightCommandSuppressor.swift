@@ -30,8 +30,14 @@ public final class RightCommandSuppressor: @unchecked Sendable {
     /// Callback for toggle
     public var onToggle: (@Sendable () -> Void)?
     
+    /// Callback for Hanja lookup (Right Option)
+    public var onHanjaLookup: (@Sendable () -> Void)?
+    
     /// Track Right Command state
     private var rightCommandIsDown = false
+    
+    /// Track Right Option state
+    private var rightOptionIsDown = false
     
     // Key codes are centralized in KeyCode enum
     
@@ -139,6 +145,22 @@ public final class RightCommandSuppressor: @unchecked Sendable {
                 }
             }
             
+            // Right Option - Hanja lookup trigger
+            if keyCode == KeyCode.rightOption {
+                let optionPressed = flags.contains(.maskAlternate)
+                
+                if optionPressed && !rightOptionIsDown {
+                    rightOptionIsDown = true
+                    DebugLogger.log("RightCommandSuppressor: Right Option DOWN - HANJA")
+                    triggerHanjaLookup()
+                    return nil  // Suppress
+                } else if !optionPressed && rightOptionIsDown {
+                    rightOptionIsDown = false
+                    DebugLogger.log("RightCommandSuppressor: Right Option UP")
+                    return nil  // Suppress release
+                }
+            }
+            
             return Unmanaged.passUnretained(event)
         }
         
@@ -169,6 +191,13 @@ public final class RightCommandSuppressor: @unchecked Sendable {
     
     private func triggerToggle() {
         let callback = onToggle
+        DispatchQueue.main.async {
+            callback?()
+        }
+    }
+    
+    private func triggerHanjaLookup() {
+        let callback = onHanjaLookup
         DispatchQueue.main.async {
             callback?()
         }
