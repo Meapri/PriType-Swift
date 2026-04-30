@@ -117,6 +117,9 @@ public class PriTypeInputController: IMKInputController {
             // This avoids heavy IPC calls (bundleId check, coordinate calculation) on every keystroke.
             self.cachedContext = ClientContextDetector.analyze(client: client)
             DebugLogger.log("Activated for client: \(self.cachedContext?.bundleId ?? "unknown") (Cached Context)")
+            
+            // Restore per-app local text buffer for hanja lookup continuity
+            composer.restoreBuffer(forApp: self.cachedContext?.bundleId)
         } else {
             // Fallback if sender is not IMKTextInput (rare)
             self.cachedContext = nil
@@ -145,9 +148,9 @@ public class PriTypeInputController: IMKInputController {
             let adapter = ClientAdapter(client: client)
             composer.forceCommit(delegate: adapter)
         }
-        // Clear local text buffer to prevent cross-app hanja leaking.
-        // Without this, text typed in App A can trigger hanja lookup in App B.
-        composer.clearLocalBuffer()
+        // Save local text buffer per-app, then clear it.
+        // This prevents cross-app hanja leaking while preserving per-app context.
+        composer.saveAndClearBuffer(forApp: cachedContext?.bundleId)
         super.deactivateServer(sender)
         // Do NOT clear currentAdapter here.
         // CGEventTap triggerHanjaLookup() is dispatched async and needs a valid adapter.

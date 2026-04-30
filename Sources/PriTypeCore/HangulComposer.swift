@@ -543,6 +543,29 @@ public class HangulComposer {
         localTextBuffer = ""
     }
     
+    /// Per-app buffer storage to preserve hanja context across app switches.
+    /// Key: bundle identifier, Value: localTextBuffer content at deactivation time.
+    private var perAppBuffers: [String: String] = [:]
+    
+    /// Save the current localTextBuffer for the given app, then clear it.
+    /// Called from `deactivateServer` before switching away from an app.
+    public func saveAndClearBuffer(forApp bundleId: String?) {
+        if let id = bundleId, !localTextBuffer.isEmpty {
+            perAppBuffers[id] = localTextBuffer
+        }
+        localTextBuffer = ""
+    }
+    
+    /// Restore the localTextBuffer for the given app.
+    /// Called from `activateServer` when switching to an app.
+    public func restoreBuffer(forApp bundleId: String?) {
+        if let id = bundleId, let saved = perAppBuffers[id] {
+            localTextBuffer = saved
+        } else {
+            localTextBuffer = ""
+        }
+    }
+    
     // MARK: - Hanja Lookup
     
     /// Trigger Hanja lookup externally (called by RightCommandSuppressor via CGEventTap)
