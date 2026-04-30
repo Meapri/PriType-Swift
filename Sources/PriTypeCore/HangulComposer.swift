@@ -538,28 +538,19 @@ public class HangulComposer {
         localTextBuffer = ""
     }
     
-    /// Timestamp of the last keystroke processed by handle().
-    /// Used to determine if localTextBuffer is "fresh" enough for hanja lookup.
-    /// Without this, stale buffer content from minutes ago could trigger hanja in the wrong context.
-    private var lastKeystrokeTime: DispatchTime = .init(uptimeNanoseconds: 0)
+    /// Bundle ID of the app where the last keystroke was processed.
+    /// Used to prevent cross-app hanja leaking: if the current app differs from
+    /// the app that populated localTextBuffer, the buffer is considered stale.
+    private var lastInputBundleId: String = ""
     
-    /// Record that a keystroke was just processed (called from handle)
-    public func markKeystroke() {
-        lastKeystrokeTime = .now()
+    /// Record which app the current keystroke is from (called from handle via controller)
+    public func markKeystroke(bundleId: String) {
+        lastInputBundleId = bundleId
     }
     
-    /// Invalidate the keystroke timestamp (called from deactivateServer)
-    /// This prevents the stale buffer from being used in a different app,
-    /// while preserving the buffer data for when the user returns.
-    public func resetKeystrokeTime() {
-        lastKeystrokeTime = .init(uptimeNanoseconds: 0)
-    }
-    
-    /// Check if a keystroke was processed recently (within the given number of seconds)
-    public func hasRecentKeystroke(withinSeconds seconds: Double = 30) -> Bool {
-        let elapsed = DispatchTime.now().uptimeNanoseconds - lastKeystrokeTime.uptimeNanoseconds
-        let elapsedSec = Double(elapsed) / 1_000_000_000
-        return elapsedSec < seconds
+    /// Check if the buffer belongs to the given app
+    public func isBufferFromApp(_ bundleId: String) -> Bool {
+        return !lastInputBundleId.isEmpty && lastInputBundleId == bundleId
     }
     
     // MARK: - Hanja Lookup
@@ -614,13 +605,17 @@ public class HangulComposer {
             DebugLogger.log("Hanja: searchKey from preedit: '\(searchKey)'")
         }
         
-        // Strategy 2: localTextBuffer (last typed character) — only if keystroke was recent
-        // Without the freshness check, stale buffer data from minutes ago or from another
-        // tab/field in the same app (Chromium deactivate/activate cycles) causes false positives.
-        if searchKey.isEmpty, hasRecentKeystroke(withinSeconds: 30),
-           let lastChar = localTextBuffer.last, lastChar.isHangulChar {
-            searchKey = String(lastChar)
-            DebugLogger.log("Hanja: searchKey from localTextBuffer: '\(searchKey)'")
+        // Strategy 2: localTextBuffer (last typed character) — only if from the same app
+        // Cross-app check: if the current focused app differs from the app that populated
+        // the buffer, the buffer content is stale and should not trigger hanja.
+        if searchKey.isEmpty {
+            let currentBundleId = PriTypeInputController.sharedController?.cachedContext?.bundleId
+                ?? NSWorkspace.shared.frontmostApplication?.bundleIdentifier ?? ""
+            if isBufferFromApp(currentBundleId),
+               let lastChar = localTextBuffer.last, lastChar.isHangulChar {
+                searchKey = String(lastChar)
+                DebugLogger.log("Hanja: searchKey from localTextBuffer: '\(searchKey)'")
+            }
         }
         
         guard !searchKey.isEmpty else {

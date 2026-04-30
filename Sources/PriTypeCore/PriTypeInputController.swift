@@ -100,7 +100,7 @@ public class PriTypeInputController: IMKInputController {
     
     /// Cached client context to avoid expensive IPC calls on every keystroke
     /// - Note: Calculated in `activateServer`, used in `handle`, cleared in `deactivateServer`
-    private var cachedContext: ClientContext?
+    private(set) var cachedContext: ClientContext?
     
     // 입력기가 활성화될 때 호출 - 새 세션 시작
     override public func activateServer(_ sender: Any!) {
@@ -145,11 +145,9 @@ public class PriTypeInputController: IMKInputController {
             let adapter = ClientAdapter(client: client)
             composer.forceCommit(delegate: adapter)
         }
-        // Reset keystroke timestamp to prevent cross-app hanja leaking.
-        // The buffer data is preserved (so hanja works when returning to this app),
-        // but the timestamp is invalidated so a different app can't use the stale buffer.
-        // When the user returns and types again, markKeystroke() refreshes the timestamp.
-        composer.resetKeystrokeTime()
+        // NOTE: Do NOT clear localTextBuffer here.
+        // Cross-app hanja leaking is prevented by bundleId matching in handleHanjaLookup(),
+        // not by clearing the buffer. Clearing would make same-app hanja lookup impossible.
         super.deactivateServer(sender)
         // Do NOT clear currentAdapter here.
         // CGEventTap triggerHanjaLookup() is dispatched async and needs a valid adapter.
@@ -180,8 +178,11 @@ public class PriTypeInputController: IMKInputController {
         #endif
         guard let event = event, let client = sender as? IMKTextInput else { return false }
         
-        // Mark keystroke time for hanja buffer freshness check
-        composer.markKeystroke()
+        // Mark keystroke with current app's bundleId for cross-app hanja validation
+        let bundleId = cachedContext?.bundleId
+            ?? (sender as? IMKTextInput)?.bundleIdentifier()
+            ?? NSWorkspace.shared.frontmostApplication?.bundleIdentifier ?? ""
+        composer.markKeystroke(bundleId: bundleId)
         
         // Debug: Log all incoming events to diagnose Caps Lock issue
         DebugLogger.log("InputController.handle() event type: \(event.type.rawValue) keyCode: \(event.keyCode)")
