@@ -117,9 +117,6 @@ public class PriTypeInputController: IMKInputController {
             // This avoids heavy IPC calls (bundleId check, coordinate calculation) on every keystroke.
             self.cachedContext = ClientContextDetector.analyze(client: client)
             DebugLogger.log("Activated for client: \(self.cachedContext?.bundleId ?? "unknown") (Cached Context)")
-            
-            // Restore per-app local text buffer for hanja lookup continuity
-            composer.restoreBuffer(forApp: self.cachedContext?.bundleId)
         } else {
             // Fallback if sender is not IMKTextInput (rare)
             self.cachedContext = nil
@@ -148,9 +145,10 @@ public class PriTypeInputController: IMKInputController {
             let adapter = ClientAdapter(client: client)
             composer.forceCommit(delegate: adapter)
         }
-        // Save local text buffer per-app, then clear it.
-        // This prevents cross-app hanja leaking while preserving per-app context.
-        composer.saveAndClearBuffer(forApp: cachedContext?.bundleId)
+        // Clear buffer on deactivate to prevent cross-app hanja leaking.
+        // Hanja lookup uses timestamp-based freshness check instead of per-app buffers,
+        // so clearing here is safe — if the user typed recently, the buffer will still be valid.
+        composer.clearLocalBuffer()
         super.deactivateServer(sender)
         // Do NOT clear currentAdapter here.
         // CGEventTap triggerHanjaLookup() is dispatched async and needs a valid adapter.
@@ -180,6 +178,9 @@ public class PriTypeInputController: IMKInputController {
         assert(Thread.isMainThread, "IMK handle must run on main thread")
         #endif
         guard let event = event, let client = sender as? IMKTextInput else { return false }
+        
+        // Mark keystroke time for hanja buffer freshness check
+        composer.markKeystroke()
         
         // Debug: Log all incoming events to diagnose Caps Lock issue
         DebugLogger.log("InputController.handle() event type: \(event.type.rawValue) keyCode: \(event.keyCode)")

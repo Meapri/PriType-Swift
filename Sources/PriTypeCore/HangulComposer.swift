@@ -536,34 +536,25 @@ public class HangulComposer {
     }
     
     /// Clear the local text buffer without affecting composition state.
-    ///
-    /// Called on app switch (deactivateServer) to prevent text typed in one app
-    /// from leaking into hanja lookup in another app.
     public func clearLocalBuffer() {
         localTextBuffer = ""
     }
     
-    /// Per-app buffer storage to preserve hanja context across app switches.
-    /// Key: bundle identifier, Value: localTextBuffer content at deactivation time.
-    private var perAppBuffers: [String: String] = [:]
+    /// Timestamp of the last keystroke processed by handle().
+    /// Used to determine if localTextBuffer is "fresh" enough for hanja lookup.
+    /// Without this, stale buffer content from minutes ago could trigger hanja in the wrong context.
+    private var lastKeystrokeTime: DispatchTime = .init(uptimeNanoseconds: 0)
     
-    /// Save the current localTextBuffer for the given app, then clear it.
-    /// Called from `deactivateServer` before switching away from an app.
-    public func saveAndClearBuffer(forApp bundleId: String?) {
-        if let id = bundleId, !localTextBuffer.isEmpty {
-            perAppBuffers[id] = localTextBuffer
-        }
-        localTextBuffer = ""
+    /// Record that a keystroke was just processed (called from handle)
+    public func markKeystroke() {
+        lastKeystrokeTime = .now()
     }
     
-    /// Restore the localTextBuffer for the given app.
-    /// Called from `activateServer` when switching to an app.
-    public func restoreBuffer(forApp bundleId: String?) {
-        if let id = bundleId, let saved = perAppBuffers[id] {
-            localTextBuffer = saved
-        } else {
-            localTextBuffer = ""
-        }
+    /// Check if a keystroke was processed recently (within the given number of seconds)
+    public func hasRecentKeystroke(withinSeconds seconds: Double = 30) -> Bool {
+        let elapsed = DispatchTime.now().uptimeNanoseconds - lastKeystrokeTime.uptimeNanoseconds
+        let elapsedSec = Double(elapsed) / 1_000_000_000
+        return elapsedSec < seconds
     }
     
     // MARK: - Hanja Lookup
@@ -618,8 +609,11 @@ public class HangulComposer {
             DebugLogger.log("Hanja: searchKey from preedit: '\(searchKey)'")
         }
         
-        // Strategy 2: localTextBuffer (last typed character) — reliable for committed text
-        if searchKey.isEmpty, let lastChar = localTextBuffer.last, lastChar.isHangulChar {
+        // Strategy 2: localTextBuffer (last typed character) — only if keystroke was recent
+        // Without the freshness check, stale buffer data from minutes ago or from another
+        // tab/field in the same app (Chromium deactivate/activate cycles) causes false positives.
+        if searchKey.isEmpty, hasRecentKeystroke(withinSeconds: 30),
+           let lastChar = localTextBuffer.last, lastChar.isHangulChar {
             searchKey = String(lastChar)
             DebugLogger.log("Hanja: searchKey from localTextBuffer: '\(searchKey)'")
         }
@@ -640,11 +634,10 @@ public class HangulComposer {
         hanjaMode = true
         hanjaKey = searchKey
         
-        // IMPORTANT: Capture cursor position BEFORE commit.
-        // Chromium/Electron apps update cursor position asynchronously after commit,
-        // so firstRect() returns garbage values if called after commitComposition().
-        // While preedit is active, the cursor is at the marked text position → valid coordinates.
-        var cursorRect = NSRect(x: NSEvent.mouseLocation.x, y: NSEvent.mouseLocation.y - 20, width: 0, height: 20)
+        // Determine cursor position for the hanja candidate window.
+        // Priority: firstRect (IMK) → Accessibility API → focused window bottom
+        // Mouse position is deliberately NOT used — it has no relation to text cursor.
+        var cursorRect: NSRect? = nil
         
         if let controller = PriTypeInputController.sharedController,
            let client = controller.client() as? IMKTextInput {
@@ -661,10 +654,28 @@ public class HangulComposer {
                     cursorRect = axRect
                     DebugLogger.log("Hanja: cursor from Accessibility API: \(axRect)")
                 } else {
-                    DebugLogger.log("Hanja: firstRect invalid (\(rect)), AX unavailable, using mouse location")
+                    DebugLogger.log("Hanja: firstRect invalid (\(rect)), AX unavailable")
                 }
             }
         }
+        
+        // Ultimate fallback: use the focused window's bottom-center position
+        if cursorRect == nil {
+            if let focusedWindow = Self.getFocusedWindowRect() {
+                // Place at center-bottom of the focused window
+                let x = focusedWindow.origin.x + focusedWindow.size.width / 2 - 100
+                let y = focusedWindow.origin.y + 40  // near bottom of window (screen coords are flipped)
+                cursorRect = NSRect(x: x, y: y, width: 0, height: 20)
+                DebugLogger.log("Hanja: cursor from focused window fallback: \(cursorRect!)")
+            } else {
+                // Absolute last resort: screen center
+                let screenFrame = NSScreen.main?.frame ?? NSRect(x: 0, y: 0, width: 1920, height: 1080)
+                cursorRect = NSRect(x: screenFrame.midX - 100, y: screenFrame.midY, width: 0, height: 20)
+                DebugLogger.log("Hanja: cursor from screen center fallback")
+            }
+        }
+        
+        let finalCursorRect = cursorRect!
         
         // Commit preedit AFTER capturing cursor position
         if hadPreedit {
@@ -681,7 +692,7 @@ public class HangulComposer {
         
         HanjaCandidateWindow.shared.show(
             entries: entries,
-            cursorRect: cursorRect,
+            cursorRect: finalCursorRect,
             onSelect: { [weak self] entry in
                 guard let self = self else { return }
                 
@@ -883,6 +894,49 @@ public class HangulComposer {
         DebugLogger.log("Hanja AX: element position fallback: \(result)")
         guard isValidCursorRect(result) else { return nil }
         return result
+    }
+    
+    /// Get the focused window's frame using Accessibility API
+    /// Used as ultimate fallback for cursor positioning when text-level APIs fail
+    private static func getFocusedWindowRect() -> NSRect? {
+        let systemWide = AXUIElementCreateSystemWide()
+        
+        // Get the focused application
+        var focusedApp: AnyObject?
+        guard AXUIElementCopyAttributeValue(systemWide, kAXFocusedApplicationAttribute as CFString, &focusedApp) == .success,
+              let app = focusedApp else {
+            return nil
+        }
+        
+        let appElement = app as! AXUIElement
+        
+        // Get the focused window
+        var focusedWindow: AnyObject?
+        guard AXUIElementCopyAttributeValue(appElement, kAXFocusedWindowAttribute as CFString, &focusedWindow) == .success,
+              let window = focusedWindow else {
+            return nil
+        }
+        
+        let windowElement = window as! AXUIElement
+        
+        // Get window position and size
+        var posValue: AnyObject?
+        var sizeValue: AnyObject?
+        guard AXUIElementCopyAttributeValue(windowElement, kAXPositionAttribute as CFString, &posValue) == .success,
+              AXUIElementCopyAttributeValue(windowElement, kAXSizeAttribute as CFString, &sizeValue) == .success,
+              let pv = posValue, let sv = sizeValue else {
+            return nil
+        }
+        
+        var pos = CGPoint.zero
+        var size = CGSize.zero
+        AXValueGetValue(pv as! AXValue, .cgPoint, &pos)
+        AXValueGetValue(sv as! AXValue, .cgSize, &size)
+        
+        // Convert from AX coordinates (top-left origin) to screen coordinates (bottom-left origin)
+        guard let screenHeight = NSScreen.main?.frame.height else { return nil }
+        let flippedY = screenHeight - pos.y - size.height
+        return NSRect(x: pos.x, y: flippedY, width: size.width, height: size.height)
     }
 }
 
