@@ -633,12 +633,10 @@ public class HangulComposer {
         hanjaMode = true
         hanjaKey = searchKey
         
-        // Commit preedit if it exists (so we can replace the committed character later)
-        if hadPreedit {
-            commitComposition(delegate: delegate)
-        }
-        
-        // Get cursor position for window placement
+        // IMPORTANT: Capture cursor position BEFORE commit.
+        // Chromium/Electron apps update cursor position asynchronously after commit,
+        // so firstRect() returns garbage values if called after commitComposition().
+        // While preedit is active, the cursor is at the marked text position → valid coordinates.
         var cursorRect = NSRect(x: NSEvent.mouseLocation.x, y: NSEvent.mouseLocation.y - 20, width: 0, height: 20)
         
         if let controller = PriTypeInputController.sharedController,
@@ -646,19 +644,24 @@ public class HangulComposer {
             var actualRange = NSRange()
             let rect = client.firstRect(forCharacterRange: client.selectedRange(), actualRange: &actualRange)
             
-            // Validate: check that the rect is within any screen bounds
-            // Electron apps can return absurd values like y=11460
-            let isValidRect = rect.origin.x != 0 || rect.origin.y != 0
-            let isOnScreen = NSScreen.screens.contains { screen in
-                screen.frame.contains(NSPoint(x: rect.origin.x, y: rect.origin.y))
-            }
-            
-            if isValidRect && isOnScreen {
+            if Self.isValidCursorRect(rect) {
                 cursorRect = rect
-                DebugLogger.log("Hanja: cursor from firstRect: \(rect)")
+                DebugLogger.log("Hanja: cursor from firstRect (pre-commit): \(rect)")
             } else {
-                DebugLogger.log("Hanja: firstRect invalid (\(rect)), using mouse location")
+                // Fallback: Use Accessibility API to get caret position
+                // Chromium/Electron apps have broken IMK firstRect but support AX well
+                if let axRect = Self.getCursorRectViaAccessibility() {
+                    cursorRect = axRect
+                    DebugLogger.log("Hanja: cursor from Accessibility API: \(axRect)")
+                } else {
+                    DebugLogger.log("Hanja: firstRect invalid (\(rect)), AX unavailable, using mouse location")
+                }
             }
+        }
+        
+        // Commit preedit AFTER capturing cursor position
+        if hadPreedit {
+            commitComposition(delegate: delegate)
         }
         
         // Capture the hanjaKey length for use in the callback
@@ -696,6 +699,168 @@ public class HangulComposer {
         )
         
         return true
+    }
+    
+    // MARK: - Cursor Position Validation
+    
+    /// Validate that a rect from firstRect is a usable cursor position
+    /// Electron/Chromium apps can return garbage values (e.g. x=1.6e-314, y=19896)
+    private static func isValidCursorRect(_ rect: NSRect) -> Bool {
+        // Reject zero origin (uninitialized)
+        guard rect.origin.x != 0 || rect.origin.y != 0 else { return false }
+        // Reject negative or zero height (malformed)
+        guard rect.size.height > 0 else { return false }
+        // Reject absurdly small coordinates (floating point garbage like 1.6e-314)
+        guard rect.origin.x > 1 && rect.origin.y > 1 else { return false }
+        // Check that the point is on any connected screen
+        return NSScreen.screens.contains { screen in
+            screen.frame.contains(NSPoint(x: rect.origin.x, y: rect.origin.y))
+        }
+    }
+    
+    // MARK: - Accessibility API Cursor Position
+    
+    /// Get cursor position via macOS Accessibility API
+    /// Chromium/Electron apps have broken IMK firstRect but properly implement AX text attributes.
+    /// Uses AXSelectedTextRange → AXBoundsForRange to get the caret's screen coordinates.
+    ///
+    /// - Returns: NSRect of the caret position in screen coordinates (bottom-left origin), or nil if unavailable
+    private static func getCursorRectViaAccessibility() -> NSRect? {
+        let systemWide = AXUIElementCreateSystemWide()
+        
+        // Get the currently focused UI element
+        var focusedElement: AnyObject?
+        let focusResult = AXUIElementCopyAttributeValue(systemWide, kAXFocusedUIElementAttribute as CFString, &focusedElement)
+        guard focusResult == .success, let element = focusedElement else {
+            DebugLogger.log("Hanja AX: focusedElement failed (\(focusResult.rawValue))")
+            return nil
+        }
+        
+        let axElement = element as! AXUIElement
+        
+        // Strategy 1: AXSelectedTextRange → AXBoundsForRange
+        if let rect = getBoundsForSelectedText(axElement) {
+            return rect
+        }
+        
+        // Strategy 2: Use element's AXPosition + AXSize as approximation
+        // The focused element itself (e.g. text area) gives us a reasonable position
+        if let rect = getElementCaretPosition(axElement) {
+            return rect
+        }
+        
+        DebugLogger.log("Hanja AX: all strategies failed")
+        return nil
+    }
+    
+    /// Try to get caret bounds via AXBoundsForRange
+    private static func getBoundsForSelectedText(_ axElement: AXUIElement) -> NSRect? {
+        // Get the selected text range (caret position)
+        var selectedRangeValue: AnyObject?
+        let rangeResult = AXUIElementCopyAttributeValue(axElement, kAXSelectedTextRangeAttribute as CFString, &selectedRangeValue)
+        guard rangeResult == .success, let rangeVal = selectedRangeValue else {
+            DebugLogger.log("Hanja AX: selectedTextRange failed (\(rangeResult.rawValue))")
+            return nil
+        }
+        
+        // Extract the CFRange to check if we have a zero-length selection (caret)
+        var cfRange = CFRange(location: 0, length: 0)
+        AXValueGetValue(rangeVal as! AXValue, .cfRange, &cfRange)
+        
+        // If caret is at position > 0, try bounds for the character BEFORE caret
+        // This often works better than bounds for a zero-length range
+        let queryRange: AnyObject
+        if cfRange.length == 0 && cfRange.location > 0 {
+            var charRange = CFRange(location: cfRange.location - 1, length: 1)
+            queryRange = AXValueCreate(.cfRange, &charRange)! as AnyObject
+        } else {
+            queryRange = rangeVal
+        }
+        
+        // Get the bounds for this text range
+        var boundsValue: AnyObject?
+        let boundsResult = AXUIElementCopyParameterizedAttributeValue(
+            axElement,
+            kAXBoundsForRangeParameterizedAttribute as CFString,
+            queryRange,
+            &boundsValue
+        )
+        guard boundsResult == .success, let boundsVal = boundsValue else {
+            DebugLogger.log("Hanja AX: boundsForRange failed (\(boundsResult.rawValue))")
+            return nil
+        }
+        
+        // Convert AXValue to CGRect
+        var bounds = CGRect.zero
+        guard AXValueGetValue(boundsVal as! AXValue, .cgRect, &bounds) else {
+            DebugLogger.log("Hanja AX: AXValueGetValue failed")
+            return nil
+        }
+        
+        DebugLogger.log("Hanja AX: raw bounds = \(bounds)")
+        
+        // Chrome returns (0, y, 0, 0) — only y is valid
+        // If we have a valid y but x/width/height are zero, supplement from element position
+        if bounds.size.width == 0 && bounds.size.height == 0 && bounds.origin.y > 0 {
+            // Get the element's position to supplement x coordinate
+            var posValue: AnyObject?
+            if AXUIElementCopyAttributeValue(axElement, kAXPositionAttribute as CFString, &posValue) == .success,
+               let pv = posValue {
+                var pos = CGPoint.zero
+                AXValueGetValue(pv as! AXValue, .cgPoint, &pos)
+                
+                // Use element x + small offset, AX y, default height
+                let defaultHeight: CGFloat = 18
+                guard let screenHeight = NSScreen.main?.frame.height else { return nil }
+                let flippedY = screenHeight - bounds.origin.y - defaultHeight
+                let result = NSRect(x: pos.x, y: flippedY, width: 0, height: defaultHeight)
+                DebugLogger.log("Hanja AX: Chrome partial → supplemented with element pos: \(result)")
+                
+                if isValidCursorRect(result) { return result }
+            }
+        }
+        
+        // Normal case: full bounds available
+        guard let screenHeight = NSScreen.main?.frame.height else { return nil }
+        let flippedY = screenHeight - bounds.origin.y - bounds.size.height
+        let result = NSRect(x: bounds.origin.x, y: flippedY, width: bounds.size.width, height: bounds.size.height)
+        
+        guard isValidCursorRect(result) else {
+            DebugLogger.log("Hanja AX: converted rect invalid: \(result)")
+            return nil
+        }
+        
+        return result
+    }
+    
+    /// Fallback: use element's AXPosition to approximate caret location
+    private static func getElementCaretPosition(_ axElement: AXUIElement) -> NSRect? {
+        var posValue: AnyObject?
+        var sizeValue: AnyObject?
+        
+        guard AXUIElementCopyAttributeValue(axElement, kAXPositionAttribute as CFString, &posValue) == .success,
+              AXUIElementCopyAttributeValue(axElement, kAXSizeAttribute as CFString, &sizeValue) == .success,
+              let pv = posValue, let sv = sizeValue else {
+            DebugLogger.log("Hanja AX: element position/size unavailable")
+            return nil
+        }
+        
+        var pos = CGPoint.zero
+        var size = CGSize.zero
+        AXValueGetValue(pv as! AXValue, .cgPoint, &pos)
+        AXValueGetValue(sv as! AXValue, .cgSize, &size)
+        
+        // Use the bottom-left of the element as a rough caret position
+        guard let screenHeight = NSScreen.main?.frame.height else { return nil }
+        let defaultHeight: CGFloat = 18
+        // Place at element's x, and bottom of element (y + height in AX coords)
+        let axBottom = pos.y + size.height
+        let flippedY = screenHeight - axBottom
+        let result = NSRect(x: pos.x, y: flippedY, width: 0, height: defaultHeight)
+        
+        DebugLogger.log("Hanja AX: element position fallback: \(result)")
+        guard isValidCursorRect(result) else { return nil }
+        return result
     }
 }
 
