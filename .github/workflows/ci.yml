@@ -23,6 +23,9 @@ jobs:
     - name: Build
       run: swift build -v
     
+    - name: Run Unit Tests
+      run: swift test -v
+
     - name: Run Verification Tests
       run: swift run PriTypeVerify
     
@@ -38,4 +41,4 @@ jobs:
       run: brew install swiftlint
     
     - name: Run SwiftLint
-      run: swiftlint lint --reporter github-actions-logging || true
+      run: swiftlint lint --reporter github-actions-logging --strict

@@ -104,6 +104,9 @@ public class PriTypeInputController: IMKInputController {
     
     // 입력기가 활성화될 때 호출 - 새 세션 시작
     override public func activateServer(_ sender: Any!) {
+        #if DEBUG
+        assert(Thread.isMainThread, "IMK activateServer must run on main thread")
+        #endif
         super.activateServer(sender)
         // 클라이언트 저장
         if let client = sender as? IMKTextInput {
@@ -131,6 +134,9 @@ public class PriTypeInputController: IMKInputController {
     }
     
     override public func deactivateServer(_ sender: Any!) {
+        #if DEBUG
+        assert(Thread.isMainThread, "IMK deactivateServer must run on main thread")
+        #endif
         // 반드시 조합 중인 내용을 커밋
         // Use the existing currentAdapter if available (not a stale temp adapter)
         if let adapter = currentAdapter {
@@ -164,6 +170,9 @@ public class PriTypeInputController: IMKInputController {
     }
     
     override public func handle(_ event: NSEvent!, client sender: Any!) -> Bool {
+        #if DEBUG
+        assert(Thread.isMainThread, "IMK handle must run on main thread")
+        #endif
         guard let event = event, let client = sender as? IMKTextInput else { return false }
         
         // Debug: Log all incoming events to diagnose Caps Lock issue

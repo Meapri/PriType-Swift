@@ -22,3 +22,11 @@ Packaging/Payload/
 test*.swift
 Sources/PriTypeCore/Resources/hanja.txt
 PriTypeV2_components.plist
+
+# Log & crash files (may contain local paths)
+*.log
+crash_logs.txt
+oslog.txt
+pritype_logs.txt
+*.crash
+*.ips
