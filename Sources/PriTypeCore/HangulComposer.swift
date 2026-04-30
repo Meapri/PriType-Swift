@@ -65,9 +65,14 @@ public class HangulComposer {
     /// The Hangul key currently being looked up for Hanja conversion
     private var hanjaKey: String = ""
     
+    /// Cached last-known-good cursor position for Hanja candidate window.
+    /// Inspired by fcitx5-macos: when Chromium blocks coordinate queries,
+    /// reuse the last successful position instead of jumping to mouse cursor.
+    nonisolated(unsafe) private static var lastKnownCursorRect: NSRect?
+    
     /// Local cache of recently typed text (English mode primarily) to avoid IPC calls
     /// Maintains the last 15 characters to support auto-capitalization and double-space detection
-    public private(set) var localTextBuffer: String = ""
+    public var localTextBuffer: String = ""
     
     /// Maximum buffer size for local text tracking
     private let bufferMaxLength = 15
@@ -177,6 +182,7 @@ public class HangulComposer {
         if keyCode == KeyCode.return || keyCode == KeyCode.numpadEnter {
             DebugLogger.log("Return key -> commit")
             commitComposition(delegate: delegate)
+            localTextBuffer = ""
             return false  // Let system insert newline
         }
         
@@ -185,8 +191,10 @@ public class HangulComposer {
             if !context.isEmpty() {
                 DebugLogger.log("Escape -> cancel composition")
                 cancelComposition(delegate: delegate)
+                localTextBuffer = ""
                 return true
             }
+            localTextBuffer = ""
             return false  // No composition, pass to system (e.g. Finder close dialog)
         }
         
@@ -211,6 +219,7 @@ public class HangulComposer {
            keyCode == KeyCode.upArrow || keyCode == KeyCode.downArrow {
             DebugLogger.log("Arrow key -> commit and pass to system")
             commitComposition(delegate: delegate)
+            localTextBuffer = ""
             return false
         }
         
@@ -218,6 +227,7 @@ public class HangulComposer {
         if keyCode == KeyCode.tab {
             DebugLogger.log("Tab key -> commit")
             commitComposition(delegate: delegate)
+            localTextBuffer = ""
             return false
         }
         
@@ -379,7 +389,13 @@ public class HangulComposer {
                 hanjaMode = false
                 hanjaKey = ""
             }
-            return consumed
+            if consumed {
+                return true
+            }
+            // If not consumed (regular key dismissed the window),
+            // fall through to normal key processing below so the
+            // keystroke is handled by the Hangul composer instead
+            // of being passed raw to the app (which would produce English).
         }
         
         // Option key: no longer intercepted here.
@@ -609,12 +625,23 @@ public class HangulComposer {
         // Cross-app check: if the current focused app differs from the app that populated
         // the buffer, the buffer content is stale and should not trigger hanja.
         if searchKey.isEmpty {
-            let currentBundleId = PriTypeInputController.sharedController?.cachedContext?.bundleId
-                ?? NSWorkspace.shared.frontmostApplication?.bundleIdentifier ?? ""
+            // Use NSWorkspace as the primary source of truth for frontmost app, because
+            // cachedContext might be stale if the user clicked a non-text area in a new app.
+            let currentBundleId = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
+                ?? PriTypeInputController.sharedController?.cachedContext?.bundleId ?? ""
             if isBufferFromApp(currentBundleId),
                let lastChar = localTextBuffer.last, lastChar.isHangulChar {
                 searchKey = String(lastChar)
                 DebugLogger.log("Hanja: searchKey from localTextBuffer: '\(searchKey)'")
+            }
+        }
+        
+        // Strategy 3: Read text before cursor if buffer is empty and no preedit
+        // This handles cases where the user used arrow keys to move the cursor
+        if searchKey.isEmpty {
+            if let text = delegate.textBeforeCursor(length: 1), let lastChar = text.last, lastChar.isHangulChar {
+                searchKey = String(lastChar)
+                DebugLogger.log("Hanja: searchKey from textBeforeCursor: '\(searchKey)'")
             }
         }
         
@@ -638,26 +665,78 @@ public class HangulComposer {
         // Chromium/Electron apps update cursor position asynchronously after commit,
         // so firstRect() returns garbage values if called after commitComposition().
         // While preedit is active, the cursor is at the marked text position → valid coordinates.
+        //
+        // STRATEGY (inspired by fcitx5-macos):
+        // 1. Try firstRect(forCharacterRange:) — works on native apps
+        // 2. Try attributes(forCharacterIndex: pos-1) — works on Chromium for committed chars
+        // 3. Use cached last-known-good position — zero-cost, natural UX
+        // 4. Last resort: AX element position or mouse location
         var cursorRect = NSRect(x: NSEvent.mouseLocation.x, y: NSEvent.mouseLocation.y - 20, width: 0, height: 20)
+        var resolved = false
         
         if let controller = PriTypeInputController.sharedController,
            let client = controller.client() as? IMKTextInput {
             var actualRange = NSRange()
-            let rect = client.firstRect(forCharacterRange: client.selectedRange(), actualRange: &actualRange)
             
-            if Self.isValidCursorRect(rect) {
-                cursorRect = rect
-                DebugLogger.log("Hanja: cursor from firstRect (pre-commit): \(rect)")
-            } else {
-                // Fallback: Use Accessibility API to get caret position
-                // Chromium/Electron apps have broken IMK firstRect but support AX well
-                if let axRect = Self.getCursorRectViaAccessibility() {
-                    cursorRect = axRect
-                    DebugLogger.log("Hanja: cursor from Accessibility API: \(axRect)")
+            // Prefer markedRange during preedit. Chromium fails with garbage values 
+            // if we request firstRect for selectedRange while a preedit is active.
+            var targetRange = client.markedRange()
+            if targetRange.location == NSNotFound || targetRange.length == 0 {
+                targetRange = client.selectedRange()
+            }
+            
+            if targetRange.location != NSNotFound {
+                // Strategy 1: firstRect — the standard IMK approach
+                let rect = client.firstRect(forCharacterRange: targetRange, actualRange: &actualRange)
+                if Self.isValidCursorRect(rect) {
+                    cursorRect = rect
+                    resolved = true
+                    DebugLogger.log("Hanja: cursor from firstRect (pre-commit): \(rect)")
                 } else {
-                    DebugLogger.log("Hanja: firstRect invalid (\(rect)), AX unavailable, using mouse location")
+                    DebugLogger.log("Hanja: firstRect returned invalid rect for range \(targetRange): \(rect)")
+                    
+                    // Strategy 2: attributes(forCharacterIndex: pos-1)
+                    // Like fcitx5, query the previously committed character (one IPC call only).
+                    // Chromium blocks queries for the active preedit character but allows committed ones.
+                    var lineRect = NSRect.zero
+                    let queryIndex = targetRange.location > 0 ? targetRange.location - 1 : 0
+                    _ = client.attributes(forCharacterIndex: queryIndex, lineHeightRectangle: &lineRect)
+                    
+                    if Self.isValidCursorRect(lineRect) {
+                        cursorRect = lineRect
+                        resolved = true
+                        DebugLogger.log("Hanja: cursor from attributes(idx \(queryIndex)): \(lineRect)")
+                    } else {
+                        DebugLogger.log("Hanja: attributes(idx \(queryIndex)) also invalid: \(lineRect)")
+                    }
                 }
             }
+            
+            // Strategy 3: Use cached last-known-good position (fcitx5-style)
+            // If coordinate query failed but we have a recent successful position,
+            // reuse it. The window stays near where it last appeared — much better
+            // than jumping to the mouse cursor across the screen.
+            if !resolved, let cached = Self.lastKnownCursorRect {
+                cursorRect = cached
+                resolved = true
+                DebugLogger.log("Hanja: using cached last-known-good position: \(cached)")
+            }
+            
+            // Strategy 4: AX element position (rough approximation)
+            if !resolved {
+                if let axRect = Self.getCursorRectViaAccessibility() {
+                    cursorRect = axRect
+                    resolved = true
+                    DebugLogger.log("Hanja: cursor from Accessibility API: \(axRect)")
+                } else {
+                    DebugLogger.log("Hanja: all strategies failed, using mouse location")
+                }
+            }
+        }
+        
+        // Cache the resolved position for future fallback
+        if resolved {
+            Self.lastKnownCursorRect = cursorRect
         }
         
         // Commit preedit AFTER capturing cursor position
@@ -693,7 +772,7 @@ public class HangulComposer {
                     }
                     
                     let selRange = client.selectedRange()
-                    if selRange.location != NSNotFound && selRange.location >= replacementLength {
+                    if selRange.location != NSNotFound && selRange.location < 10000000 && selRange.location >= replacementLength {
                         let replaceRange = NSRange(location: selRange.location - replacementLength, length: replacementLength)
                         client.insertText(entry.hanja, replacementRange: replaceRange)
                     } else {
@@ -782,6 +861,7 @@ public class HangulComposer {
             return rect
         }
         
+
         DebugLogger.log("Hanja AX: all strategies failed")
         return nil
     }
@@ -832,7 +912,7 @@ public class HangulComposer {
         
         DebugLogger.log("Hanja AX: raw bounds = \(bounds)")
         
-        // Chrome returns (0, y, 0, 0) — only y is valid, in AX top-left coordinates
+        // Chrome returns (0, y, 0, 0) — only y is valid
         // If we have a valid y but x/width/height are zero, supplement from element position
         if bounds.size.width == 0 && bounds.size.height == 0 && bounds.origin.y > 0 {
             // Get the element's position to supplement x coordinate
@@ -842,29 +922,14 @@ public class HangulComposer {
                 var pos = CGPoint.zero
                 AXValueGetValue(pv as! AXValue, .cgPoint, &pos)
                 
-                // bounds.origin.y is AX coord (top-left origin), convert to screen (bottom-left)
+                // Use element x + small offset, AX y, default height
                 let defaultHeight: CGFloat = 18
                 guard let screenHeight = NSScreen.main?.frame.height else { return nil }
                 let flippedY = screenHeight - bounds.origin.y - defaultHeight
+                let result = NSRect(x: pos.x, y: flippedY, width: 0, height: defaultHeight)
+                DebugLogger.log("Hanja AX: Chrome partial → supplemented with element pos: \(result)")
                 
-                // If flippedY is valid (on-screen), use it; otherwise try element-based fallback
-                if flippedY >= 0 {
-                    let result = NSRect(x: pos.x, y: flippedY, width: 0, height: defaultHeight)
-                    DebugLogger.log("Hanja AX: Chrome partial → (x=element, y=AXBounds): \(result)")
-                    if isValidCursorRect(result) { return result }
-                }
-                
-                // Chrome's y may reference the text field's internal y, not screen y.
-                // Try: use element position's y and offset by (bounds.y - element y) if within element
-                let elementBottomAX = pos.y + 20  // approximate line height from element top
-                let altFlippedY = screenHeight - elementBottomAX
-                if altFlippedY >= 0 {
-                    let result = NSRect(x: pos.x, y: altFlippedY, width: 0, height: defaultHeight)
-                    DebugLogger.log("Hanja AX: Chrome partial → element-offset fallback: \(result)")
-                    if isValidCursorRect(result) { return result }
-                }
-                
-                DebugLogger.log("Hanja AX: Chrome partial failed (flippedY=\(flippedY))")
+                if isValidCursorRect(result) { return result }
             }
         }
         

@@ -30,3 +30,6 @@ oslog.txt
 pritype_logs.txt
 *.crash
 *.ips
+
+# Scratch files
+scratch_*.swift

@@ -59,7 +59,7 @@ public class PriTypeInputController: IMKInputController {
         
         func textBeforeCursor(length: Int) -> String? {
             let selRange = client.selectedRange()
-            guard selRange.location != NSNotFound else { return nil }
+            guard selRange.location != NSNotFound, selRange.location < 10000000 else { return nil } // Protect against Chromium garbage values
             
             let location = max(0, selRange.location - length)
             let actualLength = selRange.location - location
@@ -71,7 +71,7 @@ public class PriTypeInputController: IMKInputController {
         
         func replaceTextBeforeCursor(length: Int, with text: String) {
             let selRange = client.selectedRange()
-            guard selRange.location != NSNotFound && selRange.location >= length else { return }
+            guard selRange.location != NSNotFound, selRange.location < 10000000, selRange.location >= length else { return }
             
             let replacementRange = NSRange(location: selRange.location - length, length: length)
             client.insertText(text, replacementRange: replacementRange)
@@ -256,6 +256,7 @@ public class PriTypeInputController: IMKInputController {
             let adapter = ClientAdapter(client: client)
             composer.forceCommit(delegate: adapter)
         }
+        composer.localTextBuffer = "" // Clear buffer when focus changes or user clicks elsewhere
         super.commitComposition(sender)
     }
     
