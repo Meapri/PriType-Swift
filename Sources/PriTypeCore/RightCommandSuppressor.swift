@@ -196,8 +196,8 @@ public final class RightCommandSuppressor: @unchecked Sendable {
             // Track Control key state (for Control+Space combo)
             controlIsDown = flags.contains(.maskControl)
             
-            // Dynamic toggle key — modifier-only binding
-            if toggleBinding.isModifierOnly && keyCode == toggleBinding.keyCode {
+            // Dynamic toggle key — modifier key, single-key binding
+            if toggleBinding.isModifierKey && toggleBinding.isModifierOnly && keyCode == toggleBinding.keyCode {
                 let modifierMask = Self.modifierMask(for: keyCode)
                 let isPressed = flags.contains(modifierMask)
                 
@@ -215,8 +215,8 @@ public final class RightCommandSuppressor: @unchecked Sendable {
                 }
             }
             
-            // Dynamic hanja key — modifier-only binding (only if different from toggle key)
-            if hanjaBinding.isModifierOnly && keyCode == hanjaBinding.keyCode && keyCode != toggleBinding.keyCode {
+            // Dynamic hanja key — modifier key, single-key binding (only if different from toggle key)
+            if hanjaBinding.isModifierKey && hanjaBinding.isModifierOnly && keyCode == hanjaBinding.keyCode && keyCode != toggleBinding.keyCode {
                 let modifierMask = Self.modifierMask(for: keyCode)
                 let isPressed = flags.contains(modifierMask)
                 
@@ -248,21 +248,43 @@ public final class RightCommandSuppressor: @unchecked Sendable {
         
         // Handle keyDown
         if type == .keyDown {
-            // Combo toggle key (e.g., Control+Space)
-            if !toggleBinding.isModifierOnly {
-                if keyCode == toggleBinding.keyCode {
+            // Regular key (non-modifier) as toggle — single key or combo
+            if keyCode == toggleBinding.keyCode && !toggleBinding.isModifierKey {
+                if toggleBinding.isModifierOnly {
+                    // Single regular key as toggle (e.g., F13, Caps Lock via keyDown)
+                    DebugLogger.log("RightCommandSuppressor: Regular key toggle (\(toggleBinding.displayName)) - TOGGLE")
+                    triggerToggle()
+                    return nil
+                } else {
+                    // Combo toggle (e.g., Control+Space, Option+G)
                     let requiredFlags = CGEventFlags(rawValue: toggleBinding.modifiers)
                     if Self.hasRequiredModifiers(flags: event.flags, required: requiredFlags) {
                         DebugLogger.log("RightCommandSuppressor: Combo toggle (\(toggleBinding.displayName)) - TOGGLE triggered")
                         triggerToggle()
-                        return nil  // Suppress
+                        return nil
                     }
                 }
             }
             
+            // Regular key (non-modifier) as hanja — single key or combo
+            if keyCode == hanjaBinding.keyCode && !hanjaBinding.isModifierKey && keyCode != toggleBinding.keyCode {
+                if hanjaBinding.isModifierOnly || Self.hasRequiredModifiers(flags: event.flags, required: CGEventFlags(rawValue: hanjaBinding.modifiers)) {
+                    DebugLogger.log("RightCommandSuppressor: Regular key hanja (\(hanjaBinding.displayName)) - HANJA")
+                    triggerHanjaLookup()
+                    return nil
+                }
+            }
+            
+            // Modifier combo toggle where the base key is a regular key (e.g., Control+Space)
+            if toggleBinding.isModifierKey == false && !toggleBinding.isModifierOnly {
+                // Already handled above
+            } else if !toggleBinding.isModifierOnly && !toggleBinding.isModifierKey {
+                // Already handled above
+            }
+            
             // When toggle modifier is held, strip its modifier from key events
             // This makes keys act as regular character input, not shortcuts
-            if toggleModifierIsDown && toggleBinding.isModifierOnly {
+            if toggleModifierIsDown && toggleBinding.isModifierKey {
                 let modifierMask = Self.modifierMask(for: toggleBinding.keyCode)
                 var newFlags = event.flags
                 newFlags.remove(modifierMask)

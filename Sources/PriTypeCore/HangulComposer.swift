@@ -551,6 +551,18 @@ public class HangulComposer {
             return
         }
         
+        // Quick guard: skip if not in Korean mode AND no preedit/buffer content
+        // This prevents the hanja window from opening when there's clearly nothing to look up
+        if inputMode != .korean {
+            let preedit = context.getPreeditString()
+            let preeditStr = CompositionHelpers.convertAndNormalize(preedit)
+            let hasBufferedHangul = localTextBuffer.last?.isHangulChar == true
+            if preeditStr.isEmpty && !hasBufferedHangul {
+                DebugLogger.log("Hanja: Not in Korean mode and no hangul content, skipping")
+                return
+            }
+        }
+        
         // Use the active controller's current adapter, fallback to strong delegate on composer
         let activeDelegate = PriTypeInputController.sharedController?.currentAdapter
             ?? lastStrongDelegate

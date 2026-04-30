@@ -79,6 +79,26 @@ struct ConfigurationManagerTests {
         #expect(KeyBinding.generateDisplayName(keyCode: 57, modifiers: 0) == "Caps Lock")
     }
     
+    @Test("KeyBinding displayName generation for regular keys")
+    func keyBindingDisplayNameRegularKeys() {
+        #expect(KeyBinding.generateDisplayName(keyCode: 0, modifiers: 0) == "A")
+        #expect(KeyBinding.generateDisplayName(keyCode: 5, modifiers: 0) == "G")
+        #expect(KeyBinding.generateDisplayName(keyCode: 49, modifiers: 0) == "Space")
+        #expect(KeyBinding.generateDisplayName(keyCode: 122, modifiers: 0) == "F1")
+        #expect(KeyBinding.generateDisplayName(keyCode: 18, modifiers: 0) == "1")
+    }
+    
+    @Test("KeyBinding isModifierKey distinguishes modifier from regular keys")
+    func keyBindingIsModifierKey() {
+        let rightCmd = KeyBinding(keyCode: 54, modifiers: 0, displayName: "우측 Command")
+        #expect(rightCmd.isModifierKey)
+        
+        let gKey = KeyBinding(keyCode: 5, modifiers: 0, displayName: "G")
+        #expect(!gKey.isModifierKey)
+        
+        let f13 = KeyBinding(keyCode: 105, modifiers: 0, displayName: "F13")
+        #expect(!f13.isModifierKey)
+    }
     @Test("KeyBinding Equatable detects conflicts")
     func keyBindingConflictDetection() {
         let toggle = KeyBinding(keyCode: 54, modifiers: 0, displayName: "우측 Command")

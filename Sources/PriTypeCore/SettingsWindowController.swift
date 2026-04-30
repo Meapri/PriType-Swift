@@ -795,19 +795,25 @@ struct KeyRecorderRow: View {
         }
     }
     
+    @State private var previousFlags: NSEvent.ModifierFlags = []
+    
     private func startRecording() {
         isRecording = true
         pulseAnimation = true
+        previousFlags = NSEvent.ModifierFlags(rawValue: 0)
         
         // Use local event monitor to capture key events in the settings window
         monitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .flagsChanged]) { event in
             if event.type == .flagsChanged {
-                // Modifier key press
                 let keyCode = Int64(event.keyCode)
-                // Only capture on key DOWN (new modifier flag appears)
-                let flags = event.modifierFlags
-                let hasModifier = !flags.intersection([.command, .option, .control, .shift]).isEmpty
-                if hasModifier {
+                let currentFlags = event.modifierFlags.intersection([.command, .option, .control, .shift])
+                
+                // Detect key DOWN: current flags have MORE modifiers than previous
+                // This prevents capturing on modifier release
+                let isNewModifier = !currentFlags.isSubset(of: previousFlags) && !currentFlags.isEmpty
+                previousFlags = currentFlags
+                
+                if isNewModifier {
                     let newBinding = KeyBinding(
                         keyCode: keyCode,
                         modifiers: 0,  // modifier-only binding
@@ -824,7 +830,7 @@ struct KeyRecorderRow: View {
                     return nil
                 }
                 
-                // Regular key + modifiers
+                // Regular key + optional modifiers
                 let keyCode = Int64(event.keyCode)
                 let modifiers = event.modifierFlags.intersection([.command, .option, .control, .shift]).rawValue
                 let newBinding = KeyBinding(

@@ -60,6 +60,20 @@ public struct KeyBinding: Codable, Equatable, Sendable {
         modifiers == 0
     }
     
+    /// Whether the bound key is a modifier key (Command, Option, Control, Shift, CapsLock)
+    /// Modifier keys generate `flagsChanged` events; regular keys generate `keyDown` events.
+    public var isModifierKey: Bool {
+        switch keyCode {
+        case 54, 55: return true  // Right/Left Command
+        case 61, 58: return true  // Right/Left Option
+        case 62, 59: return true  // Right/Left Control
+        case 56, 60: return true  // Left/Right Shift
+        case 57:     return true  // Caps Lock
+        case 63:     return true  // Fn
+        default:     return false
+        }
+    }
+    
     /// Default toggle key: Right Command
     public static let defaultToggle = KeyBinding(keyCode: 54, modifiers: 0, displayName: "우측 Command")
     
@@ -76,22 +90,104 @@ public struct KeyBinding: Codable, Equatable, Sendable {
         if flags.contains(.maskShift) { parts.append("Shift") }
         if flags.contains(.maskCommand) { parts.append("Command") }
         
-        // Key name from keyCode
+        // Key name from keyCode — comprehensive macOS virtual key code mapping
         let keyName: String
         switch keyCode {
+        // Modifier keys
         case 54: keyName = "우측 Command"
         case 55: keyName = "좌측 Command"
         case 61: keyName = "우측 Option"
         case 58: keyName = "좌측 Option"
         case 62: keyName = "우측 Control"
         case 59: keyName = "좌측 Control"
-        case 49: keyName = "Space"
+        case 56: keyName = "좌측 Shift"
+        case 60: keyName = "우측 Shift"
         case 57: keyName = "Caps Lock"
+        case 63: keyName = "Fn"
+        // Special keys
+        case 49: keyName = "Space"
         case 36: keyName = "Return"
         case 48: keyName = "Tab"
         case 53: keyName = "Escape"
+        case 51: keyName = "Delete"
+        case 117: keyName = "Forward Delete"
+        // Arrow keys
+        case 123: keyName = "←"
+        case 124: keyName = "→"
+        case 125: keyName = "↓"
+        case 126: keyName = "↑"
+        // Navigation
+        case 115: keyName = "Home"
+        case 119: keyName = "End"
+        case 116: keyName = "Page Up"
+        case 121: keyName = "Page Down"
+        // F-keys
+        case 122: keyName = "F1"
+        case 120: keyName = "F2"
+        case 99:  keyName = "F3"
+        case 118: keyName = "F4"
+        case 96:  keyName = "F5"
+        case 97:  keyName = "F6"
+        case 98:  keyName = "F7"
+        case 100: keyName = "F8"
+        case 101: keyName = "F9"
+        case 109: keyName = "F10"
+        case 103: keyName = "F11"
+        case 111: keyName = "F12"
+        case 105: keyName = "F13"
+        case 107: keyName = "F14"
+        case 113: keyName = "F15"
+        // Letter keys (QWERTY layout)
+        case 0:  keyName = "A"
+        case 11: keyName = "B"
+        case 8:  keyName = "C"
+        case 2:  keyName = "D"
+        case 14: keyName = "E"
+        case 3:  keyName = "F"
+        case 5:  keyName = "G"
+        case 4:  keyName = "H"
+        case 34: keyName = "I"
+        case 38: keyName = "J"
+        case 40: keyName = "K"
+        case 37: keyName = "L"
+        case 46: keyName = "M"
+        case 45: keyName = "N"
+        case 31: keyName = "O"
+        case 35: keyName = "P"
+        case 12: keyName = "Q"
+        case 15: keyName = "R"
+        case 1:  keyName = "S"
+        case 17: keyName = "T"
+        case 32: keyName = "U"
+        case 9:  keyName = "V"
+        case 13: keyName = "W"
+        case 7:  keyName = "X"
+        case 16: keyName = "Y"
+        case 6:  keyName = "Z"
+        // Number keys
+        case 29: keyName = "0"
+        case 18: keyName = "1"
+        case 19: keyName = "2"
+        case 20: keyName = "3"
+        case 21: keyName = "4"
+        case 23: keyName = "5"
+        case 22: keyName = "6"
+        case 26: keyName = "7"
+        case 28: keyName = "8"
+        case 25: keyName = "9"
+        // Punctuation
+        case 27: keyName = "-"
+        case 24: keyName = "="
+        case 33: keyName = "["
+        case 30: keyName = "]"
+        case 42: keyName = "\\"
+        case 41: keyName = ";"
+        case 39: keyName = "'"
+        case 43: keyName = ","
+        case 47: keyName = "."
+        case 44: keyName = "/"
+        case 50: keyName = "`"
         default:
-            // Try to get character from keyCode
             keyName = "Key(\(keyCode))"
         }
         
