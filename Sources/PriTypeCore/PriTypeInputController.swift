@@ -150,8 +150,8 @@ public class PriTypeInputController: IMKInputController {
         // CGEventTap triggerHanjaLookup() is dispatched async and needs a valid adapter.
         // The next activateServer() will replace it with the new client's adapter.
         lastClient = nil
-        // Clear cached context to prevent stale state
-        cachedContext = nil
+        // Keep cachedContext alive — activateServer() will replace it with the new client's context.
+        // Clearing it here causes unnecessary slow path if handle() arrives before activateServer().
         NotificationCenter.default.removeObserver(self, name: .keyboardLayoutChanged, object: nil)
     }
     
@@ -205,19 +205,16 @@ public class PriTypeInputController: IMKInputController {
             DebugLogger.log("Secure Input: Global flag set but '\(bundleId)' supports markedText — ignoring stale flag")
         }
         
-        // PERFORMANCE: Use cached context if available, otherwise analyze (fallback)
-        // This dramatically reduces input latency by avoiding IPC on hot path.
+        // PERFORMANCE: Use cached context if available and still valid, otherwise analyze.
+        // Context is invalidated when the client object changes (app switch without activateServer).
         var context: ClientContext
-        if let cached = self.cachedContext {
+        if let cached = self.cachedContext, lastClient === client || lastClient == nil {
             context = cached
-            // The firstRect heuristic for Finder is computationally expensive and triggers IPC.
-            // We now rely on the initial check performed during activateServer (which is cached)
-            // or the ContextDetector. This avoids IPC calls on every keystroke.
         } else {
-            // Fallback for edge cases where activateServer might not have populated cache
-            DebugLogger.log("Warning: cachedContext is nil in handle(), performing analysis (Slow Path)")
+            // Client changed or no cache — re-analyze
+            DebugLogger.log("cachedContext miss: client changed or nil, analyzing (Slow Path)")
             context = ClientContextDetector.analyze(client: client)
-            self.cachedContext = context // Cache it for subsequent events
+            self.cachedContext = context
         }
         
         // Finder-specific handling
