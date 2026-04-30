@@ -21,3 +21,4 @@ Packaging/Payload/
 # Temporary files
 test*.swift
 Sources/PriTypeCore/Resources/hanja.txt
+PriTypeV2_components.plist

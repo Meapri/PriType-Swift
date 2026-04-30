@@ -34,18 +34,14 @@ struct KeyCodeTests {
     
     @Test("Ignorable control chars exclude tab/newline/CR")
     func ignorableControlChars() {
-        // Should be ignorable
         #expect(KeyCode.isIgnorableControlChar(0))  // NUL
         #expect(KeyCode.isIgnorableControlChar(1))  // SOH
         #expect(KeyCode.isIgnorableControlChar(8))  // BS
         
-        // Tab, newline, CR should NOT be ignorable
         #expect(!KeyCode.isIgnorableControlChar(9))  // Tab
         #expect(!KeyCode.isIgnorableControlChar(10)) // LF
         #expect(!KeyCode.isIgnorableControlChar(13)) // CR
-        
-        // Printable should NOT be ignorable
-        #expect(!KeyCode.isIgnorableControlChar(32))
+        #expect(!KeyCode.isIgnorableControlChar(32)) // Space
     }
     
     @Test("shouldPassThrough combines function + control char checks")

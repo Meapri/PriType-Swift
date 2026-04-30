@@ -37,9 +37,15 @@ public class SettingsWindowController: NSObject {
         newWindow.isMovableByWindowBackground = true
         newWindow.titlebarSeparatorStyle = .none
         
-        // Translucent glass window — desktop shows through with blur
+        // Liquid Glass window background
         newWindow.backgroundColor = .clear
         newWindow.isOpaque = false
+        
+        // Wrap content in NSGlassEffectView for proper Liquid Glass rendering
+        let glassView = NSGlassEffectView()
+        glassView.cornerRadius = 14
+        glassView.contentView = hostingController.view
+        newWindow.contentView = glassView
         
         // Set proper size to avoid truncation
         newWindow.setContentSize(NSSize(width: PriTypeConfig.settingsWindowWidth, height: PriTypeConfig.settingsWindowHeight))
@@ -101,12 +107,7 @@ struct SettingsView: View {
     ]
     
     var body: some View {
-        ZStack {
-            // Single translucent background — no additional GlassEffectContainer
-            VisualEffectView(material: .hudWindow, blendingMode: .behindWindow)
-                .edgesIgnoringSafeArea(.all)
-            
-            VStack(spacing: 0) {
+        VStack(spacing: 0) {
                 // ── Header (fixed, not scrollable) ──
                 VStack(spacing: 0) {
                     HStack(spacing: 12) {
@@ -361,8 +362,6 @@ struct SettingsView: View {
                         .padding(.horizontal, 14)
                         .padding(.vertical, 6)
                     Spacer()
-                }
-                .padding(.vertical, 8)
             }
         }
         .frame(width: PriTypeConfig.settingsWindowWidth, height: PriTypeConfig.settingsWindowHeight)

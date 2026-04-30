@@ -10,6 +10,7 @@ public final class HanjaCandidateWindow: @unchecked Sendable {
     nonisolated(unsafe) public static let shared = HanjaCandidateWindow()
     
     private var window: NSWindow?
+    private var glassContainer: NSGlassEffectView?
     private var candidates: [HanjaEntry] = []
     private var currentPage = 0
     private let pageSize = 9
@@ -63,6 +64,13 @@ public final class HanjaCandidateWindow: @unchecked Sendable {
             panel.hidesOnDeactivate = false
             panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
             panel.isReleasedWhenClosed = false
+            
+            // Create persistent Liquid Glass container
+            let glass = NSGlassEffectView()
+            glass.cornerRadius = 10
+            panel.contentView = glass
+            self.glassContainer = glass
+            
             self.window = panel
         }
         
@@ -201,7 +209,9 @@ public final class HanjaCandidateWindow: @unchecked Sendable {
         let hostView = NSHostingView(rootView: view)
         hostView.frame.size = hostView.fittingSize
         
-        window.contentView = hostView
+        // Update Liquid Glass container content
+        glassContainer?.contentView = hostView
+        glassContainer?.frame.size = hostView.fittingSize
         window.setContentSize(hostView.fittingSize)
     }
     
@@ -279,12 +289,6 @@ private struct HanjaCandidateView: View {
         }
         .padding(.vertical, 4)
         .frame(minWidth: 240)
-        .background(
-            RoundedRectangle(cornerRadius: 10)
-                .fill(.ultraThinMaterial)
-                .shadow(color: .black.opacity(0.15), radius: 8, y: 4)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 10))
     }
 }
 

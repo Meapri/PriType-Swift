@@ -64,4 +64,28 @@ struct ClientContextTests {
         #expect(!unknownCtx.isFinder)
         #expect(!unknownCtx.shouldUseImmediateMode)
     }
+    
+    // MARK: - Resolution / Desktop Detection (migrated from ResolutionTests.swift)
+    
+    @Test("Desktop detection — standard resolution")
+    func desktopDetectionStandard() {
+        #expect(isDesktopArea(x: 5.0, y: 20.0), "Should detect Desktop at (5, 20)")
+        #expect(!isDesktopArea(x: 800.0, y: 600.0), "Should NOT detect Search Bar at (800, 600)")
+    }
+    
+    @Test("Desktop detection — 5K Retina")
+    func desktopDetection5K() {
+        #expect(isDesktopArea(x: 5.0, y: 20.0), "5K: Desktop coords remain small in Points")
+        #expect(!isDesktopArea(x: 2400.0, y: 1350.0), "5K: Search Bar at (2400, 1350)")
+    }
+    
+    @Test("Desktop detection — multi-monitor with negative coords")
+    func desktopDetectionMultiMonitor() {
+        #expect(!isDesktopArea(x: -1000.0, y: 500.0), "Multi-mon: Left monitor")
+        #expect(!isDesktopArea(x: 500.0, y: -1000.0), "Multi-mon: Bottom monitor")
+    }
+    
+    private func isDesktopArea(x: Double, y: Double) -> Bool {
+        return x < Double(PriTypeConfig.finderDesktopThreshold) && y < Double(PriTypeConfig.finderDesktopThreshold)
+    }
 }

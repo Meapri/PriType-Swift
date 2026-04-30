@@ -13,13 +13,11 @@ struct CompositionHelpersTests {
     
     @Test("Convert single Hangul syllable code point")
     func convertSingleCodePoint() {
-        // "가" = U+AC00
         #expect(CompositionHelpers.convertToString([0xAC00]) == "가")
     }
     
     @Test("Convert multiple Hangul code points")
     func convertMultipleCodePoints() {
-        // "한글" = U+D55C U+AE00
         #expect(CompositionHelpers.convertToString([0xD55C, 0xAE00]) == "한글")
     }
     
@@ -46,7 +44,6 @@ struct CompositionHelpersTests {
     
     @Test("Normalize Choseong Jamo produces non-empty result")
     func normalizeChoseongJamo() {
-        // Choseong ㄱ (U+1100)
         let result = CompositionHelpers.normalizeJamoForDisplay([0x1100])
         #expect(!result.isEmpty)
     }

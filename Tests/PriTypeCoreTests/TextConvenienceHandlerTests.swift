@@ -1,169 +1,141 @@
-import XCTest
+import Testing
 @testable import PriTypeCore
 
-// MARK: - Mock Delegate
+// MARK: - TextConvenienceHandler Tests
 
-private class MockTextDelegate: HangulComposerDelegate {
-    var insertedTexts: [String] = []
-    var markedText: String = ""
-    var fullText: String = ""
+@Suite("TextConvenienceHandler")
+struct TextConvenienceHandlerTests {
     
-    func insertText(_ text: String) {
-        insertedTexts.append(text)
-        markedText = ""
-        fullText.append(text)
-    }
-    
-    func setMarkedText(_ text: String) {
-        markedText = text
-    }
-    
-    func textBeforeCursor(length: Int) -> String? {
-        if fullText.isEmpty { return nil }
-        let count = fullText.count
-        let start = max(0, count - length)
-        let startIndex = fullText.index(fullText.startIndex, offsetBy: start)
-        return String(fullText[startIndex...])
-    }
-    
-    func replaceTextBeforeCursor(length: Int, with text: String) {
-        if fullText.count >= length {
-            fullText.removeLast(length)
-            fullText.append(text)
-        }
-    }
-    
-    func reset() {
-        insertedTexts = []
-        markedText = ""
-        fullText = ""
-    }
-}
-
-// MARK: - Tests
-
-final class TextConvenienceHandlerTests: XCTestCase {
-
-    private var handler: TextConvenienceHandler!
-    private var delegate: MockTextDelegate!
-    private var buffer: String!
-
-    override func setUp() {
-        super.setUp()
-        handler = TextConvenienceHandler()
-        delegate = MockTextDelegate()
-        buffer = ""
-    }
-
-    override func tearDown() {
-        handler = nil
-        delegate = nil
-        buffer = nil
-        super.tearDown()
-    }
-
     // MARK: - Double Space Period Tests
-
-    func testDoubleSpacePeriodConversion() {
-        // Setup: "Hello " already typed
+    
+    @Test("Double space converts to period")
+    func doubleSpacePeriodConversion() {
+        let handler = TextConvenienceHandler()
+        let delegate = MockComposerDelegate()
         delegate.fullText = "Hello "
-        buffer = "Hello "
-
-        // First space (already in buffer)
+        var buffer = "Hello "
+        
         _ = handler.handleDoubleSpacePeriod(buffer: &buffer, delegate: delegate, checkHangul: false)
-
-        // Immediately second space should convert to period
         let result = handler.handleDoubleSpacePeriod(buffer: &buffer, delegate: delegate, checkHangul: false)
-
-        XCTAssertEqual(result, .convertedToPeriod)
-        XCTAssertTrue(delegate.fullText.hasSuffix(". "))
+        
+        #expect(result == .convertedToPeriod)
+        #expect(delegate.fullText.hasSuffix(". "))
     }
-
-    func testNormalSpaceDoesNotConvert() {
+    
+    @Test("Normal space does not convert")
+    func normalSpaceDoesNotConvert() {
+        let handler = TextConvenienceHandler()
+        let delegate = MockComposerDelegate()
         delegate.fullText = "Hello"
-        buffer = "Hello"
-
-        // First space
+        var buffer = "Hello"
+        
         let result = handler.handleDoubleSpacePeriod(buffer: &buffer, delegate: delegate, checkHangul: false)
-
-        XCTAssertEqual(result, .normalSpace)
+        
+        #expect(result == .normalSpace)
     }
-
-    func testResetSpaceState() {
+    
+    @Test("Reset space state prevents conversion")
+    func resetSpaceState() {
+        let handler = TextConvenienceHandler()
+        let delegate = MockComposerDelegate()
         delegate.fullText = "Hello "
-        buffer = "Hello "
+        var buffer = "Hello "
         _ = handler.handleDoubleSpacePeriod(buffer: &buffer, delegate: delegate, checkHangul: false)
-
-        // Reset state (simulates typing a character)
+        
         handler.resetSpaceState()
-
-        // Next space should not convert
+        
         let result = handler.handleDoubleSpacePeriod(buffer: &buffer, delegate: delegate, checkHangul: false)
-        XCTAssertEqual(result, .normalSpace)
+        #expect(result == .normalSpace)
     }
-
+    
     // MARK: - Auto Capitalize Tests
-
-    func testShouldCapitalizeAtDocumentStart() {
-        // Empty buffer
-        XCTAssertTrue(handler.shouldAutoCapitalize(buffer: ""))
+    
+    @Test("Should capitalize at document start")
+    func capitalizeAtDocumentStart() {
+        let handler = TextConvenienceHandler()
+        #expect(handler.shouldAutoCapitalize(buffer: ""))
     }
-
-    func testShouldCapitalizeAfterPeriod() {
-        XCTAssertTrue(handler.shouldAutoCapitalize(buffer: "Hello. "))
+    
+    @Test("Should capitalize after period")
+    func capitalizeAfterPeriod() {
+        let handler = TextConvenienceHandler()
+        #expect(handler.shouldAutoCapitalize(buffer: "Hello. "))
     }
-
-    func testShouldCapitalizeAfterExclamation() {
-        XCTAssertTrue(handler.shouldAutoCapitalize(buffer: "Wow! "))
+    
+    @Test("Should capitalize after exclamation")
+    func capitalizeAfterExclamation() {
+        let handler = TextConvenienceHandler()
+        #expect(handler.shouldAutoCapitalize(buffer: "Wow! "))
     }
-
-    func testShouldCapitalizeAfterQuestion() {
-        XCTAssertTrue(handler.shouldAutoCapitalize(buffer: "Really? "))
+    
+    @Test("Should capitalize after question mark")
+    func capitalizeAfterQuestion() {
+        let handler = TextConvenienceHandler()
+        #expect(handler.shouldAutoCapitalize(buffer: "Really? "))
     }
-
-    func testShouldCapitalizeAfterNewline() {
-        XCTAssertTrue(handler.shouldAutoCapitalize(buffer: "Line one\n"))
+    
+    @Test("Should capitalize after newline")
+    func capitalizeAfterNewline() {
+        let handler = TextConvenienceHandler()
+        #expect(handler.shouldAutoCapitalize(buffer: "Line one\n"))
     }
-
-    func testShouldNotCapitalizeMidSentence() {
-        XCTAssertFalse(handler.shouldAutoCapitalize(buffer: "Hello "))
+    
+    @Test("Should NOT capitalize mid-sentence")
+    func shouldNotCapitalizeMidSentence() {
+        let handler = TextConvenienceHandler()
+        #expect(!handler.shouldAutoCapitalize(buffer: "Hello "))
     }
-
-    func testShouldNotCapitalizeAfterComma() {
-        XCTAssertFalse(handler.shouldAutoCapitalize(buffer: "Hello, "))
+    
+    @Test("Should NOT capitalize after comma")
+    func shouldNotCapitalizeAfterComma() {
+        let handler = TextConvenienceHandler()
+        #expect(!handler.shouldAutoCapitalize(buffer: "Hello, "))
     }
-
+    
     // MARK: - Hangul Detection Tests
-
-    func testIsHangulSyllable() {
-        XCTAssertTrue(handler.isHangul("한"))
-        XCTAssertTrue(handler.isHangul("글"))
-        XCTAssertTrue(handler.isHangul("가"))
+    
+    @Test("Hangul syllable detection")
+    func isHangulSyllable() {
+        let handler = TextConvenienceHandler()
+        #expect(handler.isHangul("한"))
+        #expect(handler.isHangul("글"))
+        #expect(handler.isHangul("가"))
     }
-
-    func testIsHangulJamo() {
-        XCTAssertTrue(handler.isHangul("ㄱ"))
-        XCTAssertTrue(handler.isHangul("ㅏ"))
-        XCTAssertTrue(handler.isHangul("ㅎ"))
+    
+    @Test("Hangul jamo detection")
+    func isHangulJamo() {
+        let handler = TextConvenienceHandler()
+        #expect(handler.isHangul("ㄱ"))
+        #expect(handler.isHangul("ㅏ"))
+        #expect(handler.isHangul("ㅎ"))
     }
-
-    func testIsNotHangul() {
-        XCTAssertFalse(handler.isHangul("A"))
-        XCTAssertFalse(handler.isHangul("1"))
-        XCTAssertFalse(handler.isHangul("!"))
+    
+    @Test("Non-Hangul detection")
+    func isNotHangul() {
+        let handler = TextConvenienceHandler()
+        #expect(!handler.isHangul("A"))
+        #expect(!handler.isHangul("1"))
+        #expect(!handler.isHangul("!"))
     }
-
+    
     // MARK: - English Mode Input Tests
-
-    func testEnglishModeSpacePassthrough() {
+    
+    @Test("English mode space passes through")
+    func englishModeSpacePassthrough() {
+        let handler = TextConvenienceHandler()
+        let delegate = MockComposerDelegate()
         delegate.fullText = "Hello"
-        buffer = "Hello"
+        var buffer = "Hello"
         let result = handler.handleEnglishModeInput(char: " ", buffer: &buffer, delegate: delegate)
-        XCTAssertEqual(result, .passThrough)
+        #expect(result == .passThrough)
     }
-
-    func testEnglishModeNonLetterPassthrough() {
+    
+    @Test("English mode non-letter passes through")
+    func englishModeNonLetterPassthrough() {
+        let handler = TextConvenienceHandler()
+        let delegate = MockComposerDelegate()
+        var buffer = ""
         let result = handler.handleEnglishModeInput(char: "1", buffer: &buffer, delegate: delegate)
-        XCTAssertEqual(result, .passThrough)
+        #expect(result == .passThrough)
     }
 }

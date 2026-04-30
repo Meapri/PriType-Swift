@@ -131,6 +131,41 @@ swift build
 
 설치 후 `시스템 설정 > 키보드 > 입력 소스 편집`에서 PriType을 추가한다. 최초 설치 시 로그아웃이 필요할 수 있다. 업데이트 시에는 PKG를 덮어 설치하면 실행 중인 프로세스가 자동 교체된다.
 
+## 테스트
+
+Swift Testing 기반 자동화 테스트 스위트로 핵심 로직을 검증한다. 99개 테스트가 13개 Suite에 걸쳐 구성되어 있다.
+
+### 실행 방법
+```bash
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift test
+```
+
+> **참고**: Command Line Tools SDK에는 Testing 모듈이 포함되어 있지 않으므로 `DEVELOPER_DIR`로 Xcode SDK를 지정해야 한다.
+
+### 테스트 Suite 구성
+
+| Suite | 테스트 수 | 검증 범위 |
+|---|---|---|
+| **HangulComposer** | 16 | 초·중·종성 조합, 백스페이스, 모드 전환, 방향키/Return/단축키 커밋 |
+| **Composition Edge Cases** | 13 | 쌍자음(ㄲㄸㅃㅆㅉ), 복합 받침(ㄺ) 분리, 연속 백스페이스, 문장 타이핑(안녕·한글), Space/Tab/ESC 커밋 |
+| **TextConvenienceHandler** | 14 | 더블스페이스→마침표, 자동 대문자, 한글 판별, 영문 모드 입력 |
+| **ConfigurationManager** | 8 | 자판 배열·토글 키·자동 대문자·더블스페이스 기본값 및 영속성 |
+| **ClientContext** | 8 | Finder 판별, 바탕화면 즉시 모드, 멀티모니터 좌표, 5K 해상도 |
+| **CompositionHelpers** | 8 | UCSChar→String 변환, NFC 정규화, 서로게이트 필터링 |
+| **KeyCode** | 6 | 키 코드 상수, printable ASCII, 기능키/제어문자 판별 |
+| **HanjaManager** | 6 | 한자 검색, 캐싱 일관성, HanjaEntry 구조체 |
+| **UpdateChecker** | 7 | 시맨틱 버전 비교 (major/minor/patch/two-part) |
+| **AboutInfo** | 5 | 버전 형식, 앱 이름/저작권/설명 유효성 |
+| **InputMode** | 2 | 토글 동작, 이중 토글 복원 |
+| **PriTypeConfig** | 1 | 전역 상수 범위 검증 |
+| **PriTypeError** | 3 | 에러 설명·복구 제안 존재 여부, HID 에러 코드 포함 |
+
+### 테스트 인프라
+
+| 파일 | 역할 |
+|---|---|
+| `TestHelpers.swift` | 공용 Mock(`MockStatusBar`, `MockComposerDelegate`)과 `TestEventFactory`(NSEvent 생성) |
+
 ## 디렉토리 구조
 ```
 PriType-Swift/
@@ -164,7 +199,19 @@ PriType-Swift/
 │   │       ├── ko.lproj/               # 한국어 문자열
 │   │       └── en.lproj/               # 영어 문자열
 │   └── PriTypeVerify/              # 빌드 검증 타깃
-├── Tests/                          # 테스트
+├── Tests/
+│   └── PriTypeCoreTests/
+│       ├── TestHelpers.swift              # 공용 Mock/유틸리티
+│       ├── HangulComposerTests.swift      # 조합 엔진 테스트
+│       ├── CompositionEdgeCaseTests.swift  # 쌍자음/복합받침/문장 타이핑
+│       ├── TextConvenienceHandlerTests.swift # 편의 기능 테스트
+│       ├── HanjaManagerTests.swift        # 한자 검색 테스트
+│       ├── ConfigurationManagerTests.swift # 설정 영속성 테스트
+│       ├── ClientContextTests.swift       # 컨텍스트 판별 테스트
+│       ├── CoreUtilityTests.swift         # 유틸리티/에러/상수 테스트
+│       ├── KeyCodeTests.swift             # 키 코드 상수 테스트
+│       ├── UpdateCheckerTests.swift       # 버전 비교 테스트
+│       └── InputSourceManagerTests.swift  # 앱 메타데이터 테스트
 ├── Packaging/
 │   ├── Payload/                    # .app 번들 조립 경로
 │   └── scripts/
