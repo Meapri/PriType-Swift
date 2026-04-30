@@ -667,15 +667,30 @@ public class HangulComposer {
         // Capture the hanjaKey length for use in the callback
         let replacementLength = searchKey.utf16.count
         
+        // Snapshot: Capture client identity at show time for validation at select time.
+        // If focus changes while the candidate window is open, the snapshot client
+        // will differ from the current active client, preventing incorrect text insertion.
+        weak var snapshotClient = (PriTypeInputController.sharedController?.client() as? IMKTextInput)
+        
         HanjaCandidateWindow.shared.show(
             entries: entries,
             cursorRect: cursorRect,
             onSelect: { [weak self] entry in
                 guard let self = self else { return }
                 
-                // Use the current active client directly for reliable text replacement
+                // Validate: Ensure the client hasn't changed since the candidate window was shown
                 if let controller = PriTypeInputController.sharedController,
                    let client = controller.client() as? IMKTextInput {
+                    
+                    // Safety check: if the client object changed (focus switched), dismiss silently
+                    if let originalClient = snapshotClient,
+                       originalClient !== (client as AnyObject) {
+                        DebugLogger.log("Hanja: Client changed since show — aborting selection")
+                        self.hanjaMode = false
+                        self.hanjaKey = ""
+                        return
+                    }
+                    
                     let selRange = client.selectedRange()
                     if selRange.location != NSNotFound && selRange.location >= replacementLength {
                         let replaceRange = NSRange(location: selRange.location - replacementLength, length: replacementLength)
