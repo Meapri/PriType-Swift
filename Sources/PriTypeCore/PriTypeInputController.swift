@@ -243,6 +243,9 @@ public class PriTypeInputController: IMKInputController {
     
     // 마우스 클릭 등으로 조합 영역 외부 클릭 시 조합 커밋
     override public func commitComposition(_ sender: Any!) {
+        #if DEBUG
+        assert(Thread.isMainThread, "IMK commitComposition must run on main thread")
+        #endif
         if let client = sender as? IMKTextInput ?? lastClient {
             let adapter = ClientAdapter(client: client)
             composer.forceCommit(delegate: adapter)
