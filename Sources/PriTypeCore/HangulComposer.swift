@@ -304,16 +304,16 @@ public class HangulComposer {
         self.lastDelegate = delegate
         
         // Delayed release of previous strong delegate to prevent indefinite retention
-        // while keeping it alive long enough for async Hanja callbacks (2s window)
+        // while keeping it alive long enough for async Hanja callbacks (2s window).
+        // HOW IT WORKS: `oldDelegate` is captured strongly by the DispatchWorkItem closure.
+        // This keeps the old adapter alive for 2 seconds even after `lastStrongDelegate`
+        // is replaced. When the work item executes (or is cancelled), the captured
+        // reference is released, allowing the old adapter to be deallocated.
         if lastStrongDelegate !== (delegate as AnyObject) {
             pendingDelegateRelease?.cancel()
-            let oldDelegate = lastStrongDelegate
-            let releaseWork = DispatchWorkItem { [weak self] in
-                // Only release if we still hold the same old delegate
-                if self?.lastStrongDelegate === (oldDelegate as AnyObject?) {
-                    // Don't release - it's still the current one
-                } 
-                // Otherwise the old one is already replaced and will be released naturally
+            let oldDelegate = lastStrongDelegate  // Strong capture keeps it alive for 2s
+            let releaseWork = DispatchWorkItem {
+                _ = oldDelegate  // prevent compiler from optimizing away the capture
             }
             pendingDelegateRelease = releaseWork
             DispatchQueue.main.asyncAfter(deadline: .now() + 2.0, execute: releaseWork)
@@ -396,8 +396,6 @@ public class HangulComposer {
              localTextBuffer = "" // Any system shortcut (Cmd+V, Cmd+Z, etc.) invalidates local context
              return false
         }
-        
-
         
         guard let characters = event.characters, !characters.isEmpty else {
             return false
