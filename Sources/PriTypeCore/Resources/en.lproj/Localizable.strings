@@ -17,6 +17,15 @@
 "toggle.ctrlSpace" = "⌃ Control + Space";
 "toggle.description" = "Choose the key to toggle between Korean and English";
 
+/* Key Binding */
+"keyBinding.title" = "Key Settings";
+"keyBinding.toggleKey" = "Toggle Key";
+"keyBinding.hanjaKey" = "Hanja Key";
+"keyBinding.recording" = "Press a key...";
+"keyBinding.change" = "Change";
+"keyBinding.conflict" = "Cannot use the same key";
+"keyBinding.reset" = "Reset to Default";
+
 /* Text Input */
 "textInput.title" = "Text Input";
 "textInput.autoCapitalize" = "Auto-capitalize sentences";

@@ -3,11 +3,15 @@ import IOKit
 import IOKit.hid
 import ApplicationServices
 
-/// Manager for IOHIDManager to detect Right Command key at hardware level.
+/// Manager for IOHIDManager to detect toggle/hanja keys at hardware level.
 ///
 /// ## Role
 /// Provides hardware-level keyboard monitoring via IOHIDManager.
 /// This class serves as a **backup fallback** when CGEventTap fails to start.
+///
+/// ## Dynamic Key Binding
+/// Reads `ConfigurationManager.toggleKeyBinding` and `ConfigurationManager.hanjaKeyBinding`
+/// to determine which keys to monitor, supporting any user-configured key.
 ///
 /// ## Relationship with RightCommandSuppressor
 /// - **Primary handler**: `RightCommandSuppressor` (CGEventTap)
@@ -27,29 +31,41 @@ public final class IOKitManager: @unchecked Sendable {
     
     private var manager: IOHIDManager?
     
-    /// Callback when Right Command is pressed alone
+    /// Callback when toggle key is pressed
     public var onRightCommandToggle: (@Sendable () -> Void)?
     
-    /// Track Right Command state
-    private var rightCommandIsDown = false
+    /// Track toggle key state
+    private var toggleKeyIsDown = false
     private var anyOtherKeyPressed = false
     
-    /// Track Right Option state for Hanja lookup
-    private var rightOptionIsDown = false
+    /// Track hanja key state
+    private var hanjaKeyIsDown = false
     
     /// Debounce for Hanja trigger
     private var lastHanjaTriggerTime: DispatchTime = .init(uptimeNanoseconds: 0)
     
-    /// Right Command usage constant (kHIDUsage_KeyboardRightGUI = 0xE7 = 231)
-    private let rightCommandUsage: UInt32 = 0xE7  // kHIDUsage_KeyboardRightGUI
-    
-    /// Right Option usage constant (kHIDUsage_KeyboardRightAlt = 0xE6 = 230)
-    private let rightOptionUsage: UInt32 = 0xE6  // kHIDUsage_KeyboardRightAlt
-    
-    /// Callback when Right Option is pressed (Hanja lookup)
+    /// Callback when hanja key is pressed
     public var onRightOptionHanja: (@Sendable () -> Void)?
     
     private init() {}
+    
+    // MARK: - HID Usage Mapping
+    
+    /// Map macOS virtual key code to HID usage
+    private static func hidUsage(for keyCode: Int64) -> UInt32? {
+        switch keyCode {
+        case 54: return 0xE7  // Right GUI (Command)
+        case 55: return 0xE3  // Left GUI (Command)
+        case 61: return 0xE6  // Right Alt (Option)
+        case 58: return 0xE2  // Left Alt (Option)
+        case 62: return 0xE4  // Right Control
+        case 59: return 0xE0  // Left Control
+        case 56: return 0xE1  // Left Shift
+        case 60: return 0xE5  // Right Shift
+        case 57: return 0x39  // Caps Lock
+        default: return nil
+        }
+    }
     
     // MARK: - Accessibility Permission
     
@@ -110,7 +126,8 @@ public final class IOKitManager: @unchecked Sendable {
             return false
         }
         
-        DebugLogger.log("IOKitManager: Started successfully (IOKit-only mode)")
+        let config = ConfigurationManager.shared
+        DebugLogger.log("IOKitManager: Started successfully (toggle=\(config.toggleKeyBinding.displayName), hanja=\(config.hanjaKeyBinding.displayName))")
         return true
     }
     
@@ -142,20 +159,26 @@ public final class IOKitManager: @unchecked Sendable {
             DebugLogger.log("IOKitManager: Modifier key 0x\(String(usage, radix: 16)) \(pressed ? "DOWN" : "UP")")
         }
         
+        let config = ConfigurationManager.shared
+        let toggleBinding = config.toggleKeyBinding
+        let hanjaBinding = config.hanjaKeyBinding
         
-
-        // Check for Right Command (Right GUI) key - only if enabled
-        if usage == rightCommandUsage && ConfigurationManager.shared.rightCommandAsToggle {
+        // Get HID usages for configured keys
+        let toggleUsage = Self.hidUsage(for: toggleBinding.keyCode)
+        let hanjaUsage = Self.hidUsage(for: hanjaBinding.keyCode)
+        
+        // Check for toggle key (only for modifier-only bindings)
+        if toggleBinding.isModifierOnly, let expectedUsage = toggleUsage, usage == expectedUsage {
             if pressed {
-                // Right Command pressed
-                rightCommandIsDown = true
+                // Toggle key pressed
+                toggleKeyIsDown = true
                 anyOtherKeyPressed = false
-                DebugLogger.log("IOKitManager: Right Command DOWN")
+                DebugLogger.log("IOKitManager: Toggle key DOWN (\(toggleBinding.displayName))")
             } else {
-                // Right Command released
-                if rightCommandIsDown && !anyOtherKeyPressed {
+                // Toggle key released
+                if toggleKeyIsDown && !anyOtherKeyPressed {
                     // Toggle!
-                    DebugLogger.log("IOKitManager: TOGGLE triggered!")
+                    DebugLogger.log("IOKitManager: TOGGLE triggered! (\(toggleBinding.displayName))")
                     let callback = onRightCommandToggle
                     DispatchQueue.main.async {
                         callback?()
@@ -163,37 +186,38 @@ public final class IOKitManager: @unchecked Sendable {
                 } else if anyOtherKeyPressed {
                     DebugLogger.log("IOKitManager: Toggle skipped (used with other key)")
                 }
-                rightCommandIsDown = false
+                toggleKeyIsDown = false
                 anyOtherKeyPressed = false
             }
-        } else if usage == rightOptionUsage {
-            // Right Option key → Hanja lookup
-            if pressed && !rightOptionIsDown {
-                rightOptionIsDown = true
+        } else if let expectedUsage = hanjaUsage, usage == expectedUsage,
+                  hanjaBinding.keyCode != toggleBinding.keyCode {
+            // Hanja key (only if different from toggle key)
+            if pressed && !hanjaKeyIsDown {
+                hanjaKeyIsDown = true
                 
                 // Debounce: ignore if last trigger was within 500ms
                 let now = DispatchTime.now()
                 let elapsed = now.uptimeNanoseconds - lastHanjaTriggerTime.uptimeNanoseconds
                 let elapsedMs = elapsed / 1_000_000
                 if elapsedMs < 500 {
-                    DebugLogger.log("IOKitManager: Right Option DEBOUNCED (\(elapsedMs)ms)")
+                    DebugLogger.log("IOKitManager: Hanja key DEBOUNCED (\(elapsedMs)ms)")
                     return
                 }
                 lastHanjaTriggerTime = now
                 
-                DebugLogger.log("IOKitManager: Right Option DOWN - HANJA")
+                DebugLogger.log("IOKitManager: Hanja key DOWN (\(hanjaBinding.displayName)) - HANJA")
                 let callback = onRightOptionHanja
                 DispatchQueue.main.async {
                     callback?()
                 }
-            } else if !pressed && rightOptionIsDown {
-                rightOptionIsDown = false
-                DebugLogger.log("IOKitManager: Right Option UP")
+            } else if !pressed && hanjaKeyIsDown {
+                hanjaKeyIsDown = false
+                DebugLogger.log("IOKitManager: Hanja key UP (\(hanjaBinding.displayName))")
             }
-        } else if rightCommandIsDown && pressed && usage > 0 && usage < 0xE0 {
-            // Non-modifier key pressed while Right Command is down
+        } else if toggleKeyIsDown && pressed && usage > 0 && usage < 0xE0 {
+            // Non-modifier key pressed while toggle key is down
             anyOtherKeyPressed = true
-            DebugLogger.log("IOKitManager: Key pressed while Right Command is down (combo)")
+            DebugLogger.log("IOKitManager: Key pressed while toggle key is down (combo)")
         }
     }
 }

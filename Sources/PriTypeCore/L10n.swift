@@ -60,6 +60,18 @@ public enum L10n {
         public static var description: String { localized("toggle.description") }
     }
     
+    // MARK: - Key Binding
+    
+    public enum keyBinding {
+        public static var title: String { localized("keyBinding.title") }
+        public static var toggleKey: String { localized("keyBinding.toggleKey") }
+        public static var hanjaKey: String { localized("keyBinding.hanjaKey") }
+        public static var recording: String { localized("keyBinding.recording") }
+        public static var change: String { localized("keyBinding.change") }
+        public static var conflict: String { localized("keyBinding.conflict") }
+        public static var reset: String { localized("keyBinding.reset") }
+    }
+    
     // MARK: - Text Input
     
     public enum textInput {

@@ -5,8 +5,13 @@ import ApplicationServices
 /// Primary toggle key handler using CGEventTap.
 ///
 /// ## Role
-/// Intercepts Right Command and Control+Space key events at the system level
+/// Intercepts user-configured toggle and hanja key events at the system level
 /// using CGEventTap to provide instant language mode switching.
+///
+/// ## Dynamic Key Binding
+/// Instead of hardcoded keys, this class reads `ConfigurationManager.toggleKeyBinding`
+/// and `ConfigurationManager.hanjaKeyBinding` to determine which keys to intercept.
+/// Users can configure any modifier key or key combination via the Settings UI.
 ///
 /// ## Relationship with IOKitManager
 /// - **Primary handler**: `RightCommandSuppressor` (this class)
@@ -17,8 +22,8 @@ import ApplicationServices
 ///
 /// ## Key Features
 /// - **Instant toggle**: Switches on key press, not release
-/// - **Modifier stripping**: When Right Command is held, removes Command modifier from other keys
-/// - **Control+Space support**: Alternative toggle key combination
+/// - **Modifier stripping**: When toggle modifier is held, removes its modifier from other keys
+/// - **Dynamic binding**: Supports any key via KeyBinding struct
 public final class RightCommandSuppressor: @unchecked Sendable {
     
     // Singleton - accessed from CGEventTap callback context
@@ -30,19 +35,17 @@ public final class RightCommandSuppressor: @unchecked Sendable {
     /// Callback for toggle
     public var onToggle: (@Sendable () -> Void)?
     
-    /// Callback for Hanja lookup (Right Option)
+    /// Callback for Hanja lookup
     public var onHanjaLookup: (@Sendable () -> Void)?
     
-    /// Track Right Command state
-    private var rightCommandIsDown = false
+    /// Track toggle modifier state
+    private var toggleModifierIsDown = false
     
-    /// Track Right Option state
-    private var rightOptionIsDown = false
+    /// Track hanja modifier state
+    private var hanjaModifierIsDown = false
     
     /// Debounce timer for Hanja trigger to prevent double-fire
     private var lastHanjaTriggerTime: DispatchTime = .init(uptimeNanoseconds: 0)
-    
-    // Key codes are centralized in KeyCode enum
     
     /// Track Control state for Control+Space
     private var controlIsDown = false
@@ -55,6 +58,12 @@ public final class RightCommandSuppressor: @unchecked Sendable {
     
     /// Callback for when CGEventTap permanently fails and IOKit should take over
     public var onTapFailed: (@Sendable () -> Void)?
+    
+    /// Whether recording mode is active (for Key Recorder in settings)
+    public var isRecordingKey = false
+    
+    /// Callback for key recording (settings UI)
+    public var onKeyRecorded: ((_ keyCode: Int64, _ modifiers: UInt64) -> Void)?
     
     private init() {}
     
@@ -101,7 +110,8 @@ public final class RightCommandSuppressor: @unchecked Sendable {
         CFRunLoopAddSource(CFRunLoopGetCurrent(), runLoopSource, .commonModes)
         CGEvent.tapEnable(tap: eventTap, enable: true)
         
-        DebugLogger.log("RightCommandSuppressor: Started (monitoring Right Command + Control+Space)")
+        let config = ConfigurationManager.shared
+        DebugLogger.log("RightCommandSuppressor: Started (toggle=\(config.toggleKeyBinding.displayName), hanja=\(config.hanjaKeyBinding.displayName))")
         return true
     }
     
@@ -152,55 +162,83 @@ public final class RightCommandSuppressor: @unchecked Sendable {
         
         let keyCode = event.getIntegerValueField(.keyboardEventKeycode)
         let config = ConfigurationManager.shared
+        let toggleBinding = config.toggleKeyBinding
+        let hanjaBinding = config.hanjaKeyBinding
+        
+        // Key recording mode — capture the next key press for settings UI
+        if isRecordingKey {
+            if type == .flagsChanged {
+                let flags = event.flags
+                // Only fire on key DOWN (when a new modifier appears)
+                let isModifierDown = flags.rawValue & 0xFFFF0000 != 0
+                if isModifierDown {
+                    let recordCallback = onKeyRecorded
+                    DispatchQueue.main.async {
+                        recordCallback?(keyCode, 0)  // modifier-only binding
+                    }
+                    return nil  // Suppress
+                }
+            } else if type == .keyDown {
+                let modifiers = event.flags.rawValue & 0xFFFF0000  // Keep only modifier flags
+                let recordCallback = onKeyRecorded
+                DispatchQueue.main.async {
+                    recordCallback?(keyCode, modifiers)
+                }
+                return nil  // Suppress
+            }
+            return Unmanaged.passUnretained(event)
+        }
         
         // Handle flagsChanged (modifier keys)
         if type == .flagsChanged {
             let flags = event.flags
             
-            // Track Control key state
+            // Track Control key state (for Control+Space combo)
             controlIsDown = flags.contains(.maskControl)
             
-            // Right Command toggle - INSTANT (toggle on press)
-            if keyCode == KeyCode.rightCommand && config.rightCommandAsToggle {
-                let commandPressed = flags.contains(.maskCommand)
+            // Dynamic toggle key — modifier-only binding
+            if toggleBinding.isModifierOnly && keyCode == toggleBinding.keyCode {
+                let modifierMask = Self.modifierMask(for: keyCode)
+                let isPressed = flags.contains(modifierMask)
                 
-                if commandPressed && !rightCommandIsDown {
-                    // Right Command pressed - toggle immediately!
-                    rightCommandIsDown = true
-                    DebugLogger.log("RightCommandSuppressor: Right Command DOWN - TOGGLE (instant)")
+                if isPressed && !toggleModifierIsDown {
+                    // Toggle modifier pressed - toggle immediately!
+                    toggleModifierIsDown = true
+                    DebugLogger.log("RightCommandSuppressor: Toggle key DOWN (\(toggleBinding.displayName)) - TOGGLE (instant)")
                     triggerToggle()
                     return nil  // Suppress the modifier event
-                } else if !commandPressed && rightCommandIsDown {
-                    // Right Command released
-                    rightCommandIsDown = false
-                    DebugLogger.log("RightCommandSuppressor: Right Command UP")
+                } else if !isPressed && toggleModifierIsDown {
+                    // Toggle modifier released
+                    toggleModifierIsDown = false
+                    DebugLogger.log("RightCommandSuppressor: Toggle key UP (\(toggleBinding.displayName))")
                     return nil  // Suppress release
                 }
             }
             
-            // Right Option - Hanja lookup trigger
-            if keyCode == KeyCode.rightOption {
-                let optionPressed = flags.contains(.maskAlternate)
+            // Dynamic hanja key — modifier-only binding (only if different from toggle key)
+            if hanjaBinding.isModifierOnly && keyCode == hanjaBinding.keyCode && keyCode != toggleBinding.keyCode {
+                let modifierMask = Self.modifierMask(for: keyCode)
+                let isPressed = flags.contains(modifierMask)
                 
-                if optionPressed && !rightOptionIsDown {
-                    rightOptionIsDown = true
+                if isPressed && !hanjaModifierIsDown {
+                    hanjaModifierIsDown = true
                     
                     // Debounce: ignore if last trigger was within 500ms
                     let now = DispatchTime.now()
                     let elapsed = now.uptimeNanoseconds - lastHanjaTriggerTime.uptimeNanoseconds
                     let elapsedMs = elapsed / 1_000_000
                     if elapsedMs < 500 {
-                        DebugLogger.log("RightCommandSuppressor: Right Option DOWN - DEBOUNCED (\(elapsedMs)ms)")
+                        DebugLogger.log("RightCommandSuppressor: Hanja key DEBOUNCED (\(elapsedMs)ms)")
                         return nil
                     }
                     lastHanjaTriggerTime = now
                     
-                    DebugLogger.log("RightCommandSuppressor: Right Option DOWN - HANJA")
+                    DebugLogger.log("RightCommandSuppressor: Hanja key DOWN (\(hanjaBinding.displayName)) - HANJA")
                     triggerHanjaLookup()
                     return nil  // Suppress
-                } else if !optionPressed && rightOptionIsDown {
-                    rightOptionIsDown = false
-                    DebugLogger.log("RightCommandSuppressor: Right Option UP")
+                } else if !isPressed && hanjaModifierIsDown {
+                    hanjaModifierIsDown = false
+                    DebugLogger.log("RightCommandSuppressor: Hanja key UP (\(hanjaBinding.displayName))")
                     return nil  // Suppress release
                 }
             }
@@ -210,27 +248,50 @@ public final class RightCommandSuppressor: @unchecked Sendable {
         
         // Handle keyDown
         if type == .keyDown {
-            // Control+Space toggle
-            if keyCode == KeyCode.spaceInt64 && controlIsDown && config.controlSpaceAsToggle {
-                DebugLogger.log("RightCommandSuppressor: Control+Space - TOGGLE triggered")
-                triggerToggle()
-                return nil  // Suppress the space
+            // Combo toggle key (e.g., Control+Space)
+            if !toggleBinding.isModifierOnly {
+                if keyCode == toggleBinding.keyCode {
+                    let requiredFlags = CGEventFlags(rawValue: toggleBinding.modifiers)
+                    if Self.hasRequiredModifiers(flags: event.flags, required: requiredFlags) {
+                        DebugLogger.log("RightCommandSuppressor: Combo toggle (\(toggleBinding.displayName)) - TOGGLE triggered")
+                        triggerToggle()
+                        return nil  // Suppress
+                    }
+                }
             }
             
-            // When Right Command is held, strip the Command modifier from key events
+            // When toggle modifier is held, strip its modifier from key events
             // This makes keys act as regular character input, not shortcuts
-            if rightCommandIsDown && config.rightCommandAsToggle {
-                // Remove Command flag from the event
+            if toggleModifierIsDown && toggleBinding.isModifierOnly {
+                let modifierMask = Self.modifierMask(for: toggleBinding.keyCode)
                 var newFlags = event.flags
-                newFlags.remove(.maskCommand)
+                newFlags.remove(modifierMask)
                 event.flags = newFlags
-                DebugLogger.log("RightCommandSuppressor: Key with Right Command - stripped modifier (normal input)")
-                // Let the modified event pass through
+                DebugLogger.log("RightCommandSuppressor: Key with toggle modifier - stripped modifier (normal input)")
                 return Unmanaged.passUnretained(event)
             }
         }
         
         return Unmanaged.passUnretained(event)
+    }
+    
+    // MARK: - Helpers
+    
+    /// Get the CGEventFlags modifier mask for a given keyCode
+    private static func modifierMask(for keyCode: Int64) -> CGEventFlags {
+        switch keyCode {
+        case 54, 55: return .maskCommand       // Right/Left Command
+        case 61, 58: return .maskAlternate      // Right/Left Option
+        case 62, 59: return .maskControl        // Right/Left Control
+        case 56, 60: return .maskShift          // Left/Right Shift
+        case 57:     return .maskAlphaShift     // Caps Lock
+        default:     return CGEventFlags(rawValue: 0)
+        }
+    }
+    
+    /// Check if event flags contain required modifier flags
+    private static func hasRequiredModifiers(flags: CGEventFlags, required: CGEventFlags) -> Bool {
+        return flags.intersection(required) == required
     }
     
     private func triggerToggle() {

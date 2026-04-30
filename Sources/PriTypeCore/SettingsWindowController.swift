@@ -76,11 +76,14 @@ extension SettingsWindowController: NSWindowDelegate {
 struct SettingsView: View {
     @State private var selectedKeyboard = ConfigurationManager.shared.keyboardId
     @State private var selectedToggleKey = ConfigurationManager.shared.toggleKey
+    @State private var toggleKeyBinding = ConfigurationManager.shared.toggleKeyBinding
+    @State private var hanjaKeyBinding = ConfigurationManager.shared.hanjaKeyBinding
     @State private var autoCapitalizeEnabled = ConfigurationManager.shared.autoCapitalizeEnabled
     @State private var doubleSpacePeriodEnabled = ConfigurationManager.shared.doubleSpacePeriodEnabled
     @State private var autoUpdateCheckEnabled = ConfigurationManager.shared.autoUpdateCheckEnabled
     @State private var isAccessibilityGranted = false
     @State private var removeABCStatus: RemoveABCStatus = .idle
+    @State private var hasKeyConflict = false
     
     // Update check state
     @State private var updateStatus: UpdateStatus = .idle
@@ -169,23 +172,58 @@ struct SettingsView: View {
                             ConfigurationManager.shared.keyboardId = newValue
                         }
                         
-                        // Toggle Key Section
+                        // Key Binding Section (replaces legacy Toggle Key preset)
                         SettingsSection(
-                            title: L10n.toggle.title,
-                            icon: "globe"
+                            title: L10n.keyBinding.title,
+                            icon: "command"
                         ) {
-                            VStack(spacing: 2) {
-                                ForEach(ToggleKey.allCases, id: \.self) { key in
-                                    SelectionRow(
-                                        title: key.displayName,
-                                        isSelected: selectedToggleKey == key,
-                                        action: { selectedToggleKey = key }
-                                    )
+                            VStack(spacing: 0) {
+                                KeyRecorderRow(
+                                    label: L10n.keyBinding.toggleKey,
+                                    icon: "globe",
+                                    binding: $toggleKeyBinding,
+                                    conflictBinding: hanjaKeyBinding,
+                                    hasConflict: $hasKeyConflict
+                                )
+                                
+                                Divider()
+                                    .opacity(0.2)
+                                    .padding(.horizontal, 12)
+                                
+                                KeyRecorderRow(
+                                    label: L10n.keyBinding.hanjaKey,
+                                    icon: "character.book.closed",
+                                    binding: $hanjaKeyBinding,
+                                    conflictBinding: toggleKeyBinding,
+                                    hasConflict: $hasKeyConflict
+                                )
+                                
+                                if hasKeyConflict {
+                                    HStack(spacing: 4) {
+                                        Image(systemName: "exclamationmark.triangle.fill")
+                                            .font(.system(size: 11))
+                                            .foregroundStyle(.orange)
+                                        Text(L10n.keyBinding.conflict)
+                                            .font(.system(size: 12, weight: .medium, design: .rounded))
+                                            .foregroundStyle(.orange)
+                                    }
+                                    .padding(.vertical, 6)
+                                    .padding(.horizontal, 12)
+                                    .transition(.opacity.combined(with: .move(edge: .top)))
                                 }
                             }
                         }
-                        .onChange(of: selectedToggleKey) { _, newValue in
-                            ConfigurationManager.shared.toggleKey = newValue
+                        .onChange(of: toggleKeyBinding) { _, newValue in
+                            ConfigurationManager.shared.toggleKeyBinding = newValue
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                hasKeyConflict = (newValue == hanjaKeyBinding)
+                            }
+                        }
+                        .onChange(of: hanjaKeyBinding) { _, newValue in
+                            ConfigurationManager.shared.hanjaKeyBinding = newValue
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                hasKeyConflict = (newValue == toggleKeyBinding)
+                            }
                         }
                         
                         // Text Input Options Section
@@ -368,6 +406,8 @@ struct SettingsView: View {
         .onAppear {
             selectedKeyboard = ConfigurationManager.shared.keyboardId
             selectedToggleKey = ConfigurationManager.shared.toggleKey
+            toggleKeyBinding = ConfigurationManager.shared.toggleKeyBinding
+            hanjaKeyBinding = ConfigurationManager.shared.hanjaKeyBinding
             autoCapitalizeEnabled = ConfigurationManager.shared.autoCapitalizeEnabled
             doubleSpacePeriodEnabled = ConfigurationManager.shared.doubleSpacePeriodEnabled
             autoUpdateCheckEnabled = ConfigurationManager.shared.autoUpdateCheckEnabled
@@ -673,5 +713,139 @@ struct SettingsToggleRow: View {
         }
         .padding(.vertical, 10)
         .padding(.horizontal, 12)
+    }
+}
+
+/// A key recorder row — press to record a new key binding
+///
+/// Shows the current key binding and enters recording mode on click.
+/// In recording mode, the next key press is captured and saved.
+struct KeyRecorderRow: View {
+    let label: String
+    let icon: String
+    @Binding var binding: KeyBinding
+    let conflictBinding: KeyBinding
+    @Binding var hasConflict: Bool
+    
+    @State private var isRecording = false
+    @State private var isHovering = false
+    @State private var monitor: Any?
+    @State private var pulseAnimation = false
+    
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: icon)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(.secondary)
+                .frame(width: 28, height: 28)
+                .background(
+                    Circle()
+                        .fill(.primary.opacity(0.06))
+                )
+            
+            Text(label)
+                .font(.system(size: 14, weight: .regular, design: .rounded))
+                .foregroundStyle(.primary)
+            
+            Spacer()
+            
+            Button(action: {
+                if isRecording {
+                    stopRecording()
+                } else {
+                    startRecording()
+                }
+            }) {
+                HStack(spacing: 6) {
+                    if isRecording {
+                        Circle()
+                            .fill(.red)
+                            .frame(width: 6, height: 6)
+                            .scaleEffect(pulseAnimation ? 1.3 : 0.8)
+                            .opacity(pulseAnimation ? 0.6 : 1.0)
+                            .animation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true), value: pulseAnimation)
+                        
+                        Text(L10n.keyBinding.recording)
+                            .font(.system(size: 12, weight: .medium, design: .rounded))
+                            .foregroundStyle(.cyan)
+                    } else {
+                        Text(binding.displayName)
+                            .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                            .foregroundStyle(.primary)
+                    }
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(
+                    Capsule()
+                        .fill(isRecording
+                              ? Color.cyan.opacity(0.12)
+                              : isHovering ? Color.primary.opacity(0.08) : Color.primary.opacity(0.05))
+                )
+            }
+            .buttonStyle(.plain)
+            .onHover { hover in
+                isHovering = hover
+            }
+        }
+        .padding(.vertical, 10)
+        .padding(.horizontal, 12)
+        .onDisappear {
+            stopRecording()
+        }
+    }
+    
+    private func startRecording() {
+        isRecording = true
+        pulseAnimation = true
+        
+        // Use local event monitor to capture key events in the settings window
+        monitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .flagsChanged]) { event in
+            if event.type == .flagsChanged {
+                // Modifier key press
+                let keyCode = Int64(event.keyCode)
+                // Only capture on key DOWN (new modifier flag appears)
+                let flags = event.modifierFlags
+                let hasModifier = !flags.intersection([.command, .option, .control, .shift]).isEmpty
+                if hasModifier {
+                    let newBinding = KeyBinding(
+                        keyCode: keyCode,
+                        modifiers: 0,  // modifier-only binding
+                        displayName: KeyBinding.generateDisplayName(keyCode: keyCode, modifiers: 0)
+                    )
+                    binding = newBinding
+                    stopRecording()
+                    return nil  // Consume event
+                }
+            } else if event.type == .keyDown {
+                // Escape cancels recording
+                if event.keyCode == 53 {
+                    stopRecording()
+                    return nil
+                }
+                
+                // Regular key + modifiers
+                let keyCode = Int64(event.keyCode)
+                let modifiers = event.modifierFlags.intersection([.command, .option, .control, .shift]).rawValue
+                let newBinding = KeyBinding(
+                    keyCode: keyCode,
+                    modifiers: UInt64(modifiers),
+                    displayName: KeyBinding.generateDisplayName(keyCode: keyCode, modifiers: UInt64(modifiers))
+                )
+                binding = newBinding
+                stopRecording()
+                return nil  // Consume event
+            }
+            return event
+        }
+    }
+    
+    private func stopRecording() {
+        isRecording = false
+        pulseAnimation = false
+        if let monitor = monitor {
+            NSEvent.removeMonitor(monitor)
+        }
+        monitor = nil
     }
 }

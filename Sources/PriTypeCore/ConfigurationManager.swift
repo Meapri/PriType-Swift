@@ -1,8 +1,9 @@
 import Foundation
+import CoreGraphics
 
 // MARK: - Types
 
-/// Toggle key options for language switching
+/// Toggle key options for language switching (legacy enum, kept for migration)
 ///
 /// Defines the available modifier key combinations that can be used
 /// to switch between Korean and English input modes.
@@ -19,6 +20,89 @@ public enum ToggleKey: String, CaseIterable, Sendable {
         case .rightCommand: return "우측 Command"
         }
     }
+    
+    /// Convert legacy ToggleKey to KeyBinding
+    public var asKeyBinding: KeyBinding {
+        switch self {
+        case .rightCommand:
+            return .defaultToggle
+        case .controlSpace:
+            return KeyBinding(keyCode: 49, modifiers: CGEventFlags.maskControl.rawValue, displayName: "Control + Space")
+        }
+    }
+}
+
+// MARK: - KeyBinding
+
+/// Represents a user-configured key binding (raw keyCode + modifiers)
+///
+/// Unlike the legacy `ToggleKey` enum which only supports preset options,
+/// `KeyBinding` stores the actual raw key code and modifier flags,
+/// allowing users to bind any key combination.
+///
+/// ## Usage
+/// ```swift
+/// let binding = KeyBinding(keyCode: 54, modifiers: 0, displayName: "우측 Command")
+/// if event.keyCode == binding.keyCode { ... }
+/// ```
+public struct KeyBinding: Codable, Equatable, Sendable {
+    /// macOS virtual key code (e.g., 54 = Right Command, 61 = Right Option)
+    public let keyCode: Int64
+    
+    /// CGEventFlags raw value. 0 means single modifier key (no additional modifiers).
+    public let modifiers: UInt64
+    
+    /// Human-readable display name (e.g., "우측 Command", "Control + Space")
+    public let displayName: String
+    
+    /// Whether this is a modifier-only binding (no additional modifiers required)
+    public var isModifierOnly: Bool {
+        modifiers == 0
+    }
+    
+    /// Default toggle key: Right Command
+    public static let defaultToggle = KeyBinding(keyCode: 54, modifiers: 0, displayName: "우측 Command")
+    
+    /// Default hanja key: Right Option
+    public static let defaultHanja = KeyBinding(keyCode: 61, modifiers: 0, displayName: "우측 Option")
+    
+    /// Generate a display name from raw keyCode and modifiers
+    public static func generateDisplayName(keyCode: Int64, modifiers: UInt64) -> String {
+        var parts: [String] = []
+        let flags = CGEventFlags(rawValue: modifiers)
+        
+        if flags.contains(.maskControl) { parts.append("Control") }
+        if flags.contains(.maskAlternate) { parts.append("Option") }
+        if flags.contains(.maskShift) { parts.append("Shift") }
+        if flags.contains(.maskCommand) { parts.append("Command") }
+        
+        // Key name from keyCode
+        let keyName: String
+        switch keyCode {
+        case 54: keyName = "우측 Command"
+        case 55: keyName = "좌측 Command"
+        case 61: keyName = "우측 Option"
+        case 58: keyName = "좌측 Option"
+        case 62: keyName = "우측 Control"
+        case 59: keyName = "좌측 Control"
+        case 49: keyName = "Space"
+        case 57: keyName = "Caps Lock"
+        case 36: keyName = "Return"
+        case 48: keyName = "Tab"
+        case 53: keyName = "Escape"
+        default:
+            // Try to get character from keyCode
+            keyName = "Key(\(keyCode))"
+        }
+        
+        // For modifier-only bindings, don't duplicate modifier name
+        if modifiers == 0 {
+            return keyName
+        }
+        
+        parts.append(keyName)
+        return parts.joined(separator: " + ")
+    }
 }
 
 // MARK: - Notification Names
@@ -27,6 +111,8 @@ public enum ToggleKey: String, CaseIterable, Sendable {
 public extension Notification.Name {
     /// Posted when the keyboard layout changes
     static let keyboardLayoutChanged = Notification.Name("PriTypeKeyboardLayoutChanged")
+    /// Posted when a key binding changes
+    static let keyBindingChanged = Notification.Name("PriTypeKeyBindingChanged")
 }
 
 // MARK: - ConfigurationProviding Protocol
@@ -107,7 +193,9 @@ public final class ConfigurationManager: ConfigurationProviding, @unchecked Send
     
     private enum Keys {
         static let keyboardId = "com.pritype.keyboardId"
-        static let toggleKey = "com.pritype.toggleKey"
+        static let toggleKey = "com.pritype.toggleKey"  // Legacy
+        static let toggleKeyBinding = "com.pritype.toggleKeyBinding"
+        static let hanjaKeyBinding = "com.pritype.hanjaKeyBinding"
         static let autoCapitalize = "com.pritype.autoCapitalize"
         static let doubleSpacePeriod = "com.pritype.doubleSpacePeriod"
         static let lastUpdateCheck = "com.pritype.lastUpdateCheck"
@@ -138,11 +226,12 @@ public final class ConfigurationManager: ConfigurationProviding, @unchecked Send
         }
     }
     
-    // MARK: - Toggle Key
+    // MARK: - Toggle Key (Legacy)
     
     /// The selected toggle key for switching between Korean and English
     ///
     /// Defaults to `.rightCommand` if no preference is set.
+    /// - Note: Legacy property kept for backward compatibility. Prefer `toggleKeyBinding`.
     public var toggleKey: ToggleKey {
         get {
             if let rawValue = defaults.string(forKey: Keys.toggleKey),
@@ -156,20 +245,62 @@ public final class ConfigurationManager: ConfigurationProviding, @unchecked Send
         }
     }
     
+    // MARK: - Key Bindings (New)
+    
+    /// The user-configured toggle key binding
+    ///
+    /// Supports any key or key combination registered via the Key Recorder UI.
+    /// On first access, migrates from legacy `toggleKey` if present.
+    public var toggleKeyBinding: KeyBinding {
+        get {
+            if let data = defaults.data(forKey: Keys.toggleKeyBinding),
+               let binding = try? JSONDecoder().decode(KeyBinding.self, from: data) {
+                return binding
+            }
+            // Migrate from legacy toggleKey
+            return toggleKey.asKeyBinding
+        }
+        set {
+            if let data = try? JSONEncoder().encode(newValue) {
+                defaults.set(data, forKey: Keys.toggleKeyBinding)
+            }
+            NotificationCenter.default.post(name: .keyBindingChanged, object: nil)
+        }
+    }
+    
+    /// The user-configured hanja input key binding
+    ///
+    /// Defaults to Right Option if no preference is set.
+    public var hanjaKeyBinding: KeyBinding {
+        get {
+            if let data = defaults.data(forKey: Keys.hanjaKeyBinding),
+               let binding = try? JSONDecoder().decode(KeyBinding.self, from: data) {
+                return binding
+            }
+            return .defaultHanja
+        }
+        set {
+            if let data = try? JSONEncoder().encode(newValue) {
+                defaults.set(data, forKey: Keys.hanjaKeyBinding)
+            }
+            NotificationCenter.default.post(name: .keyBindingChanged, object: nil)
+        }
+    }
+    
     // MARK: - Convenience Properties
     
     /// Whether Right Command key is configured as the toggle key
     ///
     /// Use this to conditionally enable Right Command monitoring.
     public var rightCommandAsToggle: Bool {
-        return toggleKey == .rightCommand
+        return toggleKeyBinding.keyCode == 54 && toggleKeyBinding.isModifierOnly
     }
     
     /// Whether Control+Space is configured as the toggle key
     ///
     /// Use this to conditionally handle Control+Space in the composer.
     public var controlSpaceAsToggle: Bool {
-        return toggleKey == .controlSpace
+        return toggleKeyBinding.keyCode == 49 && toggleKeyBinding.modifiers == CGEventFlags.maskControl.rawValue
     }
     
     // MARK: - Text Input Features

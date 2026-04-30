@@ -17,6 +17,15 @@
 "toggle.ctrlSpace" = "⌃ Control + Space";
 "toggle.description" = "한/영 전환에 사용할 키를 선택하세요";
 
+/* Key Binding */
+"keyBinding.title" = "키 설정";
+"keyBinding.toggleKey" = "한/영 전환키";
+"keyBinding.hanjaKey" = "한자 입력키";
+"keyBinding.recording" = "키를 입력하세요...";
+"keyBinding.change" = "변경";
+"keyBinding.conflict" = "같은 키는 사용할 수 없습니다";
+"keyBinding.reset" = "기본값으로 복원";
+
 /* Text Input */
 "textInput.title" = "텍스트 입력";
 "textInput.autoCapitalize" = "자동으로 문장을 대문자로 시작";
