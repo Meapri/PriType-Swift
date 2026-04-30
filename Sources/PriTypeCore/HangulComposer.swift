@@ -550,6 +550,13 @@ public class HangulComposer {
         lastKeystrokeTime = .now()
     }
     
+    /// Invalidate the keystroke timestamp (called from deactivateServer)
+    /// This prevents the stale buffer from being used in a different app,
+    /// while preserving the buffer data for when the user returns.
+    public func resetKeystrokeTime() {
+        lastKeystrokeTime = .init(uptimeNanoseconds: 0)
+    }
+    
     /// Check if a keystroke was processed recently (within the given number of seconds)
     public func hasRecentKeystroke(withinSeconds seconds: Double = 30) -> Bool {
         let elapsed = DispatchTime.now().uptimeNanoseconds - lastKeystrokeTime.uptimeNanoseconds

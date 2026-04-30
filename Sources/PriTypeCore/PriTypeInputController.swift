@@ -145,10 +145,11 @@ public class PriTypeInputController: IMKInputController {
             let adapter = ClientAdapter(client: client)
             composer.forceCommit(delegate: adapter)
         }
-        // Clear buffer on deactivate to prevent cross-app hanja leaking.
-        // Hanja lookup uses timestamp-based freshness check instead of per-app buffers,
-        // so clearing here is safe — if the user typed recently, the buffer will still be valid.
-        composer.clearLocalBuffer()
+        // Reset keystroke timestamp to prevent cross-app hanja leaking.
+        // The buffer data is preserved (so hanja works when returning to this app),
+        // but the timestamp is invalidated so a different app can't use the stale buffer.
+        // When the user returns and types again, markKeystroke() refreshes the timestamp.
+        composer.resetKeystrokeTime()
         super.deactivateServer(sender)
         // Do NOT clear currentAdapter here.
         // CGEventTap triggerHanjaLookup() is dispatched async and needs a valid adapter.

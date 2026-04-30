@@ -341,7 +341,6 @@ public final class ConfigurationManager: ConfigurationProviding, @unchecked Send
         }
     }
     
-    // MARK: - Key Bindings (New)
     // MARK: - Key Binding Cache
     // CGEventTap callbacks read these on EVERY key event (100+ times/sec during typing).
     // JSON decoding on every access is wasteful; cache in memory and invalidate on write.

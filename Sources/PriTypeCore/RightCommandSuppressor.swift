@@ -275,7 +275,6 @@ public final class RightCommandSuppressor: @unchecked Sendable {
                 }
             }
             
-            
             // When toggle modifier is held, strip its modifier from key events
             // This makes keys act as regular character input, not shortcuts
             if toggleModifierIsDown && toggleBinding.isModifierKey {
