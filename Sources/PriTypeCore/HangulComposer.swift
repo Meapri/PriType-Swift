@@ -746,12 +746,29 @@ public class HangulComposer {
         
         // Get the currently focused UI element
         var focusedElement: AnyObject?
-        let focusResult = AXUIElementCopyAttributeValue(systemWide, kAXFocusedUIElementAttribute as CFString, &focusedElement)
-        guard focusResult == .success, let element = focusedElement else {
-            DebugLogger.log("Hanja AX: focusedElement failed (\(focusResult.rawValue))")
-            return nil
+        var focusResult = AXUIElementCopyAttributeValue(systemWide, kAXFocusedUIElementAttribute as CFString, &focusedElement)
+        
+        // Fallback: If system-wide focused element fails (common in Chromium intermittently),
+        // try going through the focused application instead
+        if focusResult != .success || focusedElement == nil {
+            DebugLogger.log("Hanja AX: systemWide focusedElement failed (\(focusResult.rawValue)), trying app path")
+            
+            var focusedApp: AnyObject?
+            if AXUIElementCopyAttributeValue(systemWide, kAXFocusedApplicationAttribute as CFString, &focusedApp) == .success,
+               let app = focusedApp {
+                let appElement = app as! AXUIElement
+                focusResult = AXUIElementCopyAttributeValue(appElement, kAXFocusedUIElementAttribute as CFString, &focusedElement)
+                if focusResult != .success {
+                    DebugLogger.log("Hanja AX: app focusedElement also failed (\(focusResult.rawValue))")
+                    return nil
+                }
+            } else {
+                DebugLogger.log("Hanja AX: focusedApplication also failed")
+                return nil
+            }
         }
         
+        guard let element = focusedElement else { return nil }
         let axElement = element as! AXUIElement
         
         // Strategy 1: AXSelectedTextRange → AXBoundsForRange
@@ -815,7 +832,7 @@ public class HangulComposer {
         
         DebugLogger.log("Hanja AX: raw bounds = \(bounds)")
         
-        // Chrome returns (0, y, 0, 0) — only y is valid
+        // Chrome returns (0, y, 0, 0) — only y is valid, in AX top-left coordinates
         // If we have a valid y but x/width/height are zero, supplement from element position
         if bounds.size.width == 0 && bounds.size.height == 0 && bounds.origin.y > 0 {
             // Get the element's position to supplement x coordinate
@@ -825,14 +842,29 @@ public class HangulComposer {
                 var pos = CGPoint.zero
                 AXValueGetValue(pv as! AXValue, .cgPoint, &pos)
                 
-                // Use element x + small offset, AX y, default height
+                // bounds.origin.y is AX coord (top-left origin), convert to screen (bottom-left)
                 let defaultHeight: CGFloat = 18
                 guard let screenHeight = NSScreen.main?.frame.height else { return nil }
                 let flippedY = screenHeight - bounds.origin.y - defaultHeight
-                let result = NSRect(x: pos.x, y: flippedY, width: 0, height: defaultHeight)
-                DebugLogger.log("Hanja AX: Chrome partial → supplemented with element pos: \(result)")
                 
-                if isValidCursorRect(result) { return result }
+                // If flippedY is valid (on-screen), use it; otherwise try element-based fallback
+                if flippedY >= 0 {
+                    let result = NSRect(x: pos.x, y: flippedY, width: 0, height: defaultHeight)
+                    DebugLogger.log("Hanja AX: Chrome partial → (x=element, y=AXBounds): \(result)")
+                    if isValidCursorRect(result) { return result }
+                }
+                
+                // Chrome's y may reference the text field's internal y, not screen y.
+                // Try: use element position's y and offset by (bounds.y - element y) if within element
+                let elementBottomAX = pos.y + 20  // approximate line height from element top
+                let altFlippedY = screenHeight - elementBottomAX
+                if altFlippedY >= 0 {
+                    let result = NSRect(x: pos.x, y: altFlippedY, width: 0, height: defaultHeight)
+                    DebugLogger.log("Hanja AX: Chrome partial → element-offset fallback: \(result)")
+                    if isValidCursorRect(result) { return result }
+                }
+                
+                DebugLogger.log("Hanja AX: Chrome partial failed (flippedY=\(flippedY))")
             }
         }
         
