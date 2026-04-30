@@ -275,12 +275,6 @@ public final class RightCommandSuppressor: @unchecked Sendable {
                 }
             }
             
-            // Modifier combo toggle where the base key is a regular key (e.g., Control+Space)
-            if toggleBinding.isModifierKey == false && !toggleBinding.isModifierOnly {
-                // Already handled above
-            } else if !toggleBinding.isModifierOnly && !toggleBinding.isModifierKey {
-                // Already handled above
-            }
             
             // When toggle modifier is held, strip its modifier from key events
             // This makes keys act as regular character input, not shortcuts
