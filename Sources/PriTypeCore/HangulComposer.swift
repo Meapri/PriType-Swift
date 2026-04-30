@@ -535,6 +535,14 @@ public class HangulComposer {
         localTextBuffer = ""
     }
     
+    /// Clear the local text buffer without affecting composition state.
+    ///
+    /// Called on app switch (deactivateServer) to prevent text typed in one app
+    /// from leaking into hanja lookup in another app.
+    public func clearLocalBuffer() {
+        localTextBuffer = ""
+    }
+    
     // MARK: - Hanja Lookup
     
     /// Trigger Hanja lookup externally (called by RightCommandSuppressor via CGEventTap)

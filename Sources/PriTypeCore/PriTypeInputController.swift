@@ -145,6 +145,9 @@ public class PriTypeInputController: IMKInputController {
             let adapter = ClientAdapter(client: client)
             composer.forceCommit(delegate: adapter)
         }
+        // Clear local text buffer to prevent cross-app hanja leaking.
+        // Without this, text typed in App A can trigger hanja lookup in App B.
+        composer.clearLocalBuffer()
         super.deactivateServer(sender)
         // Do NOT clear currentAdapter here.
         // CGEventTap triggerHanjaLookup() is dispatched async and needs a valid adapter.
