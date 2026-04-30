@@ -342,21 +342,36 @@ public final class ConfigurationManager: ConfigurationProviding, @unchecked Send
     }
     
     // MARK: - Key Bindings (New)
+    // MARK: - Key Binding Cache
+    // CGEventTap callbacks read these on EVERY key event (100+ times/sec during typing).
+    // JSON decoding on every access is wasteful; cache in memory and invalidate on write.
+    
+    private var _cachedToggleBinding: KeyBinding?
+    private var _cachedHanjaBinding: KeyBinding?
     
     /// The user-configured toggle key binding
     ///
     /// Supports any key or key combination registered via the Key Recorder UI.
     /// On first access, migrates from legacy `toggleKey` if present.
+    /// Result is cached in memory to avoid JSON decoding on every CGEventTap callback.
     public var toggleKeyBinding: KeyBinding {
         get {
-            if let data = defaults.data(forKey: Keys.toggleKeyBinding),
-               let binding = try? JSONDecoder().decode(KeyBinding.self, from: data) {
-                return binding
+            if let cached = _cachedToggleBinding {
+                return cached
             }
-            // Migrate from legacy toggleKey
-            return toggleKey.asKeyBinding
+            let binding: KeyBinding
+            if let data = defaults.data(forKey: Keys.toggleKeyBinding),
+               let decoded = try? JSONDecoder().decode(KeyBinding.self, from: data) {
+                binding = decoded
+            } else {
+                // Migrate from legacy toggleKey
+                binding = toggleKey.asKeyBinding
+            }
+            _cachedToggleBinding = binding
+            return binding
         }
         set {
+            _cachedToggleBinding = newValue
             if let data = try? JSONEncoder().encode(newValue) {
                 defaults.set(data, forKey: Keys.toggleKeyBinding)
             }
@@ -367,15 +382,24 @@ public final class ConfigurationManager: ConfigurationProviding, @unchecked Send
     /// The user-configured hanja input key binding
     ///
     /// Defaults to Right Option if no preference is set.
+    /// Result is cached in memory to avoid JSON decoding on every CGEventTap callback.
     public var hanjaKeyBinding: KeyBinding {
         get {
-            if let data = defaults.data(forKey: Keys.hanjaKeyBinding),
-               let binding = try? JSONDecoder().decode(KeyBinding.self, from: data) {
-                return binding
+            if let cached = _cachedHanjaBinding {
+                return cached
             }
-            return .defaultHanja
+            let binding: KeyBinding
+            if let data = defaults.data(forKey: Keys.hanjaKeyBinding),
+               let decoded = try? JSONDecoder().decode(KeyBinding.self, from: data) {
+                binding = decoded
+            } else {
+                binding = .defaultHanja
+            }
+            _cachedHanjaBinding = binding
+            return binding
         }
         set {
+            _cachedHanjaBinding = newValue
             if let data = try? JSONEncoder().encode(newValue) {
                 defaults.set(data, forKey: Keys.hanjaKeyBinding)
             }

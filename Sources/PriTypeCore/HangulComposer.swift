@@ -551,18 +551,6 @@ public class HangulComposer {
             return
         }
         
-        // Quick guard: skip if not in Korean mode AND no preedit/buffer content
-        // This prevents the hanja window from opening when there's clearly nothing to look up
-        if inputMode != .korean {
-            let preedit = context.getPreeditString()
-            let preeditStr = CompositionHelpers.convertAndNormalize(preedit)
-            let hasBufferedHangul = localTextBuffer.last?.isHangulChar == true
-            if preeditStr.isEmpty && !hasBufferedHangul {
-                DebugLogger.log("Hanja: Not in Korean mode and no hangul content, skipping")
-                return
-            }
-        }
-        
         // Use the active controller's current adapter, fallback to strong delegate on composer
         let activeDelegate = PriTypeInputController.sharedController?.currentAdapter
             ?? lastStrongDelegate
@@ -582,13 +570,14 @@ public class HangulComposer {
             return false
         }
         
-        // Get the search key with multiple fallback strategies
-        // Electron apps (Chrome, VS Code) may clear localTextBuffer via deactivateServer
-        // and may not support attributedSubstring properly
+        // Search key: only use OWNED state (preedit or localTextBuffer).
+        // Previously we had fallback strategies using textBeforeCursor/attributedSubstring,
+        // but those pick up existing text in the field that wasn't just typed,
+        // causing false-positive hanja windows in Chromium/Electron apps.
         var searchKey = ""
         var hadPreedit = false
         
-        // Strategy 1: Current preedit (composing text)
+        // Strategy 1: Current preedit (composing text) — most reliable
         let preedit = context.getPreeditString()
         let preeditStr = CompositionHelpers.convertAndNormalize(preedit)
         
@@ -598,40 +587,15 @@ public class HangulComposer {
             DebugLogger.log("Hanja: searchKey from preedit: '\(searchKey)'")
         }
         
-        // Strategy 2: localTextBuffer (last typed character)
+        // Strategy 2: localTextBuffer (last typed character) — reliable for committed text
         if searchKey.isEmpty, let lastChar = localTextBuffer.last, lastChar.isHangulChar {
             searchKey = String(lastChar)
             DebugLogger.log("Hanja: searchKey from localTextBuffer: '\(searchKey)'")
         }
         
-        // Strategy 3: delegate.textBeforeCursor (works in most native apps)
-        if searchKey.isEmpty {
-            if let textBefore = delegate.textBeforeCursor(length: 1), !textBefore.isEmpty,
-               let lastChar = textBefore.last, lastChar.isHangulChar {
-                searchKey = String(lastChar)
-                DebugLogger.log("Hanja: searchKey from delegate.textBeforeCursor: '\(searchKey)'")
-            }
-        }
-        
-        // Strategy 4: Direct IMKTextInput client read (best for Electron apps)
-        if searchKey.isEmpty {
-            if let controller = PriTypeInputController.sharedController,
-               let client = controller.client() as? IMKTextInput {
-                let selRange = client.selectedRange()
-                if selRange.location != NSNotFound && selRange.location > 0 {
-                    let charRange = NSRange(location: selRange.location - 1, length: 1)
-                    if let attrStr = client.attributedSubstring(from: charRange),
-                       let lastChar = attrStr.string.last, lastChar.isHangulChar {
-                        searchKey = String(lastChar)
-                        DebugLogger.log("Hanja: searchKey from direct client read: '\(searchKey)'")
-                    }
-                }
-            }
-        }
-        
         guard !searchKey.isEmpty else {
             DebugLogger.log("Hanja: No Hangul text to look up (buffer='\(localTextBuffer)', preedit='\(preeditStr)')")
-            return true // Consume the Option key
+            return true // Consume the key but don't open the window
         }
         
         let entries = HanjaManager.shared.search(key: searchKey)
