@@ -16,6 +16,7 @@ public final class HanjaManager: @unchecked Sendable {
     /// Jamo → special symbol mapping (Windows-style)
     private var jamoSymbols: [String: [HanjaEntry]] = [:]
     private var jamoSymbolsLoaded = false
+    private let jamoLock = NSLock()
     
     private init() {}
     
@@ -52,6 +53,8 @@ public final class HanjaManager: @unchecked Sendable {
     
     /// Load jamo symbol mapping from bundled JSON
     private func loadJamoSymbolsIfNeeded() {
+        jamoLock.lock()
+        defer { jamoLock.unlock() }
         guard !jamoSymbolsLoaded else { return }
         
         let bundle = Self.resourceBundle
@@ -96,9 +99,13 @@ public final class HanjaManager: @unchecked Sendable {
     private func cachePut(_ key: String, _ results: [HanjaEntry]) {
         cacheLock.lock()
         defer { cacheLock.unlock() }
+        // Remove existing entry to prevent duplicates in cacheOrder
+        if let idx = cacheOrder.firstIndex(of: key) {
+            cacheOrder.remove(at: idx)
+        }
         searchCache[key] = results
         cacheOrder.append(key)
-        if cacheOrder.count > cacheMaxSize {
+        while cacheOrder.count > cacheMaxSize {
             let evicted = cacheOrder.removeFirst()
             searchCache.removeValue(forKey: evicted)
         }

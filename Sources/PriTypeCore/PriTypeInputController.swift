@@ -216,14 +216,17 @@ public class PriTypeInputController: IMKInputController {
         
         // PERFORMANCE: Use cached context if available and still valid, otherwise analyze.
         // Context is invalidated when the client object changes (app switch without activateServer).
+        // When lastClient is nil (after deactivateServer), always re-analyze to avoid
+        // using stale context from a previous app/field.
         var context: ClientContext
-        if let cached = self.cachedContext, lastClient === client || lastClient == nil {
+        if let cached = self.cachedContext, let last = lastClient, last === client {
             context = cached
         } else {
             // Client changed or no cache — re-analyze
             DebugLogger.log("cachedContext miss: client changed or nil, analyzing (Slow Path)")
             context = ClientContextDetector.analyze(client: client)
             self.cachedContext = context
+            self.lastClient = client
         }
         
         // Finder-specific handling

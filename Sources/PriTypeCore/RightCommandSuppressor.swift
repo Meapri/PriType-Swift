@@ -32,6 +32,9 @@ public final class RightCommandSuppressor: @unchecked Sendable {
     private var eventTap: CFMachPort?
     private var runLoopSource: CFRunLoopSource?
     
+    /// Whether the event tap is currently running
+    public var isRunning: Bool { eventTap != nil }
+    
     /// Callback for toggle
     public var onToggle: (@Sendable () -> Void)?
     

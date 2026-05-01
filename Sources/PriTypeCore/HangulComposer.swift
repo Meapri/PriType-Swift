@@ -748,9 +748,14 @@ public class HangulComposer {
         let replacementLength = searchKey.utf16.count
         
         // Snapshot: Capture client identity at show time for validation at select time.
-        // If focus changes while the candidate window is open, the snapshot client
-        // will differ from the current active client, preventing incorrect text insertion.
-        weak var snapshotClient = (PriTypeInputController.sharedController?.client() as? IMKTextInput)
+        // Use ObjectIdentifier instead of weak reference: if the weak ref is deallocated,
+        // validation would be skipped and hanja could be inserted into a wrong client.
+        let snapshotClientID: ObjectIdentifier? = {
+            if let client = PriTypeInputController.sharedController?.client() as? IMKTextInput {
+                return ObjectIdentifier(client as AnyObject)
+            }
+            return nil
+        }()
         
         HanjaCandidateWindow.shared.show(
             entries: entries,
@@ -763,8 +768,8 @@ public class HangulComposer {
                    let client = controller.client() as? IMKTextInput {
                     
                     // Safety check: if the client object changed (focus switched), dismiss silently
-                    if let originalClient = snapshotClient,
-                       originalClient !== (client as AnyObject) {
+                    guard let originalID = snapshotClientID,
+                          ObjectIdentifier(client as AnyObject) == originalID else {
                         DebugLogger.log("Hanja: Client changed since show — aborting selection")
                         self.hanjaMode = false
                         self.hanjaKey = ""

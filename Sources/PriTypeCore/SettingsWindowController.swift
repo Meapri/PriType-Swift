@@ -214,16 +214,22 @@ struct SettingsView: View {
                             }
                         }
                         .onChange(of: toggleKeyBinding) { _, newValue in
-                            ConfigurationManager.shared.toggleKeyBinding = newValue
-                            withAnimation(.easeInOut(duration: 0.2)) {
-                                hasKeyConflict = (newValue == hanjaKeyBinding)
+                            if newValue == hanjaKeyBinding {
+                                withAnimation(.easeInOut(duration: 0.2)) { hasKeyConflict = true }
+                                toggleKeyBinding = ConfigurationManager.shared.toggleKeyBinding
+                                return
                             }
+                            ConfigurationManager.shared.toggleKeyBinding = newValue
+                            withAnimation(.easeInOut(duration: 0.2)) { hasKeyConflict = false }
                         }
                         .onChange(of: hanjaKeyBinding) { _, newValue in
-                            ConfigurationManager.shared.hanjaKeyBinding = newValue
-                            withAnimation(.easeInOut(duration: 0.2)) {
-                                hasKeyConflict = (newValue == toggleKeyBinding)
+                            if newValue == toggleKeyBinding {
+                                withAnimation(.easeInOut(duration: 0.2)) { hasKeyConflict = true }
+                                hanjaKeyBinding = ConfigurationManager.shared.hanjaKeyBinding
+                                return
                             }
+                            ConfigurationManager.shared.hanjaKeyBinding = newValue
+                            withAnimation(.easeInOut(duration: 0.2)) { hasKeyConflict = false }
                         }
                         
                         // Text Input Options Section
@@ -520,6 +526,18 @@ struct SettingsView: View {
             if granted {
                 DispatchQueue.main.async {
                     self.isAccessibilityGranted = true
+                    
+                    // Auto-start key monitoring that was skipped at launch
+                    if !RightCommandSuppressor.shared.isRunning {
+                        RightCommandSuppressor.shared.onToggle = {
+                            PriTypeInputController.sharedComposer.toggleInputMode()
+                        }
+                        RightCommandSuppressor.shared.onHanjaLookup = {
+                            PriTypeInputController.sharedComposer.triggerHanjaLookup()
+                        }
+                        let started = RightCommandSuppressor.shared.start()
+                        DebugLogger.log("Accessibility granted: CGEventTap start = \(started)")
+                    }
                 }
                 timer.invalidate()
             }
@@ -814,6 +832,8 @@ struct KeyRecorderRow: View {
                 previousFlags = currentFlags
                 
                 if isNewModifier {
+                    // Fn key (63) is not supported in CGEventTap — ignore it
+                    guard keyCode != 63 else { return event }
                     let newBinding = KeyBinding(
                         keyCode: keyCode,
                         modifiers: 0,  // modifier-only binding

@@ -344,9 +344,11 @@ public final class ConfigurationManager: ConfigurationProviding, @unchecked Send
     // MARK: - Key Binding Cache
     // CGEventTap callbacks read these on EVERY key event (100+ times/sec during typing).
     // JSON decoding on every access is wasteful; cache in memory and invalidate on write.
+    // Lock protects in-memory cache from races between CGEventTap thread and settings UI.
     
     private var _cachedToggleBinding: KeyBinding?
     private var _cachedHanjaBinding: KeyBinding?
+    private let keyBindingLock = NSLock()
     
     /// The user-configured toggle key binding
     ///
@@ -355,6 +357,8 @@ public final class ConfigurationManager: ConfigurationProviding, @unchecked Send
     /// Result is cached in memory to avoid JSON decoding on every CGEventTap callback.
     public var toggleKeyBinding: KeyBinding {
         get {
+            keyBindingLock.lock()
+            defer { keyBindingLock.unlock() }
             if let cached = _cachedToggleBinding {
                 return cached
             }
@@ -370,7 +374,9 @@ public final class ConfigurationManager: ConfigurationProviding, @unchecked Send
             return binding
         }
         set {
+            keyBindingLock.lock()
             _cachedToggleBinding = newValue
+            keyBindingLock.unlock()
             if let data = try? JSONEncoder().encode(newValue) {
                 defaults.set(data, forKey: Keys.toggleKeyBinding)
             }
@@ -384,6 +390,8 @@ public final class ConfigurationManager: ConfigurationProviding, @unchecked Send
     /// Result is cached in memory to avoid JSON decoding on every CGEventTap callback.
     public var hanjaKeyBinding: KeyBinding {
         get {
+            keyBindingLock.lock()
+            defer { keyBindingLock.unlock() }
             if let cached = _cachedHanjaBinding {
                 return cached
             }
@@ -398,7 +406,9 @@ public final class ConfigurationManager: ConfigurationProviding, @unchecked Send
             return binding
         }
         set {
+            keyBindingLock.lock()
             _cachedHanjaBinding = newValue
+            keyBindingLock.unlock()
             if let data = try? JSONEncoder().encode(newValue) {
                 defaults.set(data, forKey: Keys.hanjaKeyBinding)
             }
