@@ -207,8 +207,9 @@ public class HangulComposer {
                 return true
             }
             DebugLogger.log("Space -> flush and space")
+            delegate.insertText(" ")
             appendToBuffer(" ")
-            return false
+            return true
         }
         
         // Non-space: reset space state
