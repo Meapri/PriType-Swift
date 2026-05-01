@@ -51,6 +51,13 @@ let package = Package(
         .testTarget(
             name: "PriTypeCoreTests",
             dependencies: ["PriTypeCore"]
+        ),
+        .executableTarget(
+            name: "PriTypeBenchmark",
+            dependencies: ["PriTypeCore"],
+            linkerSettings: [
+                .unsafeFlags(["-framework", "InputMethodKit"])
+            ]
         )
     ]
 )

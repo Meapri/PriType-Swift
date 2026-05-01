@@ -78,18 +78,38 @@ public final class HanjaManager: @unchecked Sendable {
     private var searchCache: [String: [HanjaEntry]] = [:]
     private var cacheOrder: [String] = []
     private let cacheMaxSize = 32
+    private let cacheLock = NSLock()
+    
+    /// Thread-safe cache lookup/store helper
+    private func cacheGet(_ key: String) -> [HanjaEntry]? {
+        cacheLock.lock()
+        defer { cacheLock.unlock() }
+        guard let cached = searchCache[key] else { return nil }
+        // Move to end (most recently used)
+        if let idx = cacheOrder.firstIndex(of: key) {
+            cacheOrder.remove(at: idx)
+            cacheOrder.append(key)
+        }
+        return cached
+    }
+    
+    private func cachePut(_ key: String, _ results: [HanjaEntry]) {
+        cacheLock.lock()
+        defer { cacheLock.unlock() }
+        searchCache[key] = results
+        cacheOrder.append(key)
+        if cacheOrder.count > cacheMaxSize {
+            let evicted = cacheOrder.removeFirst()
+            searchCache.removeValue(forKey: evicted)
+        }
+    }
     
     /// Search for Hanja entries matching the given Hangul key (exact match)
     /// - Parameter key: Hangul text to search for (e.g., "가") or a jamo consonant (e.g., "ㅁ")
     /// - Returns: Array of Hanja entries, empty if no results
     public func search(key: String) -> [HanjaEntry] {
         // Check cache first
-        if let cached = searchCache[key] {
-            // Move to end (most recently used)
-            if let idx = cacheOrder.firstIndex(of: key) {
-                cacheOrder.remove(at: idx)
-                cacheOrder.append(key)
-            }
+        if let cached = cacheGet(key) {
             return cached
         }
         
@@ -108,13 +128,7 @@ public final class HanjaManager: @unchecked Sendable {
         if !normalizedKey.isEmpty {
             loadJamoSymbolsIfNeeded()
             let results = jamoSymbols[normalizedKey] ?? []
-            // Cache with original key
-            searchCache[key] = results
-            cacheOrder.append(key)
-            if cacheOrder.count > cacheMaxSize {
-                let evicted = cacheOrder.removeFirst()
-                searchCache.removeValue(forKey: evicted)
-            }
+            cachePut(key, results)
             return results
         }
         
@@ -134,16 +148,7 @@ public final class HanjaManager: @unchecked Sendable {
             }
         }
         
-        // Store in cache
-        searchCache[key] = results
-        cacheOrder.append(key)
-        
-        // Evict oldest if over capacity
-        if cacheOrder.count > cacheMaxSize {
-            let evicted = cacheOrder.removeFirst()
-            searchCache.removeValue(forKey: evicted)
-        }
-        
+        cachePut(key, results)
         return results
     }
     

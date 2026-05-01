@@ -800,7 +800,7 @@ public class HangulComposer {
     
     /// Validate that a rect from firstRect is a usable cursor position
     /// Electron/Chromium apps can return garbage values (e.g. x=1.6e-314, y=19896)
-    static func isValidCursorRect(_ rect: NSRect) -> Bool {
+    public static func isValidCursorRect(_ rect: NSRect) -> Bool {
         // Reject zero origin (uninitialized)
         guard rect.origin.x != 0 || rect.origin.y != 0 else { return false }
         // Reject negative or zero height (malformed)
