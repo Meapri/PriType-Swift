@@ -58,3 +58,23 @@
 | 자모 테이블 추가 후 | 80.2MB | +0.5MB |
 
 한자 사전(hanja.txt, 약 80,000항목)이 메모리의 대부분을 차지한다.
+
+## 유닛 테스트
+
+`DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift test`로 실행. 109개 테스트, 13개 Suite 전체 통과 (0.007초).
+
+| Suite | 테스트 수 | 결과 |
+|---|---|---|
+| HangulComposer | 16 | pass |
+| Composition Edge Cases | 13 | pass |
+| TextConvenienceHandler | 14 | pass |
+| ConfigurationManager | 14 | pass |
+| ClientContext | 8 | pass |
+| CompositionHelpers | 8 | pass |
+| UpdateChecker | 7 | pass |
+| HanjaManager | 6 | pass |
+| KeyCode | 6 | pass |
+| AboutInfo | 5 | pass |
+| PriTypeError | 3 | pass |
+| InputMode | 2 | pass |
+| PriTypeConfig | 1 | pass |
