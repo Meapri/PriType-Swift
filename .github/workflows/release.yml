@@ -11,16 +11,11 @@ permissions:
 jobs:
   release:
     name: Build, Sign, Notarize & Release
-    runs-on: macos-15
+    runs-on: self-hosted
     
     steps:
     - name: Checkout
       uses: actions/checkout@v4
-    
-    - name: Setup Swift
-      uses: swift-actions/setup-swift@v2
-      with:
-        swift-version: "6.0"
     
     - name: Extract version from tag
       id: version
