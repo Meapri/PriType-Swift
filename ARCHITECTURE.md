@@ -151,6 +151,25 @@ PriType은 2단계 검증으로 이를 처리한다:
 1. **번들 ID 확인**: `SecurityAgent`, `loginwindow`, `screencaptureui`이면 즉시 pass-through.
 2. **필드 속성 확인**: 위 목록에 없으면 `validAttributesForMarkedText()`가 빈 배열인지 검사. 빈 배열이면 비밀번호 필드로 간주하여 pass-through. 그 외에는 오래된(stale) 플래그로 판단하고 정상 입력 처리.
 
+## 동시성 (Concurrency) 및 스레드 안전성
+
+PriType은 메인 스레드(IMKServer)와 백그라운드 스레드(CGEventTap, IOKit) 간의 상태 불일치 및 크래시를 방지하기 위해 정교한 동기화 메커니즘을 사용한다.
+
+1. **설정 관리 (`ConfigurationManager`)**
+   - 백그라운드 스레드(CGEventTap)에서 매 키 입력마다 `toggleKeyBinding` 및 `hanjaKeyBinding`을 조회한다.
+   - 메인 스레드(설정 창)에서 설정이 변경될 때 발생하는 `UserDefaults` 읽기/쓰기 충돌(Race Condition)을 방지하기 위해, 내부적으로 캐시를 유지하고 `NSLock`을 통해 모든 접근을 직렬화한다.
+
+2. **한자 사전 및 LRU 캐시 (`HanjaManager`)**
+   - 6.4MB(약 80,000항목)의 `hanja.txt` 파일은 앱 실행 시 비동기 백그라운드 스레드에서 로딩되며, 로딩 완료 상태는 thread-safe하게 관리된다.
+   - 반복적인 검색 시 오버헤드를 줄이기 위해 최근 32개의 결과를 저장하는 LRU(Least Recently Used) 캐시를 사용한다. 이 캐시의 읽기/쓰기 및 순서 업데이트 로직은 `NSLock`으로 보호되어 동시 접근을 안전하게 처리한다.
+
+3. **입력 컨텍스트 캐싱 (`PriTypeInputController`)**
+   - 포커스 앱 변경 시 발생하는 무거운 IPC(Inter-Process Communication) 호출을 피하기 위해 상태를 캐싱(`cachedContext`)한다.
+   - 이벤트 주기(`activateServer` ~ `handle()` ~ `deactivateServer`)에 맞물려 메인 스레드의 순차적 흐름 내에서만 안전하게 갱신 및 해제된다.
+
+4. **조합 엔진 동기화 (`libhangul-swift`)**
+   - 하부 엔진인 `ThreadSafeHangulInputContext`는 내부적으로 `OSAllocatedUnfairLock`을 사용하여 C API 호출을 스레드 안전하게 동기화한다.
+
 ## 테스트
 
 Swift Testing 기반 109개 유닛 테스트, 13개 Suite 구성. 실행 방법과 상세 결과는 [BENCHMARK.md](BENCHMARK.md#유닛-테스트)를 참고한다.
