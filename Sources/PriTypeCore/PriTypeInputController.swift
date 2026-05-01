@@ -178,16 +178,27 @@ public class PriTypeInputController: IMKInputController {
         #endif
         guard let event = event, let client = sender as? IMKTextInput else { return false }
         
-        // Mark keystroke with current app's bundleId for cross-app hanja validation
-        let bundleId = cachedContext?.bundleId
-            ?? (sender as? IMKTextInput)?.bundleIdentifier()
-            ?? NSWorkspace.shared.frontmostApplication?.bundleIdentifier ?? ""
-        composer.markKeystroke(bundleId: bundleId)
+        // 1. Resolve context FIRST — all subsequent logic must use fresh bundleId.
+        // Context is invalidated when the client object changes (app switch without activateServer).
+        // When lastClient is nil (after deactivateServer), always re-analyze to avoid
+        // using stale context from a previous app/field.
+        var context: ClientContext
+        if let cached = self.cachedContext, let last = lastClient, last === client {
+            context = cached
+        } else {
+            DebugLogger.log("cachedContext miss: client changed or nil, analyzing (Slow Path)")
+            context = ClientContextDetector.analyze(client: client)
+            self.cachedContext = context
+            self.lastClient = client
+        }
+        
+        // 2. Mark keystroke with current app's bundleId for cross-app hanja validation
+        composer.markKeystroke(bundleId: context.bundleId)
         
         // Debug: Log all incoming events to diagnose Caps Lock issue
         DebugLogger.log("InputController.handle() event type: \(event.type.rawValue) keyCode: \(event.keyCode)")
         
-        // DYNAMIC CHECK: Secure Input (password fields)
+        // 3. DYNAMIC CHECK: Secure Input (password fields)
         // IsSecureEventInputEnabled() is a GLOBAL flag - other apps (KakaoTalk, browsers)
         // may enable it for password fields and forget to disable it, affecting ALL apps.
         // Two-tier validation:
@@ -195,7 +206,7 @@ public class PriTypeInputController: IMKInputController {
         // 2. Other apps with global flag on → check if current field supports marked text
         //    (password fields typically don't support marked text attributes)
         if IsSecureEventInputEnabled() {
-            let bundleId = cachedContext?.bundleId ?? ""
+            let bundleId = context.bundleId
             let isSystemSecureClient = bundleId == "com.apple.SecurityAgent" ||
                                        bundleId == "com.apple.loginwindow" ||
                                        bundleId == "com.apple.screencaptureui"
@@ -212,21 +223,6 @@ public class PriTypeInputController: IMKInputController {
             }
             
             DebugLogger.log("Secure Input: Global flag set but '\(bundleId)' supports markedText — ignoring stale flag")
-        }
-        
-        // PERFORMANCE: Use cached context if available and still valid, otherwise analyze.
-        // Context is invalidated when the client object changes (app switch without activateServer).
-        // When lastClient is nil (after deactivateServer), always re-analyze to avoid
-        // using stale context from a previous app/field.
-        var context: ClientContext
-        if let cached = self.cachedContext, let last = lastClient, last === client {
-            context = cached
-        } else {
-            // Client changed or no cache — re-analyze
-            DebugLogger.log("cachedContext miss: client changed or nil, analyzing (Slow Path)")
-            context = ClientContextDetector.analyze(client: client)
-            self.cachedContext = context
-            self.lastClient = client
         }
         
         // Finder-specific handling

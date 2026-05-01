@@ -62,6 +62,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         if !IOKitManager.hasAccessibilityPermission() {
             DebugLogger.log("Requesting Accessibility permission...")
             IOKitManager.requestAccessibilityPermission()
+            
+            // Poll until user grants permission from the system popup
+            Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { timer in
+                guard AXIsProcessTrusted() else { return }
+                timer.invalidate()
+                DebugLogger.log("Accessibility granted via system popup — starting key monitoring")
+                self.setupIOKit()
+            }
             return
         }
         

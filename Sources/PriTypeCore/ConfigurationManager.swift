@@ -365,7 +365,8 @@ public final class ConfigurationManager: ConfigurationProviding, @unchecked Send
             let binding: KeyBinding
             if let data = defaults.data(forKey: Keys.toggleKeyBinding),
                let decoded = try? JSONDecoder().decode(KeyBinding.self, from: data) {
-                binding = decoded
+                // Sanitize: Fn key (63) is not supported in CGEventTap
+                binding = decoded.keyCode == 63 ? .defaultToggle : decoded
             } else {
                 // Migrate from legacy toggleKey
                 binding = toggleKey.asKeyBinding
@@ -398,7 +399,8 @@ public final class ConfigurationManager: ConfigurationProviding, @unchecked Send
             let binding: KeyBinding
             if let data = defaults.data(forKey: Keys.hanjaKeyBinding),
                let decoded = try? JSONDecoder().decode(KeyBinding.self, from: data) {
-                binding = decoded
+                // Sanitize: Fn key (63) is not supported in CGEventTap
+                binding = decoded.keyCode == 63 ? .defaultHanja : decoded
             } else {
                 binding = .defaultHanja
             }

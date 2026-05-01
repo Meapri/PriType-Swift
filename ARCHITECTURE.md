@@ -95,7 +95,7 @@ libhangul preedit: ᄆ (U+1106)
 
 ## 모듈 구성
 
-프로젝트는 두 개의 타깃으로 구성된다.
+프로젝트의 제품은 `PriType` 실행 타깃과 `PriTypeCore` 라이브러리 타깃으로 구성된다. 이 외에 `PriTypeBenchmark`(성능 측정), `PriTypeVerify`(빌드 검증), `PriTypeCoreTests`(유닛 테스트) 타깃이 있다.
 
 ### `PriType` (실행 타깃)
 
