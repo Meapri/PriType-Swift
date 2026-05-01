@@ -267,7 +267,7 @@ public class PriTypeInputController: IMKInputController {
         let menu = NSMenu()
         
         // Settings
-        let settingsItem = NSMenuItem(title: "PriType 설정...", action: #selector(openSettings(_:)), keyEquivalent: ",")
+        let settingsItem = NSMenuItem(title: "PriType 설정...", action: #selector(openSettings(_:)), keyEquivalent: "")
         settingsItem.target = self
         menu.addItem(settingsItem)
         
