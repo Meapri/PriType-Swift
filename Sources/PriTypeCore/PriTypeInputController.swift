@@ -189,7 +189,8 @@ public class PriTypeInputController: IMKInputController {
             DebugLogger.log("cachedContext miss: client changed or nil, analyzing (Slow Path)")
             context = ClientContextDetector.analyze(client: client)
             self.cachedContext = context
-            self.lastClient = client
+            // Do not update self.lastClient here. It must be updated alongside currentAdapter
+            // below to ensure the adapter is correctly recreated when the client changes.
         }
         
         // 2. Mark keystroke with current app's bundleId for cross-app hanja validation
