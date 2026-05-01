@@ -20,7 +20,6 @@ Packaging/Payload/
 
 # Temporary files
 test*.swift
-Sources/PriTypeCore/Resources/hanja.txt
 PriTypeV2_components.plist
 
 # Log & crash files (may contain local paths)
@@ -33,3 +32,4 @@ pritype_logs.txt
 
 # Scratch files
 scratch_*.swift
+setup_github_secrets.sh
