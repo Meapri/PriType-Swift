@@ -244,6 +244,34 @@ public class PriTypeInputController: IMKInputController {
             currentAdapter = ClientAdapter(client: client)
         }
         
+        // Proactively cache cursor position during Korean composition.
+        // Chromium blocks coordinate queries during hanja lookup but may allow
+        // them during normal typing. Try multiple strategies to populate cache.
+        if composer.inputMode == .korean {
+            var lineRect = NSRect.zero
+            var cached = false
+            let markedRange = client.markedRange()
+            
+            // Strategy A: firstRect for markedRange
+            if !cached && markedRange.location != NSNotFound {
+                var actualRange = NSRange(location: NSNotFound, length: 0)
+                let rect = client.firstRect(forCharacterRange: markedRange, actualRange: &actualRange)
+                if HangulComposer.isValidCursorRect(rect) {
+                    HangulComposer.lastKnownCursorRect = rect
+                    cached = true
+                }
+            }
+            
+            // Strategy B: attributes(pos-1)
+            if !cached && markedRange.location != NSNotFound && markedRange.location > 0 {
+                client.attributes(forCharacterIndex: markedRange.location - 1, lineHeightRectangle: &lineRect)
+                if HangulComposer.isValidCursorRect(lineRect) {
+                    HangulComposer.lastKnownCursorRect = lineRect
+                    cached = true
+                }
+            }
+        }
+        
         return composer.handle(event, delegate: currentAdapter!)
     }
     

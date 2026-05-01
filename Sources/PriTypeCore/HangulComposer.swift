@@ -68,7 +68,7 @@ public class HangulComposer {
     /// Cached last-known-good cursor position for Hanja candidate window.
     /// Inspired by fcitx5-macos: when Chromium blocks coordinate queries,
     /// reuse the last successful position instead of jumping to mouse cursor.
-    nonisolated(unsafe) private static var lastKnownCursorRect: NSRect?
+    nonisolated(unsafe) static var lastKnownCursorRect: NSRect?
     
     /// Local cache of recently typed text (English mode primarily) to avoid IPC calls
     /// Maintains the last 15 characters to support auto-capitalization and double-space detection
@@ -800,7 +800,7 @@ public class HangulComposer {
     
     /// Validate that a rect from firstRect is a usable cursor position
     /// Electron/Chromium apps can return garbage values (e.g. x=1.6e-314, y=19896)
-    private static func isValidCursorRect(_ rect: NSRect) -> Bool {
+    static func isValidCursorRect(_ rect: NSRect) -> Bool {
         // Reject zero origin (uninitialized)
         guard rect.origin.x != 0 || rect.origin.y != 0 else { return false }
         // Reject negative or zero height (malformed)
