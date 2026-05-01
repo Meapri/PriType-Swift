@@ -9,6 +9,7 @@ xattr -cr "$APP_PATH" 2>/dev/null || true
 # 2. Force macOS to re-register the input method
 #    Kill the TextInputMenuAgent so it picks up the new bundle
 killall TextInputMenuAgent 2>/dev/null || true
+killall PriTypeV2 2>/dev/null || true
 
 # 3. Launch the new PriTypeV2 process
 #    macOS InputMethodKit will auto-relaunch if it was previously registered,
