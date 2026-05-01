@@ -61,7 +61,11 @@ else
 fi
 
 # Building the PKG
-echo "[4/4] Building the PKG installer..."
+APP_VERSION=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" Info.plist)
+APP_BUILD=$(/usr/libexec/PlistBuddy -c "Print :CFBundleVersion" Info.plist)
+PKG_VERSION="${APP_VERSION}"
+
+echo "[4/5] Building the PKG installer..."
 
 # Disable relocation by generating a component plist
 echo "Generating component plist to disable relocation..."
@@ -74,12 +78,6 @@ PKG_SIGN_IDENTITY=""
 DEV_ID_INSTALLER=$(security find-identity -v | grep "Developer ID Installer:" | head -n 1 | awk -F'"' '{print $2}')
 if [ -n "$DEV_ID_INSTALLER" ]; then
     PKG_SIGN_IDENTITY="$DEV_ID_INSTALLER"
-else
-    # Mac Installer Distribution (Mac App Store) could also be checked, but usually it's Developer ID
-    MAC_INSTALLER=$(security find-identity -v | grep "Mac Installer Distribution:" | head -n 1 | awk -F'"' '{print $2}')
-    if [ -n "$MAC_INSTALLER" ]; then
-        PKG_SIGN_IDENTITY="$MAC_INSTALLER"
-    fi
 fi
 
 if [ -n "$PKG_SIGN_IDENTITY" ]; then
@@ -89,7 +87,7 @@ if [ -n "$PKG_SIGN_IDENTITY" ]; then
              --install-location "$INSTALL_DIR" \
              --scripts "Packaging/scripts" \
              --identifier "com.meapri.PriTypeV2" \
-             --version "2.4.4" \
+             --version "$PKG_VERSION" \
              --sign "$PKG_SIGN_IDENTITY" \
              "$PKG_OUTPUT"
 else
@@ -100,16 +98,21 @@ else
              --install-location "$INSTALL_DIR" \
              --scripts "Packaging/scripts" \
              --identifier "com.meapri.PriTypeV2" \
-             --version "2.4.4" \
+             --version "$PKG_VERSION" \
              "$PKG_OUTPUT"
 fi
 
 rm "PriTypeV2_components.plist"
 
+echo "[5/5] Submitting for Notarization..."
+if [ -n "$PKG_SIGN_IDENTITY" ]; then
+    xcrun notarytool submit "$PKG_OUTPUT" --keychain-profile "PriTypeNotary" --wait
+    echo "Stapling Notarization Ticket..."
+    xcrun stapler staple "$PKG_OUTPUT"
+else
+    echo "Skipping notarization because PKG is not signed."
+fi
+
 echo "=========================================="
 echo "    Done! PKG created: $PKG_OUTPUT"
 echo "=========================================="
-echo "Note: To distribute this PKG outside the Mac App Store without Gatekeeper warnings,"
-echo "you MUST sign it with 'Developer ID Application' and 'Developer ID Installer' certs,"
-echo "and notarize it using 'xcrun notarytool'."
-echo "For now, the installer is ready for local testing."
