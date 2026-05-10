@@ -19,7 +19,7 @@ Packaging/Payload/
 .spm-security/
 
 # Temporary files
-test*.swift
+/test*.swift
 PriTypeV2_components.plist
 
 # Log & crash files (may contain local paths)
