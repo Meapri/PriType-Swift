@@ -7,18 +7,20 @@ import SwiftUI
 /// Supports keyboard navigation (1-9, arrow keys, page up/down).
 public final class HanjaCandidateWindow: @unchecked Sendable {
     
-    nonisolated(unsafe) public static let shared = HanjaCandidateWindow()
+    public static let shared = HanjaCandidateWindow()
     
     private var window: NSWindow?
     private var glassContainer: NSGlassEffectView?
     private var candidates: [HanjaEntry] = []
     private var currentPage = 0
     private let pageSize = 9
-    private var onSelect: ((HanjaEntry) -> Void)?
-    private var onDismiss: (() -> Void)?
+    private var onSelect: (@Sendable (HanjaEntry) -> Void)?
+    private var onDismiss: (@Sendable () -> Void)?
     
     public var isVisible: Bool {
-        window?.isVisible ?? false
+        MainActor.assumeIsolated {
+            window?.isVisible ?? false
+        }
     }
     
     private init() {}
@@ -32,8 +34,25 @@ public final class HanjaCandidateWindow: @unchecked Sendable {
     public func show(
         entries: [HanjaEntry],
         cursorRect: NSRect,
-        onSelect: @escaping (HanjaEntry) -> Void,
-        onDismiss: @escaping () -> Void
+        onSelect: @escaping @Sendable (HanjaEntry) -> Void,
+        onDismiss: @escaping @Sendable () -> Void
+    ) {
+        MainActor.assumeIsolated {
+            showOnMain(
+                entries: entries,
+                cursorRect: cursorRect,
+                onSelect: onSelect,
+                onDismiss: onDismiss
+            )
+        }
+    }
+
+    @MainActor
+    private func showOnMain(
+        entries: [HanjaEntry],
+        cursorRect: NSRect,
+        onSelect: @escaping @Sendable (HanjaEntry) -> Void,
+        onDismiss: @escaping @Sendable () -> Void
     ) {
         self.candidates = entries
         self.currentPage = 0
@@ -83,6 +102,13 @@ public final class HanjaCandidateWindow: @unchecked Sendable {
     
     /// Dismiss the candidate window (hides without destroying)
     public func dismiss() {
+        MainActor.assumeIsolated {
+            dismissOnMain()
+        }
+    }
+
+    @MainActor
+    private func dismissOnMain() {
         window?.orderOut(nil)
         candidates = []
         let dismissCallback = onDismiss
@@ -94,10 +120,18 @@ public final class HanjaCandidateWindow: @unchecked Sendable {
     /// Handle a key event while the candidate window is visible
     /// - Returns: true if the event was consumed
     public func handleKey(_ event: NSEvent) -> Bool {
-        guard isVisible else { return false }
-        
         let keyCode = event.keyCode
-        
+        let digit = event.charactersIgnoringModifiers?.first?.wholeNumberValue
+
+        return MainActor.assumeIsolated {
+            handleKeyOnMain(keyCode: keyCode, digit: digit)
+        }
+    }
+
+    @MainActor
+    private func handleKeyOnMain(keyCode: UInt16, digit: Int?) -> Bool {
+        guard isVisible else { return false }
+
         // ESC -> dismiss
         if keyCode == 53 { // Escape
             dismiss()
@@ -105,9 +139,7 @@ public final class HanjaCandidateWindow: @unchecked Sendable {
         }
         
         // Number keys 1-9 -> select
-        if let chars = event.charactersIgnoringModifiers,
-           let digit = chars.first?.wholeNumberValue,
-           digit >= 1 && digit <= 9 {
+        if let digit, digit >= 1 && digit <= 9 {
             let index = (currentPage * pageSize) + (digit - 1)
             if index < candidates.count {
                 selectCandidate(at: index)
@@ -167,6 +199,7 @@ public final class HanjaCandidateWindow: @unchecked Sendable {
     
     // MARK: - Private
     
+    @MainActor
     private func selectCandidate(at index: Int) {
         guard index < candidates.count else { return }
         let entry = candidates[index]
@@ -179,6 +212,7 @@ public final class HanjaCandidateWindow: @unchecked Sendable {
     
     /// Hide the window without triggering onDismiss callback
     /// Used after selection, where the onSelect callback already handles state cleanup
+    @MainActor
     private func dismissWithoutCallback() {
         window?.orderOut(nil)
         candidates = []
@@ -187,6 +221,7 @@ public final class HanjaCandidateWindow: @unchecked Sendable {
         currentPage = 0
     }
     
+    @MainActor
     private func updateContent() {
         guard let window = window else { return }
         
@@ -215,6 +250,7 @@ public final class HanjaCandidateWindow: @unchecked Sendable {
         window.setContentSize(hostView.fittingSize)
     }
     
+    @MainActor
     private func positionWindow(near cursorRect: NSRect) {
         guard let window = window else { return }
         

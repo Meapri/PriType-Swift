@@ -114,22 +114,22 @@ public final class StatusBarManager: NSObject, StatusBarUpdating, @unchecked Sen
             let isKorean = (modeValue == .korean)
             let text = isKorean ? "가" : "A"
             let font = NSFont(name: "AppleSDGothicNeo-Medium", size: 14) ?? NSFont.systemFont(ofSize: 14)
+            let attributes: [NSAttributedString.Key: Any] = [
+                .font: font,
+                .baselineOffset: CGFloat(-1)
+            ]
             
             // Subtle fade animation for mode change feedback
             NSAnimationContext.runAnimationGroup { context in
                 context.duration = 0.08
                 button.animator().alphaValue = 0.4
-            } completionHandler: {
-                let attributes: [NSAttributedString.Key: Any] = [
-                    .font: font,
-                    .baselineOffset: CGFloat(-1)
-                ]
-                button.attributedTitle = NSAttributedString(string: text, attributes: attributes)
-                
-                NSAnimationContext.runAnimationGroup { context in
-                    context.duration = 0.08
-                    button.animator().alphaValue = 1.0
-                }
+            }
+
+            button.attributedTitle = NSAttributedString(string: text, attributes: attributes)
+
+            NSAnimationContext.runAnimationGroup { context in
+                context.duration = 0.08
+                button.animator().alphaValue = 1.0
             }
             
             DebugLogger.log("StatusBarManager: Mode set to \(modeValue)")

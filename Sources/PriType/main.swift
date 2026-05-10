@@ -7,7 +7,7 @@ let kConnectionName = "PriType_InputString_v2"
 
 // MARK: - App Delegate
 
-class AppDelegate: NSObject, NSApplicationDelegate {
+class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
     
     private var hasLaunchedBefore = false
     

@@ -24,7 +24,7 @@ public class PriTypeInputController: IMKInputController {
     
     /// Shared composer instance for toggle key handler access
     /// - Warning: Access from main thread only (guaranteed by IMK, not compiler-enforced)
-    nonisolated(unsafe) public static let sharedComposer = HangulComposer()
+    public static let sharedComposer = HangulComposer()
     private var composer: HangulComposer { Self.sharedComposer }
     
     /// Last active controller reference for external toggle access
@@ -79,7 +79,7 @@ public class PriTypeInputController: IMKInputController {
     }
     
     /// Standard adapter with underlined marked text for composition display
-    private final class ClientAdapter: BaseClientAdapter {
+    private class ClientAdapter: BaseClientAdapter {
         override func setMarkedText(_ text: String) {
             let attributes: [NSAttributedString.Key: Any] = [
                 .underlineStyle: NSUnderlineStyle.single.rawValue,
@@ -87,6 +87,22 @@ public class PriTypeInputController: IMKInputController {
             ]
             let attributed = NSAttributedString(string: text, attributes: attributes)
             client.setMarkedText(attributed, selectionRange: NSRange(location: text.utf16.count, length: 0), replacementRange: NSRange(location: NSNotFound, length: NSNotFound))
+        }
+    }
+
+    /// Conservative marked-text adapter for game/Wine text bridges.
+    ///
+    /// Some game runtimes leak a standalone initial Jamo marked text as committed
+    /// text, then also accept the later composed syllable. That produces strings
+    /// like "ㅂ박찬우". Suppress only single standalone Jamo preedit while keeping
+    /// normal syllable marked text and final commits intact.
+    private final class GameCompatibilityAdapter: ClientAdapter {
+        override func setMarkedText(_ text: String) {
+            guard !CompositionHelpers.isSingleStandaloneJamo(text) else {
+                DebugLogger.log("GameCompatibility: suppressed standalone jamo marked text")
+                return
+            }
+            super.setMarkedText(text)
         }
     }
     
@@ -101,6 +117,26 @@ public class PriTypeInputController: IMKInputController {
     /// Cached client context to avoid expensive IPC calls on every keystroke
     /// - Note: Calculated in `activateServer`, used in `handle`, cleared in `deactivateServer`
     private(set) var cachedContext: ClientContext?
+
+    private func makeAdapter(for client: IMKTextInput, context: ClientContext) -> any HangulComposerDelegate {
+        if context.shouldUseImmediateMode {
+            return ImmediateModeAdapter(client: client)
+        }
+        if context.usesGameCompatibilityMode {
+            return GameCompatibilityAdapter(client: client)
+        }
+        return ClientAdapter(client: client)
+    }
+
+    private func adapterMatchesContext(_ adapter: (any HangulComposerDelegate)?, context: ClientContext) -> Bool {
+        if context.shouldUseImmediateMode {
+            return adapter is ImmediateModeAdapter
+        }
+        if context.usesGameCompatibilityMode {
+            return adapter is GameCompatibilityAdapter
+        }
+        return adapter is ClientAdapter && !(adapter is GameCompatibilityAdapter)
+    }
     
     // 입력기가 활성화될 때 호출 - 새 세션 시작
     override public func activateServer(_ sender: Any!) {
@@ -111,11 +147,12 @@ public class PriTypeInputController: IMKInputController {
         // 클라이언트 저장
         if let client = sender as? IMKTextInput {
             lastClient = client
-            currentAdapter = ClientAdapter(client: client)
             
             // PERFORMANCE: Analyze context ONCE per session and cache it.
             // This avoids heavy IPC calls (bundleId check, coordinate calculation) on every keystroke.
-            self.cachedContext = ClientContextDetector.analyze(client: client)
+            let context = ClientContextDetector.analyze(client: client)
+            self.cachedContext = context
+            currentAdapter = makeAdapter(for: client, context: context)
             DebugLogger.log("Activated for client: \(self.cachedContext?.bundleId ?? "unknown") (Cached Context)")
         } else {
             // Fallback if sender is not IMKTextInput (rare)
@@ -200,48 +237,27 @@ public class PriTypeInputController: IMKInputController {
         DebugLogger.log("InputController.handle() event type: \(event.type.rawValue) keyCode: \(event.keyCode)")
         
         // 3. DYNAMIC CHECK: Secure Input (password fields)
-        // IsSecureEventInputEnabled() is a GLOBAL flag - other apps (KakaoTalk, browsers)
-        // may enable it for password fields and forget to disable it, affecting ALL apps.
-        // Two-tier validation:
-        // 1. System security clients (SecurityAgent, loginwindow) → always pass through
-        // 2. Other apps with global flag on → check if current field supports marked text
-        //    (password fields typically don't support marked text attributes)
-        if IsSecureEventInputEnabled() {
-            let bundleId = context.bundleId
-            let isSystemSecureClient = bundleId == "com.apple.SecurityAgent" ||
-                                       bundleId == "com.apple.loginwindow" ||
-                                       bundleId == "com.apple.screencaptureui"
-            if isSystemSecureClient {
-                DebugLogger.log("Secure Input: System secure client (\(bundleId)), passing through")
-                return false
-            }
-            
-            // Secondary check: if the field doesn't support marked text, treat as secure
-            let validAttrs = client.validAttributesForMarkedText() ?? []
-            if validAttrs.isEmpty {
-                DebugLogger.log("Secure Input: Global flag + no markedText support in '\(bundleId)' → likely password field, passing through")
-                return false
-            }
-            
-            DebugLogger.log("Secure Input: Global flag set but '\(bundleId)' supports markedText — ignoring stale flag")
+        if shouldPassThroughSecureInput(client: client, context: context) {
+            composer.discardCompositionForPassThrough()
+            return false
         }
         
         // Finder-specific handling
         if context.shouldUseImmediateMode {
             DebugLogger.log("Finder: ImmediateMode (context=\(context))")
             // Only recreate adapter if client changed or type mismatch
-            if lastClient !== client || !(currentAdapter is ImmediateModeAdapter) {
+            if lastClient !== client || !adapterMatchesContext(currentAdapter, context: context) {
                 lastClient = client
-                currentAdapter = ImmediateModeAdapter(client: client)
+                currentAdapter = makeAdapter(for: client, context: context)
             }
             return composer.handle(event, delegate: currentAdapter!)
         }
         
         // Reuse adapter from activateServer if client hasn't changed
         // This avoids ~20 heap allocations/second during fast typing
-        if lastClient !== client || currentAdapter == nil {
+        if lastClient !== client || currentAdapter == nil || !adapterMatchesContext(currentAdapter, context: context) {
             lastClient = client
-            currentAdapter = ClientAdapter(client: client)
+            currentAdapter = makeAdapter(for: client, context: context)
         }
         
         // Proactively cache cursor position during Korean composition.
@@ -274,18 +290,77 @@ public class PriTypeInputController: IMKInputController {
         
         return composer.handle(event, delegate: currentAdapter!)
     }
+
+    private func shouldPassThroughSecureInput(client: IMKTextInput, context: ClientContext) -> Bool {
+        let bundleId = context.bundleId
+        let isSystemSecureClient = bundleId == "com.apple.SecurityAgent" ||
+                                   bundleId == "com.apple.loginwindow" ||
+                                   bundleId == "com.apple.screencaptureui"
+
+        if isSystemSecureClient {
+            DebugLogger.log("Secure Input: System secure client (\(bundleId)), passing through")
+            return true
+        }
+
+        let selectionRange = client.selectedRange()
+        let hasInvalidSelection = selectionRange.location == NSNotFound
+        let hasGlobalSecureInput = IsSecureEventInputEnabled()
+
+        guard hasInvalidSelection || hasGlobalSecureInput else {
+            return false
+        }
+
+        let focusedSecureState = ClientContextDetector.focusedSecureTextState()
+        if focusedSecureState == .secureTextField {
+            DebugLogger.log("Secure Input: focused secure text field in '\(bundleId)', passing through")
+            return true
+        }
+
+        if hasGlobalSecureInput, focusedSecureState == .nonSecureTextInput {
+            DebugLogger.log("Secure Input: global flag stale in '\(bundleId)' — focused field is not secure")
+            return false
+        }
+
+        let validAttrs = client.validAttributesForMarkedText() ?? []
+        if validAttrs.isEmpty || !context.hasTextInputCapability {
+            DebugLogger.log("Secure Input: no markedText support in '\(bundleId)', passing through")
+            return true
+        }
+
+        if hasInvalidSelection {
+            DebugLogger.log("Secure Input: transient invalid selection in '\(bundleId)' with markedText support — continuing")
+            return false
+        }
+
+        DebugLogger.log("Secure Input: global flag set but '\(bundleId)' supports markedText — ignoring stale flag")
+        return false
+    }
     
     // 마우스 클릭 등으로 조합 영역 외부 클릭 시 조합 커밋
     override public func commitComposition(_ sender: Any!) {
         #if DEBUG
         assert(Thread.isMainThread, "IMK commitComposition must run on main thread")
         #endif
+        if let context = currentContext(for: sender), context.usesGameCompatibilityMode, composer.hasActiveComposition {
+            DebugLogger.log("GameCompatibility: ignored lifecycle commitComposition during active composition")
+            return
+        }
         if let client = sender as? IMKTextInput ?? lastClient {
-            let adapter = ClientAdapter(client: client)
+            let adapter = currentAdapter ?? ClientAdapter(client: client)
             composer.forceCommit(delegate: adapter)
         }
         composer.localTextBuffer = "" // Clear buffer when focus changes or user clicks elsewhere
         super.commitComposition(sender)
+    }
+
+    private func currentContext(for sender: Any?) -> ClientContext? {
+        if let client = sender as? IMKTextInput {
+            if let cachedContext, lastClient === client {
+                return cachedContext
+            }
+            return ClientContextDetector.analyze(client: client)
+        }
+        return cachedContext
     }
     
     // MARK: - Input Method Menu

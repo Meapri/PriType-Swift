@@ -27,7 +27,7 @@ import InputMethodKit
 ///
 /// ## Thread Safety
 /// This class is not thread-safe. All calls should be made from the main thread.
-public class HangulComposer {
+public class HangulComposer: @unchecked Sendable {
     
     // MARK: - Public Properties
     
@@ -35,6 +35,11 @@ public class HangulComposer {
     ///
     /// When in `.english` mode, all keystrokes are passed through unchanged.
     public private(set) var inputMode: InputMode = .korean
+
+    /// Whether the underlying Hangul engine currently has active composition.
+    public var hasActiveComposition: Bool {
+        !context.isEmpty()
+    }
     
     // MARK: - Dependencies
     
@@ -554,6 +559,17 @@ public class HangulComposer {
     public func clearLocalBuffer() {
         localTextBuffer = ""
     }
+
+    /// Drops in-progress composition without touching the current client.
+    ///
+    /// Secure text fields must receive raw key events from the system. Calling
+    /// `setMarkedText` or `insertText` while focus is inside a password field can
+    /// trigger host-app warning beeps, so this reset intentionally has no delegate.
+    public func discardCompositionForPassThrough() {
+        context.reset()
+        localTextBuffer = ""
+        textConvenience.resetSpaceState()
+    }
     
     /// Bundle ID of the app where the last keystroke was processed.
     /// Used to prevent cross-app hanja leaking: if the current app differs from
@@ -676,7 +692,7 @@ public class HangulComposer {
         var resolved = false
         
         if let controller = PriTypeInputController.sharedController,
-           let client = controller.client() as? IMKTextInput {
+           let client = controller.client() {
             var actualRange = NSRange()
             
             // Prefer markedRange during preedit. Chromium fails with garbage values 
@@ -766,7 +782,7 @@ public class HangulComposer {
                 
                 // Validate: Ensure the client hasn't changed since the candidate window was shown
                 if let controller = PriTypeInputController.sharedController,
-                   let client = controller.client() as? IMKTextInput {
+                   let client = controller.client() {
                     
                     // Safety check: if the client object changed (focus switched), dismiss silently
                     guard let originalID = snapshotClientID,

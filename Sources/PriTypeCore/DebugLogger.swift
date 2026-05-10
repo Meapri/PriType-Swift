@@ -84,14 +84,13 @@ public final class DebugLogger: @unchecked Sendable {
     
     /// Log sensitive input data (like keystrokes or composed strings).
     /// By default, the actual content is redacted even in DEBUG builds to prevent accidental leakage.
-    /// To see actual input logs, developers must explicitly change `redactSensitiveLogs` to false.
+    /// To see actual input logs, compile with `-D PRITYPE_UNREDACT_SENSITIVE_LOGS`.
     public static func logSensitive(_ msg: String, sensitiveContent: String) {
-        let redactSensitiveLogs = true // Set to false ONLY during active local debugging
-        if redactSensitiveLogs {
-            log("\(msg): [REDACTED]")
-        } else {
-            log("\(msg): \(sensitiveContent)")
-        }
+        #if PRITYPE_UNREDACT_SENSITIVE_LOGS
+        log("\(msg): \(sensitiveContent)")
+        #else
+        log("\(msg): [REDACTED]")
+        #endif
     }
     
     /// Log an error with context

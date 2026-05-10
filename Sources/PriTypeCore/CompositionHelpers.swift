@@ -43,4 +43,15 @@ public struct CompositionHelpers: Sendable {
         }
         return String(mapped.map { Character($0) })
     }
+
+    /// Returns true when the string is a single standalone Jamo used as preedit.
+    public static func isSingleStandaloneJamo(_ text: String) -> Bool {
+        let scalars = Array(text.unicodeScalars)
+        guard scalars.count == 1, let value = scalars.first?.value else {
+            return false
+        }
+
+        return (0x1100...0x11FF).contains(value) ||
+            (0x3130...0x318F).contains(value)
+    }
 }

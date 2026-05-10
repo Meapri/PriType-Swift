@@ -1,5 +1,15 @@
 import Cocoa
 import InputMethodKit
+import ApplicationServices
+
+// MARK: - SecureTextFocusState
+
+/// Focused text field security state detected through Accessibility.
+public enum SecureTextFocusState: Sendable {
+    case secureTextField
+    case nonSecureTextInput
+    case unknown
+}
 
 // MARK: - ClientContext
 
@@ -17,6 +27,21 @@ public struct ClientContext: Sendable {
     
     /// Whether the client appears to be in a desktop/non-text area (coordinate heuristic)
     public let isLikelyDesktopArea: Bool
+
+    /// Whether the client needs conservative marked-text handling for game/Wine runtimes.
+    public let usesGameCompatibilityMode: Bool
+
+    public init(
+        bundleId: String,
+        hasTextInputCapability: Bool,
+        isLikelyDesktopArea: Bool,
+        usesGameCompatibilityMode: Bool = false
+    ) {
+        self.bundleId = bundleId
+        self.hasTextInputCapability = hasTextInputCapability
+        self.isLikelyDesktopArea = isLikelyDesktopArea
+        self.usesGameCompatibilityMode = usesGameCompatibilityMode
+    }
     
     // MARK: - Derived Properties
     
@@ -58,8 +83,9 @@ public struct ClientContextDetector: Sendable {
     public static func analyze(client: IMKTextInput) -> ClientContext {
         // 1. FAST PATH: Check active application Bundle ID
         // Using NSWorkspace is generally faster and safer than generic IPC calls on the client
+        let frontmostApp = NSWorkspace.shared.frontmostApplication
         var bundleId = client.bundleIdentifier() ?? ""
-        if bundleId.isEmpty, let app = NSWorkspace.shared.frontmostApplication {
+        if bundleId.isEmpty, let app = frontmostApp {
             bundleId = app.bundleIdentifier ?? ""
         }
         
@@ -91,7 +117,85 @@ public struct ClientContextDetector: Sendable {
         return ClientContext(
             bundleId: bundleId,
             hasTextInputCapability: hasTextInputCapability,
-            isLikelyDesktopArea: isLikelyDesktopArea
+            isLikelyDesktopArea: isLikelyDesktopArea,
+            usesGameCompatibilityMode: usesGameCompatibilityMode(
+                bundleId: bundleId,
+                app: frontmostApp
+            )
         )
+    }
+
+    private static func usesGameCompatibilityMode(
+        bundleId: String,
+        app: NSRunningApplication?
+    ) -> Bool {
+        let hints = [
+            bundleId,
+            app?.localizedName ?? "",
+            app?.bundleURL?.path ?? "",
+            app?.executableURL?.path ?? ""
+        ]
+        .joined(separator: " ")
+        .lowercased()
+
+        return hints.contains("maplestory") ||
+            hints.contains("nexon") ||
+            hints.contains("wine") ||
+            hints.contains("crossover") ||
+            hints.contains("whisky")
+    }
+
+    /// Detects whether the frontmost focused accessibility element is a secure text field.
+    ///
+    /// `IsSecureEventInputEnabled()` is a process-global signal and can be stale, while
+    /// some password fields still report enough IMK text capability to tempt us into
+    /// composing text. The focused AX element gives the field-level answer when available.
+    public static func focusedSecureTextState() -> SecureTextFocusState {
+        guard let app = NSWorkspace.shared.frontmostApplication else {
+            return .unknown
+        }
+
+        let appElement = AXUIElementCreateApplication(app.processIdentifier)
+        var focusedValue: CFTypeRef?
+        let focusedError = AXUIElementCopyAttributeValue(
+            appElement,
+            kAXFocusedUIElementAttribute as CFString,
+            &focusedValue
+        )
+
+        guard focusedError == .success, let focusedValue else {
+            DebugLogger.log("Secure Input: AX focused element unavailable error=\(focusedError.rawValue)")
+            return .unknown
+        }
+
+        guard CFGetTypeID(focusedValue) == AXUIElementGetTypeID() else {
+            DebugLogger.log("Secure Input: AX focused value is not an element")
+            return .unknown
+        }
+
+        let focusedElement = focusedValue as! AXUIElement
+        let role = stringAttribute(kAXRoleAttribute as CFString, from: focusedElement)
+        let subrole = stringAttribute(kAXSubroleAttribute as CFString, from: focusedElement)
+
+        if subrole == (kAXSecureTextFieldSubrole as String) {
+            return .secureTextField
+        }
+
+        if role == (kAXTextFieldRole as String) ||
+            role == (kAXTextAreaRole as String) ||
+            role == (kAXComboBoxRole as String) {
+            return .nonSecureTextInput
+        }
+
+        return .unknown
+    }
+
+    private static func stringAttribute(_ attribute: CFString, from element: AXUIElement) -> String? {
+        var value: CFTypeRef?
+        let error = AXUIElementCopyAttributeValue(element, attribute, &value)
+        guard error == .success else {
+            return nil
+        }
+        return value as? String
     }
 }
