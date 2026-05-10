@@ -165,7 +165,11 @@ public final class HanjaManager: @unchecked Sendable {
            let resourceBundle = Bundle(url: resourceURL.appendingPathComponent("PriType_PriTypeCore.bundle")) {
             return resourceBundle
         }
+        #if SWIFT_PACKAGE
+        return Bundle.module
+        #else
         return Bundle.main
+        #endif
     }()
 }
 

@@ -22,11 +22,11 @@ public enum L10n {
         
         // 2. Try Bundle.module for SPM development environment
         #if SWIFT_PACKAGE
-        // This is safe in dev environment, but we use lazy fallback logic for robustness
-        #endif
-        
+        return Bundle.module
+        #else
         // 3. Fallback to main bundle (localization files directly in Resources)
         return Bundle.main
+        #endif
     }()
     
     /// Helper to get localized string
