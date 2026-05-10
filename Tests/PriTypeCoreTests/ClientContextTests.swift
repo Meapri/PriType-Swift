@@ -115,6 +115,63 @@ struct ClientContextTests {
             executablePath: "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
         ))
     }
+
+    @Test("Secure input policy passes through unknown focused fields when global secure input is active")
+    func secureInputPolicyPassesThroughUnknownGlobalSecureField() {
+        #expect(SecureInputPolicy.shouldPassThrough(SecureInputSignals(
+            bundleId: "com.kakao.KakaoTalkMac",
+            hasTextInputCapability: true,
+            hasInvalidSelection: false,
+            hasGlobalSecureInput: true,
+            hasMarkedTextSupport: true,
+            focusedSecureState: .unknown
+        )))
+    }
+
+    @Test("Secure input policy ignores stale global flag for proven non-secure text fields")
+    func secureInputPolicyIgnoresStaleGlobalFlagForNonSecureTextField() {
+        #expect(!SecureInputPolicy.shouldPassThrough(SecureInputSignals(
+            bundleId: "com.google.Chrome",
+            hasTextInputCapability: true,
+            hasInvalidSelection: false,
+            hasGlobalSecureInput: true,
+            hasMarkedTextSupport: true,
+            focusedSecureState: .nonSecureTextInput
+        )))
+    }
+
+    @Test("Secure input policy handles invalid selection capability cases")
+    func secureInputPolicyHandlesInvalidSelectionCapabilityCases() {
+        #expect(SecureInputPolicy.shouldPassThrough(SecureInputSignals(
+            bundleId: "com.example.PasswordPanel",
+            hasTextInputCapability: false,
+            hasInvalidSelection: true,
+            hasGlobalSecureInput: false,
+            hasMarkedTextSupport: false,
+            focusedSecureState: nil
+        )))
+
+        #expect(!SecureInputPolicy.shouldPassThrough(SecureInputSignals(
+            bundleId: "com.google.Chrome",
+            hasTextInputCapability: true,
+            hasInvalidSelection: true,
+            hasGlobalSecureInput: false,
+            hasMarkedTextSupport: true,
+            focusedSecureState: nil
+        )))
+    }
+
+    @Test("Secure input policy always passes through system secure clients")
+    func secureInputPolicyPassesThroughSystemSecureClients() {
+        #expect(SecureInputPolicy.shouldPassThrough(SecureInputSignals(
+            bundleId: "com.apple.SecurityAgent",
+            hasTextInputCapability: true,
+            hasInvalidSelection: false,
+            hasGlobalSecureInput: false,
+            hasMarkedTextSupport: true,
+            focusedSecureState: .nonSecureTextInput
+        )))
+    }
     
     // MARK: - Resolution / Desktop Detection (migrated from ResolutionTests.swift)
     

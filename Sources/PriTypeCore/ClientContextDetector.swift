@@ -11,6 +11,64 @@ public enum SecureTextFocusState: Sendable {
     case unknown
 }
 
+// MARK: - SecureInputPolicy
+
+/// Pure policy for deciding whether a secure-input-looking client should bypass IMK composition.
+///
+/// Password fields can still expose partial IMK capabilities, while Accessibility focus
+/// detection can return `unknown` for Electron, Chromium, KakaoTalk, and system auth panels.
+/// When macOS says Secure Event Input is active and the focused field cannot be proven
+/// non-secure, prefer raw passthrough to avoid password-field beeps and accidental composition.
+struct SecureInputSignals: Sendable {
+    let bundleId: String
+    let hasTextInputCapability: Bool
+    let hasInvalidSelection: Bool
+    let hasGlobalSecureInput: Bool
+    let hasMarkedTextSupport: Bool
+    let focusedSecureState: SecureTextFocusState?
+}
+
+struct SecureInputPolicy: Sendable {
+    static func isSystemSecureClient(_ bundleId: String) -> Bool {
+        bundleId == "com.apple.SecurityAgent" ||
+            bundleId == "com.apple.loginwindow" ||
+            bundleId == "com.apple.screencaptureui"
+    }
+
+    static func shouldPassThrough(_ signals: SecureInputSignals) -> Bool {
+        if isSystemSecureClient(signals.bundleId) {
+            return true
+        }
+
+        guard signals.hasInvalidSelection || signals.hasGlobalSecureInput else {
+            return false
+        }
+
+        if signals.hasInvalidSelection && !signals.hasTextInputCapability {
+            return true
+        }
+
+        if !signals.hasMarkedTextSupport || !signals.hasTextInputCapability {
+            return true
+        }
+
+        if signals.hasInvalidSelection {
+            return false
+        }
+
+        guard signals.hasGlobalSecureInput else {
+            return false
+        }
+
+        switch signals.focusedSecureState {
+        case .secureTextField, .unknown, nil:
+            return true
+        case .nonSecureTextInput:
+            return false
+        }
+    }
+}
+
 // MARK: - ClientContext
 
 /// Represents the context of the current text input client

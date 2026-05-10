@@ -293,11 +293,8 @@ public class PriTypeInputController: IMKInputController {
 
     private func shouldPassThroughSecureInput(client: IMKTextInput, context: ClientContext) -> Bool {
         let bundleId = context.bundleId
-        let isSystemSecureClient = bundleId == "com.apple.SecurityAgent" ||
-                                   bundleId == "com.apple.loginwindow" ||
-                                   bundleId == "com.apple.screencaptureui"
 
-        if isSystemSecureClient {
+        if SecureInputPolicy.isSystemSecureClient(bundleId) {
             DebugLogger.log("Secure Input: System secure client (\(bundleId)), passing through")
             return true
         }
@@ -329,6 +326,11 @@ public class PriTypeInputController: IMKInputController {
         let focusedSecureState = ClientContextDetector.focusedSecureTextState()
         if focusedSecureState == .secureTextField {
             DebugLogger.log("Secure Input: focused secure text field in '\(bundleId)', passing through")
+            return true
+        }
+
+        if hasGlobalSecureInput, focusedSecureState == .unknown {
+            DebugLogger.log("Secure Input: Global flag + unknown focused field in '\(bundleId)' -> passing through")
             return true
         }
 
