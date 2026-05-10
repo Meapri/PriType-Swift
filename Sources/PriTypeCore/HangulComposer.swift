@@ -856,8 +856,7 @@ public class HangulComposer: @unchecked Sendable {
             
             var focusedApp: AnyObject?
             if AXUIElementCopyAttributeValue(systemWide, kAXFocusedApplicationAttribute as CFString, &focusedApp) == .success,
-               let app = focusedApp {
-                let appElement = app as! AXUIElement
+               let appElement = validatedAXElement(focusedApp) {
                 focusResult = AXUIElementCopyAttributeValue(appElement, kAXFocusedUIElementAttribute as CFString, &focusedElement)
                 if focusResult != .success {
                     DebugLogger.log("Hanja AX: app focusedElement also failed (\(focusResult.rawValue))")
@@ -869,8 +868,10 @@ public class HangulComposer: @unchecked Sendable {
             }
         }
         
-        guard let element = focusedElement else { return nil }
-        let axElement = element as! AXUIElement
+        guard let axElement = validatedAXElement(focusedElement) else {
+            DebugLogger.log("Hanja AX: focused value was not an AXUIElement")
+            return nil
+        }
         
         // Strategy 1: AXSelectedTextRange → AXBoundsForRange
         if let rect = getBoundsForSelectedText(axElement) {
@@ -893,14 +894,17 @@ public class HangulComposer: @unchecked Sendable {
         // Get the selected text range (caret position)
         var selectedRangeValue: AnyObject?
         let rangeResult = AXUIElementCopyAttributeValue(axElement, kAXSelectedTextRangeAttribute as CFString, &selectedRangeValue)
-        guard rangeResult == .success, let rangeVal = selectedRangeValue else {
+        guard rangeResult == .success, let rangeVal = validatedAXValue(selectedRangeValue) else {
             DebugLogger.log("Hanja AX: selectedTextRange failed (\(rangeResult.rawValue))")
             return nil
         }
         
         // Extract the CFRange to check if we have a zero-length selection (caret)
         var cfRange = CFRange(location: 0, length: 0)
-        AXValueGetValue(rangeVal as! AXValue, .cfRange, &cfRange)
+        guard AXValueGetValue(rangeVal, .cfRange, &cfRange) else {
+            DebugLogger.log("Hanja AX: selectedTextRange was not a CFRange")
+            return nil
+        }
         
         // If caret is at position > 0, try bounds for the character BEFORE caret
         // This often works better than bounds for a zero-length range
@@ -920,14 +924,14 @@ public class HangulComposer: @unchecked Sendable {
             queryRange,
             &boundsValue
         )
-        guard boundsResult == .success, let boundsVal = boundsValue else {
+        guard boundsResult == .success, let boundsVal = validatedAXValue(boundsValue) else {
             DebugLogger.log("Hanja AX: boundsForRange failed (\(boundsResult.rawValue))")
             return nil
         }
         
         // Convert AXValue to CGRect
         var bounds = CGRect.zero
-        guard AXValueGetValue(boundsVal as! AXValue, .cgRect, &bounds) else {
+        guard AXValueGetValue(boundsVal, .cgRect, &bounds) else {
             DebugLogger.log("Hanja AX: AXValueGetValue failed")
             return nil
         }
@@ -940,9 +944,12 @@ public class HangulComposer: @unchecked Sendable {
             // Get the element's position to supplement x coordinate
             var posValue: AnyObject?
             if AXUIElementCopyAttributeValue(axElement, kAXPositionAttribute as CFString, &posValue) == .success,
-               let pv = posValue {
+               let pv = validatedAXValue(posValue) {
                 var pos = CGPoint.zero
-                AXValueGetValue(pv as! AXValue, .cgPoint, &pos)
+                guard AXValueGetValue(pv, .cgPoint, &pos) else {
+                    DebugLogger.log("Hanja AX: element position was not a CGPoint")
+                    return nil
+                }
                 
                 // Use element x + small offset, AX y, default height
                 let defaultHeight: CGFloat = 18
@@ -975,15 +982,18 @@ public class HangulComposer: @unchecked Sendable {
         
         guard AXUIElementCopyAttributeValue(axElement, kAXPositionAttribute as CFString, &posValue) == .success,
               AXUIElementCopyAttributeValue(axElement, kAXSizeAttribute as CFString, &sizeValue) == .success,
-              let pv = posValue, let sv = sizeValue else {
+              let pv = validatedAXValue(posValue), let sv = validatedAXValue(sizeValue) else {
             DebugLogger.log("Hanja AX: element position/size unavailable")
             return nil
         }
         
         var pos = CGPoint.zero
         var size = CGSize.zero
-        AXValueGetValue(pv as! AXValue, .cgPoint, &pos)
-        AXValueGetValue(sv as! AXValue, .cgSize, &size)
+        guard AXValueGetValue(pv, .cgPoint, &pos),
+              AXValueGetValue(sv, .cgSize, &size) else {
+            DebugLogger.log("Hanja AX: element position/size had unexpected AXValue types")
+            return nil
+        }
         
         // Use the bottom-left of the element as a rough caret position
         guard let screenHeight = NSScreen.main?.frame.height else { return nil }
@@ -996,6 +1006,18 @@ public class HangulComposer: @unchecked Sendable {
         DebugLogger.log("Hanja AX: element position fallback: \(result)")
         guard isValidCursorRect(result) else { return nil }
         return result
+    }
+
+    private static func validatedAXElement(_ value: AnyObject?) -> AXUIElement? {
+        guard let value else { return nil }
+        guard CFGetTypeID(value) == AXUIElementGetTypeID() else { return nil }
+        return (value as! AXUIElement)
+    }
+
+    private static func validatedAXValue(_ value: AnyObject?) -> AXValue? {
+        guard let value else { return nil }
+        guard CFGetTypeID(value) == AXValueGetTypeID() else { return nil }
+        return (value as! AXValue)
     }
 }
 
