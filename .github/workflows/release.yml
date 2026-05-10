@@ -23,11 +23,26 @@ jobs:
       id: version
       run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
     
-    - name: Validate tag matches Info.plist
+    - name: Validate tag matches Info.plist channel
       run: |
+        TAG_VERSION="${{ steps.version.outputs.VERSION }}"
+        EXPECTED_CHANNEL="stable"
+        EXPECTED_INFO_VERSION="$TAG_VERSION"
+        if [[ "$TAG_VERSION" == *-* ]]; then
+          EXPECTED_CHANNEL="beta"
+          EXPECTED_INFO_VERSION="${TAG_VERSION%%-*}"
+        fi
+
         INFO_VERSION=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" Info.plist)
-        if [ "$INFO_VERSION" != "${{ steps.version.outputs.VERSION }}" ]; then
-          echo "Tag version ${{ steps.version.outputs.VERSION }} does not match Info.plist $INFO_VERSION" >&2
+        INFO_CHANNEL=$(/usr/libexec/PlistBuddy -c "Print :PriTypeReleaseChannel" Info.plist)
+
+        if [ "$INFO_VERSION" != "$EXPECTED_INFO_VERSION" ]; then
+          echo "Tag version $TAG_VERSION expects Info.plist version $EXPECTED_INFO_VERSION, found $INFO_VERSION" >&2
+          exit 1
+        fi
+
+        if [ "$INFO_CHANNEL" != "$EXPECTED_CHANNEL" ]; then
+          echo "Tag version $TAG_VERSION expects channel $EXPECTED_CHANNEL, found $INFO_CHANNEL" >&2
           exit 1
         fi
     

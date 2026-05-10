@@ -17,6 +17,19 @@ public struct AboutInfo: Sendable {
     public static let version: String = {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "2.0.0"
     }()
+
+    /// Current release channel (stable/beta), read from Info.plist when present.
+    public static let releaseChannel: ReleaseChannel = {
+        ReleaseChannel.detect(
+            plistValue: Bundle.main.object(forInfoDictionaryKey: "PriTypeReleaseChannel") as? String,
+            version: version
+        )
+    }()
+
+    /// User-visible version label including the release channel.
+    public static var displayVersion: String {
+        "\(version) (\(releaseChannel.displayName))"
+    }
     
     /// Copyright notice (localized)
     public static var copyright: String { L10n.app.copyright }
@@ -34,7 +47,7 @@ public struct AboutInfo: Sendable {
     public static func showAlert() {
         let alert = NSAlert()
         alert.messageText = appName
-        alert.informativeText = "\(description)\n\n\(L10n.about.version): \(version)\n\(copyright)"
+        alert.informativeText = "\(description)\n\n\(L10n.about.version): \(displayVersion)\n\(copyright)"
         alert.alertStyle = .informational
         alert.runModal()
     }

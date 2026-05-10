@@ -400,7 +400,7 @@ struct SettingsView: View {
                 // ── Footer ──
                 HStack {
                     Spacer()
-                    Text("v\(AboutInfo.version)")
+                    Text("v\(AboutInfo.displayVersion)")
                         .font(.system(size: 11, weight: .semibold, design: .monospaced))
                         .foregroundStyle(.tertiary)
                         .padding(.horizontal, 14)

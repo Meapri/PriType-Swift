@@ -52,11 +52,12 @@ public final class UpdateChecker: @unchecked Sendable {
     
     // MARK: - GitHub API Response Models
     
-    private struct GitHubRelease: Codable {
+    struct GitHubRelease: Codable, Sendable {
         let tagName: String
         let htmlUrl: String
         let name: String?
         let body: String?
+        let draft: Bool
         let prerelease: Bool
         let assets: [GitHubAsset]
         
@@ -65,12 +66,13 @@ public final class UpdateChecker: @unchecked Sendable {
             case htmlUrl = "html_url"
             case name
             case body
+            case draft
             case prerelease
             case assets
         }
     }
     
-    private struct GitHubAsset: Codable {
+    struct GitHubAsset: Codable, Sendable {
         let name: String
         let browserDownloadUrl: String
         
@@ -82,7 +84,7 @@ public final class UpdateChecker: @unchecked Sendable {
     
     // MARK: - Constants
     
-    private let apiURL = "https://api.github.com/repos/Meapri/PriType-Swift/releases/latest"
+    private let apiURL = "https://api.github.com/repos/Meapri/PriType-Swift/releases?per_page=100"
     
     /// Minimum interval between automatic checks (24 hours)
     private let checkInterval: TimeInterval = 24 * 60 * 60
@@ -148,25 +150,23 @@ public final class UpdateChecker: @unchecked Sendable {
             }
             
             let decoder = JSONDecoder()
-            let release = try decoder.decode(GitHubRelease.self, from: data)
-            
-            // Skip pre-releases
-            if release.prerelease {
-                DebugLogger.log("UpdateChecker: Latest release is pre-release, treating as up-to-date")
+            let releases = try decoder.decode([GitHubRelease].self, from: data)
+            guard let release = Self.latestStableRelease(in: releases) else {
+                DebugLogger.log("UpdateChecker: No stable release found")
                 ConfigurationManager.shared.lastUpdateCheck = Date()
                 return .upToDate
             }
             
             // Compare versions
-            let latestVersion = normalizeVersion(release.tagName)
-            let currentVersion = normalizeVersion(AboutInfo.version)
+            let latestVersion = Self.normalizeVersion(release.tagName)
+            let currentVersion = Self.normalizeVersion(AboutInfo.version)
             
-            DebugLogger.log("UpdateChecker: current=\(currentVersion) latest=\(latestVersion)")
+            DebugLogger.log("UpdateChecker: channel=stable current=\(currentVersion) latest=\(latestVersion)")
             
             // Record successful check time
             ConfigurationManager.shared.lastUpdateCheck = Date()
             
-            if isNewer(latestVersion, than: currentVersion) {
+            if Self.isNewer(latestVersion, than: currentVersion) {
                 // Find PKG asset download URL
                 let pkgAsset = release.assets.first { $0.name.hasSuffix(".pkg") }
                 
@@ -192,19 +192,41 @@ public final class UpdateChecker: @unchecked Sendable {
     // MARK: - Version Comparison
     
     /// Normalize a version string by stripping leading "v" or "V"
-    private func normalizeVersion(_ version: String) -> String {
+    static func normalizeVersion(_ version: String) -> String {
         var v = version.trimmingCharacters(in: .whitespaces)
         if v.hasPrefix("v") || v.hasPrefix("V") {
             v = String(v.dropFirst())
         }
+        if let prereleaseStart = v.firstIndex(of: "-") {
+            v = String(v[..<prereleaseStart])
+        }
+        if let metadataStart = v.firstIndex(of: "+") {
+            v = String(v[..<metadataStart])
+        }
         return v
     }
     
+    /// Selects the highest stable release by numeric version, ignoring beta/pre-release tags.
+    static func latestStableRelease(in releases: [GitHubRelease]) -> GitHubRelease? {
+        releases
+            .filter { release in
+                !release.draft &&
+                ReleaseChannel.detect(
+                    tagName: release.tagName,
+                    name: release.name,
+                    prerelease: release.prerelease
+                ) == .stable
+            }
+            .max { lhs, rhs in
+                isNewer(normalizeVersion(rhs.tagName), than: normalizeVersion(lhs.tagName))
+            }
+    }
+
     /// Check if `latest` is newer than `current` using numeric comparison
     ///
     /// Uses Foundation's `.numeric` comparison option which correctly handles
     /// dotted version strings (e.g. "2.1" > "2.0.0", "2.10" > "2.9")
-    private func isNewer(_ latest: String, than current: String) -> Bool {
+    static func isNewer(_ latest: String, than current: String) -> Bool {
         return latest.compare(current, options: .numeric) == .orderedDescending
     }
 }

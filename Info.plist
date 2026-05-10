@@ -24,6 +24,8 @@
 	<string>2.6.4</string>
 	<key>CFBundleVersion</key>
 	<string>30</string>
+	<key>PriTypeReleaseChannel</key>
+	<string>stable</string>
 	<key>ComponentInputModeDict</key>
 	<dict>
 		<key>tsInputModeListKey</key>
