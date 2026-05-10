@@ -310,15 +310,9 @@ public class PriTypeInputController: IMKInputController {
             return false
         }
 
-        let focusedSecureState = ClientContextDetector.focusedSecureTextState()
-        if focusedSecureState == .secureTextField {
-            DebugLogger.log("Secure Input: focused secure text field in '\(bundleId)', passing through")
+        if hasInvalidSelection && !context.hasTextInputCapability {
+            DebugLogger.log("Secure Input: invalid selection with no text capability in '\(bundleId)', passing through")
             return true
-        }
-
-        if hasGlobalSecureInput, focusedSecureState == .nonSecureTextInput {
-            DebugLogger.log("Secure Input: global flag stale in '\(bundleId)' — focused field is not secure")
-            return false
         }
 
         let validAttrs = client.validAttributesForMarkedText() ?? []
@@ -329,6 +323,17 @@ public class PriTypeInputController: IMKInputController {
 
         if hasInvalidSelection {
             DebugLogger.log("Secure Input: transient invalid selection in '\(bundleId)' with markedText support — continuing")
+            return false
+        }
+
+        let focusedSecureState = ClientContextDetector.focusedSecureTextState()
+        if focusedSecureState == .secureTextField {
+            DebugLogger.log("Secure Input: focused secure text field in '\(bundleId)', passing through")
+            return true
+        }
+
+        if hasGlobalSecureInput, focusedSecureState == .nonSecureTextInput {
+            DebugLogger.log("Secure Input: global flag stale in '\(bundleId)' — focused field is not secure")
             return false
         }
 
