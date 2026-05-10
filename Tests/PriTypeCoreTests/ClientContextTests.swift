@@ -64,6 +64,57 @@ struct ClientContextTests {
         #expect(!unknownCtx.isFinder)
         #expect(!unknownCtx.shouldUseImmediateMode)
     }
+
+    @Test("Game compatibility mode does not imply Finder immediate mode")
+    func gameCompatibilityDoesNotUseImmediateMode() {
+        let gameCtx = ClientContext(
+            bundleId: "com.nexon.maplestory.kr.v1",
+            hasTextInputCapability: true,
+            isLikelyDesktopArea: false,
+            usesGameCompatibilityMode: true
+        )
+
+        #expect(gameCtx.usesGameCompatibilityMode)
+        #expect(!gameCtx.isFinder)
+        #expect(!gameCtx.shouldUseImmediateMode)
+    }
+
+    @Test("Game compatibility detects known Wine and game runtime markers")
+    func gameCompatibilityMarkers() {
+        let markerCases: [(bundleId: String, name: String?, bundlePath: String?, executablePath: String?)] = [
+            ("com.nexon.maplestory.kr.v1", nil, nil, nil),
+            ("com.example.Game", "MapleStory", nil, nil),
+            ("com.example.Game", nil, "/Applications/CrossOver.app/Contents/SharedSupport/Bottles/Game.app", nil),
+            ("com.example.Game", nil, nil, "/Users/me/Games/Wine/game.exe"),
+            ("com.example.Game", nil, "/Applications/Whisky.app/Contents/Resources/game.app", nil)
+        ]
+
+        for markerCase in markerCases {
+            #expect(ClientContextDetector.usesGameCompatibilityMode(
+                bundleId: markerCase.bundleId,
+                localizedName: markerCase.name,
+                bundlePath: markerCase.bundlePath,
+                executablePath: markerCase.executablePath
+            ))
+        }
+    }
+
+    @Test("Game compatibility ignores normal native apps")
+    func gameCompatibilityIgnoresNormalApps() {
+        #expect(!ClientContextDetector.usesGameCompatibilityMode(
+            bundleId: "com.apple.TextEdit",
+            localizedName: "TextEdit",
+            bundlePath: "/System/Applications/TextEdit.app",
+            executablePath: "/System/Applications/TextEdit.app/Contents/MacOS/TextEdit"
+        ))
+
+        #expect(!ClientContextDetector.usesGameCompatibilityMode(
+            bundleId: "com.google.Chrome",
+            localizedName: "Google Chrome",
+            bundlePath: "/Applications/Google Chrome.app",
+            executablePath: "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+        ))
+    }
     
     // MARK: - Resolution / Desktop Detection (migrated from ResolutionTests.swift)
     

@@ -129,20 +129,38 @@ public struct ClientContextDetector: Sendable {
         bundleId: String,
         app: NSRunningApplication?
     ) -> Bool {
+        usesGameCompatibilityMode(
+            bundleId: bundleId,
+            localizedName: app?.localizedName,
+            bundlePath: app?.bundleURL?.path,
+            executablePath: app?.executableURL?.path
+        )
+    }
+
+    static func usesGameCompatibilityMode(
+        bundleId: String,
+        localizedName: String?,
+        bundlePath: String?,
+        executablePath: String?
+    ) -> Bool {
         let hints = [
             bundleId,
-            app?.localizedName ?? "",
-            app?.bundleURL?.path ?? "",
-            app?.executableURL?.path ?? ""
+            localizedName ?? "",
+            bundlePath ?? "",
+            executablePath ?? ""
         ]
         .joined(separator: " ")
         .lowercased()
 
-        return hints.contains("maplestory") ||
-            hints.contains("nexon") ||
-            hints.contains("wine") ||
-            hints.contains("crossover") ||
-            hints.contains("whisky")
+        let compatibilityMarkers = [
+            "maplestory",
+            "nexon",
+            "wine",
+            "crossover",
+            "whisky"
+        ]
+
+        return compatibilityMarkers.contains { hints.contains($0) }
     }
 
     /// Detects whether the frontmost focused accessibility element is a secure text field.
@@ -173,7 +191,7 @@ public struct ClientContextDetector: Sendable {
             return .unknown
         }
 
-        let focusedElement = focusedValue as! AXUIElement
+        let focusedElement = (focusedValue as! AXUIElement)
         let role = stringAttribute(kAXRoleAttribute as CFString, from: focusedElement)
         let subrole = stringAttribute(kAXSubroleAttribute as CFString, from: focusedElement)
 
