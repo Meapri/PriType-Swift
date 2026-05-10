@@ -42,8 +42,23 @@ func separator(_ title: String, emoji: String = "─") {
     print(String(repeating: "─", count: 50))
 }
 
+func benchmarkVersion() -> String {
+    let infoPlistURL = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
+        .appendingPathComponent("Info.plist")
+
+    guard let data = try? Data(contentsOf: infoPlistURL),
+          let plist = try? PropertyListSerialization.propertyList(from: data, format: nil),
+          let dictionary = plist as? [String: Any],
+          let version = dictionary["CFBundleShortVersionString"] as? String,
+          !version.isEmpty else {
+        return AboutInfo.version
+    }
+
+    return version
+}
+
 print(String(repeating: "=", count: 60))
-print("  PriType v2.6.1 성능/안전성 벤치마크")
+print("  PriType v\(benchmarkVersion()) 성능/안전성 벤치마크")
 print(String(repeating: "=", count: 60))
 let baseMemory = memoryUsageMB()
 print("\n📊 초기 메모리: \(String(format: "%.1f", baseMemory))MB")
