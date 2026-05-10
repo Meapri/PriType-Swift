@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Localization support with L10n.swift for type-safe string access
+- Korean (ko) and English (en) Localizable.strings
+- Multi-monitor Finder heuristic tests
+- SwiftLint configuration (.swiftlint.yml)
+- Extended KeyCode constants with helper methods
+
+### Changed
+- InputSourceManager refactored to TIS API only (removed shell commands)
+- HangulComposer separated TextConvenience logic to dedicated handler
+- Adapter classes refactored with BaseClientAdapter inheritance
+- Finder detection improved with validAttributesForMarkedText
+
+### Fixed
+- Cmd/Ctrl/Option+Arrow and Fn+Arrow (Home/End/PageUp/PageDown) shortcuts now work correctly during Hangul composition. The in-progress preedit is committed and marked text is cleared before the event is passed to the host application, preventing the shortcut from being ignored or misapplied.
+
+### Security
+- Removed all shell command execution (PlistBuddy, killall cfprefsd)
+- Added -strict-concurrency=complete Swift flag
+
 ## [2.6.5] - 2026-05-10 (Stable)
 
 ### 추가
@@ -35,26 +55,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - PriTypeVerify 통과
 - PriTypeBenchmark 통과
 - 릴리즈 PKG 서명, Apple 공증, 스테이플, Gatekeeper 검증 통과
-
-### Added
-- Localization support with L10n.swift for type-safe string access
-- Korean (ko) and English (en) Localizable.strings
-- Multi-monitor Finder heuristic tests
-- SwiftLint configuration (.swiftlint.yml)
-- Extended KeyCode constants with helper methods
-
-### Changed
-- InputSourceManager refactored to TIS API only (removed shell commands)
-- HangulComposer separated TextConvenience logic to dedicated handler
-- Adapter classes refactored with BaseClientAdapter inheritance
-- Finder detection improved with validAttributesForMarkedText
-
-### Fixed
-- Cmd/Ctrl/Option+Arrow and Fn+Arrow (Home/End/PageUp/PageDown) shortcuts now work correctly during Hangul composition. The in-progress preedit is committed and marked text is cleared before the event is passed to the host application, preventing the shortcut from being ignored or misapplied.
-
-### Security
-- Removed all shell command execution (PlistBuddy, killall cfprefsd)
-- Added -strict-concurrency=complete Swift flag
 
 ## [1.0.0] - 2025-12-11
 
