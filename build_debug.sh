@@ -11,9 +11,12 @@ CONTENTS_DIR="${PAYLOAD_DIR}/${APP_BUNDLE}/Contents"
 MACOS_DIR="${CONTENTS_DIR}/MacOS"
 RESOURCES_DIR="${CONTENTS_DIR}/Resources"
 PKG_OUTPUT="PriTypeV2_Debug.pkg"
+COMPONENT_PLIST="PriTypeV2_components.plist"
 APP_SIGN="Developer ID Application: Chanwoo Park (M4U438VG59)"
 PKG_SIGN="Developer ID Installer: Chanwoo Park (M4U438VG59)"
 KEYCHAIN_PROFILE="PriTypeNotary"
+
+trap 'rm -f "$COMPONENT_PLIST"' EXIT
 
 echo "=========================================="
 echo "    PriType Debug Build & Notarization    "
@@ -47,15 +50,14 @@ echo "Verifying App Signature..."
 codesign -vv -d "$PAYLOAD_DIR/$APP_BUNDLE"
 
 APP_VERSION=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" Info.plist)
-APP_BUILD=$(/usr/libexec/PlistBuddy -c "Print :CFBundleVersion" Info.plist)
 PKG_VERSION="${APP_VERSION}-debug"
 
 echo "[4/6] Building the PKG installer..."
-pkgbuild --analyze --root "$PAYLOAD_DIR" "PriTypeV2_components.plist"
-plutil -replace 0.BundleIsRelocatable -bool NO "PriTypeV2_components.plist"
+pkgbuild --analyze --root "$PAYLOAD_DIR" "$COMPONENT_PLIST"
+plutil -replace 0.BundleIsRelocatable -bool NO "$COMPONENT_PLIST"
 
 pkgbuild --root "$PAYLOAD_DIR" \
-         --component-plist "PriTypeV2_components.plist" \
+         --component-plist "$COMPONENT_PLIST" \
          --install-location "$INSTALL_DIR" \
          --scripts "Packaging/scripts" \
          --identifier "com.meapri.PriTypeV2" \
@@ -63,13 +65,14 @@ pkgbuild --root "$PAYLOAD_DIR" \
          --sign "$PKG_SIGN" \
          "$PKG_OUTPUT"
 
-rm "PriTypeV2_components.plist"
-
 echo "[5/6] Submitting for Notarization..."
 xcrun notarytool submit "$PKG_OUTPUT" --keychain-profile "$KEYCHAIN_PROFILE" --wait
 
 echo "[6/6] Stapling Notarization Ticket..."
 xcrun stapler staple "$PKG_OUTPUT"
+xcrun stapler validate "$PKG_OUTPUT"
+pkgutil --check-signature "$PKG_OUTPUT"
+spctl -a -vv -t install "$PKG_OUTPUT"
 
 echo "=========================================="
 echo "    Done! Debug PKG is ready and notarized."

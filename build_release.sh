@@ -11,15 +11,19 @@ CONTENTS_DIR="${PAYLOAD_DIR}/${APP_BUNDLE}/Contents"
 MACOS_DIR="${CONTENTS_DIR}/MacOS"
 RESOURCES_DIR="${CONTENTS_DIR}/Resources"
 PKG_OUTPUT="PriTypeV2_Release.pkg"
+COMPONENT_PLIST="PriTypeV2_components.plist"
+KEYCHAIN_PROFILE="${KEYCHAIN_PROFILE:-PriTypeNotary}"
+
+trap 'rm -f "$COMPONENT_PLIST"' EXIT
 
 echo "=========================================="
 echo "    PriType Release Build & Packaging     "
 echo "=========================================="
 
-echo "[1/4] Building release..."
+echo "[1/6] Building release..."
 swift build -c release
 
-echo "[2/4] Creating bundle structure..."
+echo "[2/6] Creating bundle structure..."
 rm -rf "$PAYLOAD_DIR"
 mkdir -p "$MACOS_DIR"
 mkdir -p "$RESOURCES_DIR"
@@ -37,41 +41,34 @@ if [ -d "$BUILD_DIR/PriType_PriTypeCore.bundle" ]; then
 fi
 
 # Code Signing the App
-echo "[3/4] Code Signing the .app bundle..."
+echo "[3/6] Code Signing the .app bundle..."
 APP_SIGN_IDENTITY=""
 # Try to find Developer ID Application first
 DEV_ID_APP=$(security find-identity -v -p codesigning | grep "Developer ID Application:" | head -n 1 | awk -F'"' '{print $2}')
 if [ -n "$DEV_ID_APP" ]; then
     APP_SIGN_IDENTITY="$DEV_ID_APP"
-else
-    # Fallback to Apple Development
-    APPLE_DEV_CERT=$(security find-identity -v -p codesigning | grep "Apple Development:" | head -n 1 | awk -F'"' '{print $2}')
-    if [ -n "$APPLE_DEV_CERT" ]; then
-        APP_SIGN_IDENTITY="$APPLE_DEV_CERT"
-    fi
 fi
 
-if [ -n "$APP_SIGN_IDENTITY" ]; then
-    echo "Using App Identity: $APP_SIGN_IDENTITY"
-    codesign --force --options runtime --timestamp --sign "$APP_SIGN_IDENTITY" "$PAYLOAD_DIR/$APP_BUNDLE"
-else
-    echo "Warning: No valid Developer ID Application or Apple Development certificate found."
-    echo "Using ad-hoc signing for the .app (Not suitable for external distribution)."
-    codesign --force --deep --sign - "$PAYLOAD_DIR/$APP_BUNDLE"
+if [ -z "$APP_SIGN_IDENTITY" ]; then
+    echo "Error: Developer ID Application certificate is required for release builds." >&2
+    exit 1
 fi
+
+echo "Using App Identity: $APP_SIGN_IDENTITY"
+codesign --force --options runtime --timestamp --sign "$APP_SIGN_IDENTITY" "$PAYLOAD_DIR/$APP_BUNDLE"
+codesign --verify --strict --verbose=2 "$PAYLOAD_DIR/$APP_BUNDLE"
 
 # Building the PKG
 APP_VERSION=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" Info.plist)
-APP_BUILD=$(/usr/libexec/PlistBuddy -c "Print :CFBundleVersion" Info.plist)
 PKG_VERSION="${APP_VERSION}"
 
-echo "[4/5] Building the PKG installer..."
+echo "[4/6] Building the PKG installer..."
 
 # Disable relocation by generating a component plist
 echo "Generating component plist to disable relocation..."
-pkgbuild --analyze --root "$PAYLOAD_DIR" "PriTypeV2_components.plist"
+pkgbuild --analyze --root "$PAYLOAD_DIR" "$COMPONENT_PLIST"
 # Use plutil to change BundleIsRelocatable to false for the first item
-plutil -replace 0.BundleIsRelocatable -bool NO "PriTypeV2_components.plist"
+plutil -replace 0.BundleIsRelocatable -bool NO "$COMPONENT_PLIST"
 
 PKG_SIGN_IDENTITY=""
 # Try to find Developer ID Installer first
@@ -80,38 +77,30 @@ if [ -n "$DEV_ID_INSTALLER" ]; then
     PKG_SIGN_IDENTITY="$DEV_ID_INSTALLER"
 fi
 
-if [ -n "$PKG_SIGN_IDENTITY" ]; then
-    echo "Using Installer Identity: $PKG_SIGN_IDENTITY"
-    pkgbuild --root "$PAYLOAD_DIR" \
-             --component-plist "PriTypeV2_components.plist" \
-             --install-location "$INSTALL_DIR" \
-             --scripts "Packaging/scripts" \
-             --identifier "com.meapri.PriTypeV2" \
-             --version "$PKG_VERSION" \
-             --sign "$PKG_SIGN_IDENTITY" \
-             "$PKG_OUTPUT"
-else
-    echo "Warning: No valid Developer ID Installer certificate found."
-    echo "Building unsigned PKG."
-    pkgbuild --root "$PAYLOAD_DIR" \
-             --component-plist "PriTypeV2_components.plist" \
-             --install-location "$INSTALL_DIR" \
-             --scripts "Packaging/scripts" \
-             --identifier "com.meapri.PriTypeV2" \
-             --version "$PKG_VERSION" \
-             "$PKG_OUTPUT"
+if [ -z "$PKG_SIGN_IDENTITY" ]; then
+    echo "Error: Developer ID Installer certificate is required for release packages." >&2
+    exit 1
 fi
 
-rm "PriTypeV2_components.plist"
+echo "Using Installer Identity: $PKG_SIGN_IDENTITY"
+pkgbuild --root "$PAYLOAD_DIR" \
+         --component-plist "$COMPONENT_PLIST" \
+         --install-location "$INSTALL_DIR" \
+         --scripts "Packaging/scripts" \
+         --identifier "com.meapri.PriTypeV2" \
+         --version "$PKG_VERSION" \
+         --sign "$PKG_SIGN_IDENTITY" \
+         "$PKG_OUTPUT"
 
-echo "[5/5] Submitting for Notarization..."
-if [ -n "$PKG_SIGN_IDENTITY" ]; then
-    xcrun notarytool submit "$PKG_OUTPUT" --keychain-profile "PriTypeNotary" --wait
-    echo "Stapling Notarization Ticket..."
-    xcrun stapler staple "$PKG_OUTPUT"
-else
-    echo "Skipping notarization because PKG is not signed."
-fi
+echo "[5/6] Submitting for Notarization..."
+xcrun notarytool submit "$PKG_OUTPUT" --keychain-profile "$KEYCHAIN_PROFILE" --wait
+echo "Stapling Notarization Ticket..."
+xcrun stapler staple "$PKG_OUTPUT"
+
+echo "[6/6] Validating signed and notarized package..."
+xcrun stapler validate "$PKG_OUTPUT"
+pkgutil --check-signature "$PKG_OUTPUT"
+spctl -a -vv -t install "$PKG_OUTPUT"
 
 echo "=========================================="
 echo "    Done! PKG created: $PKG_OUTPUT"
