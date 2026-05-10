@@ -116,27 +116,14 @@ struct ClientContextTests {
         ))
     }
 
-    @Test("Secure input policy passes through unknown focused fields when global secure input is active")
-    func secureInputPolicyPassesThroughUnknownGlobalSecureField() {
+    @Test("Secure input policy passes through global secure input")
+    func secureInputPolicyPassesThroughGlobalSecureInput() {
         #expect(SecureInputPolicy.shouldPassThrough(SecureInputSignals(
             bundleId: "com.kakao.KakaoTalkMac",
             hasTextInputCapability: true,
             hasInvalidSelection: false,
             hasGlobalSecureInput: true,
-            hasMarkedTextSupport: true,
-            focusedSecureState: .unknown
-        )))
-    }
-
-    @Test("Secure input policy ignores stale global flag for proven non-secure text fields")
-    func secureInputPolicyIgnoresStaleGlobalFlagForNonSecureTextField() {
-        #expect(!SecureInputPolicy.shouldPassThrough(SecureInputSignals(
-            bundleId: "com.google.Chrome",
-            hasTextInputCapability: true,
-            hasInvalidSelection: false,
-            hasGlobalSecureInput: true,
-            hasMarkedTextSupport: true,
-            focusedSecureState: .nonSecureTextInput
+            hasMarkedTextSupport: true
         )))
     }
 
@@ -147,17 +134,23 @@ struct ClientContextTests {
             hasTextInputCapability: false,
             hasInvalidSelection: true,
             hasGlobalSecureInput: false,
-            hasMarkedTextSupport: false,
-            focusedSecureState: nil
+            hasMarkedTextSupport: false
         )))
 
-        #expect(!SecureInputPolicy.shouldPassThrough(SecureInputSignals(
+        #expect(SecureInputPolicy.shouldPassThrough(SecureInputSignals(
+            bundleId: "com.kakao.KakaoTalkMac",
+            hasTextInputCapability: true,
+            hasInvalidSelection: true,
+            hasGlobalSecureInput: false,
+            hasMarkedTextSupport: true
+        )))
+
+        #expect(SecureInputPolicy.shouldPassThrough(SecureInputSignals(
             bundleId: "com.google.Chrome",
             hasTextInputCapability: true,
             hasInvalidSelection: true,
             hasGlobalSecureInput: false,
-            hasMarkedTextSupport: true,
-            focusedSecureState: nil
+            hasMarkedTextSupport: true
         )))
     }
 
@@ -168,8 +161,7 @@ struct ClientContextTests {
             hasTextInputCapability: true,
             hasInvalidSelection: false,
             hasGlobalSecureInput: false,
-            hasMarkedTextSupport: true,
-            focusedSecureState: .nonSecureTextInput
+            hasMarkedTextSupport: true
         )))
     }
     

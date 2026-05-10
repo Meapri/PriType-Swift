@@ -1,31 +1,19 @@
 import Cocoa
 import InputMethodKit
-import ApplicationServices
-
-// MARK: - SecureTextFocusState
-
-/// Focused text field security state detected through Accessibility.
-public enum SecureTextFocusState: Sendable {
-    case secureTextField
-    case nonSecureTextInput
-    case unknown
-}
 
 // MARK: - SecureInputPolicy
 
 /// Pure policy for deciding whether a secure-input-looking client should bypass IMK composition.
 ///
-/// Password fields can still expose partial IMK capabilities, while Accessibility focus
-/// detection can return `unknown` for Electron, Chromium, KakaoTalk, and system auth panels.
-/// When macOS says Secure Event Input is active and the focused field cannot be proven
-/// non-secure, prefer raw passthrough to avoid password-field beeps and accidental composition.
+/// Password fields can still expose partial IMK capabilities. Avoid Accessibility
+/// probing on the keystroke hot path; prefer raw passthrough whenever the client
+/// selection is unavailable or macOS Secure Event Input is active.
 struct SecureInputSignals: Sendable {
     let bundleId: String
     let hasTextInputCapability: Bool
     let hasInvalidSelection: Bool
     let hasGlobalSecureInput: Bool
     let hasMarkedTextSupport: Bool
-    let focusedSecureState: SecureTextFocusState?
 }
 
 struct SecureInputPolicy: Sendable {
@@ -53,19 +41,10 @@ struct SecureInputPolicy: Sendable {
         }
 
         if signals.hasInvalidSelection {
-            return false
-        }
-
-        guard signals.hasGlobalSecureInput else {
-            return false
-        }
-
-        switch signals.focusedSecureState {
-        case .secureTextField, .unknown, nil:
             return true
-        case .nonSecureTextInput:
-            return false
         }
+
+        return signals.hasGlobalSecureInput
     }
 }
 
@@ -132,7 +111,6 @@ public struct ClientContext: Sendable {
 /// }
 /// ```
 public struct ClientContextDetector: Sendable {
-    
     /// Analyzes an IMKTextInput client and returns its context
     ///
     /// - Parameter client: The text input client to analyze
@@ -218,59 +196,5 @@ public struct ClientContextDetector: Sendable {
         ]
 
         return compatibilityMarkers.contains { hints.contains($0) }
-    }
-
-    /// Detects whether the frontmost focused accessibility element is a secure text field.
-    ///
-    /// `IsSecureEventInputEnabled()` is a process-global signal and can be stale, while
-    /// some password fields still report enough IMK text capability to tempt us into
-    /// composing text. The focused AX element gives the field-level answer when available.
-    public static func focusedSecureTextState() -> SecureTextFocusState {
-        guard let app = NSWorkspace.shared.frontmostApplication else {
-            return .unknown
-        }
-
-        let appElement = AXUIElementCreateApplication(app.processIdentifier)
-        var focusedValue: CFTypeRef?
-        let focusedError = AXUIElementCopyAttributeValue(
-            appElement,
-            kAXFocusedUIElementAttribute as CFString,
-            &focusedValue
-        )
-
-        guard focusedError == .success, let focusedValue else {
-            DebugLogger.log("Secure Input: AX focused element unavailable error=\(focusedError.rawValue)")
-            return .unknown
-        }
-
-        guard CFGetTypeID(focusedValue) == AXUIElementGetTypeID() else {
-            DebugLogger.log("Secure Input: AX focused value is not an element")
-            return .unknown
-        }
-
-        let focusedElement = (focusedValue as! AXUIElement)
-        let role = stringAttribute(kAXRoleAttribute as CFString, from: focusedElement)
-        let subrole = stringAttribute(kAXSubroleAttribute as CFString, from: focusedElement)
-
-        if subrole == (kAXSecureTextFieldSubrole as String) {
-            return .secureTextField
-        }
-
-        if role == (kAXTextFieldRole as String) ||
-            role == (kAXTextAreaRole as String) ||
-            role == (kAXComboBoxRole as String) {
-            return .nonSecureTextInput
-        }
-
-        return .unknown
-    }
-
-    private static func stringAttribute(_ attribute: CFString, from element: AXUIElement) -> String? {
-        var value: CFTypeRef?
-        let error = AXUIElementCopyAttributeValue(element, attribute, &value)
-        guard error == .success else {
-            return nil
-        }
-        return value as? String
     }
 }
