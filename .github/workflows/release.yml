@@ -12,6 +12,8 @@ jobs:
   release:
     name: Build, Sign, Notarize & Release
     runs-on: self-hosted
+    env:
+      DEVELOPER_DIR: /Applications/Xcode.app/Contents/Developer
     
     steps:
     - name: Checkout
@@ -21,28 +23,12 @@ jobs:
       id: version
       run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
     
-    - name: Build Release
-      run: swift build -c release
-    
-    - name: Create App Bundle
+    - name: Validate tag matches Info.plist
       run: |
-        APP_NAME="PriTypeV2"
-        BUILD_DIR=".build/release"
-        PAYLOAD_DIR="Packaging/Payload"
-        CONTENTS_DIR="${PAYLOAD_DIR}/${APP_NAME}.app/Contents"
-        MACOS_DIR="${CONTENTS_DIR}/MacOS"
-        RESOURCES_DIR="${CONTENTS_DIR}/Resources"
-        
-        rm -rf "$PAYLOAD_DIR"
-        mkdir -p "$MACOS_DIR" "$RESOURCES_DIR"
-        
-        cp "$BUILD_DIR/PriType" "$MACOS_DIR/$APP_NAME"
-        cp Info.plist "$CONTENTS_DIR/"
-        cp -R Resources/* "$RESOURCES_DIR/" 2>/dev/null || true
-        cp "AppIcon.icns" "$RESOURCES_DIR/" 2>/dev/null || true
-        cp "icon.tiff" "$RESOURCES_DIR/" 2>/dev/null || true
-        if [ -d "$BUILD_DIR/PriType_PriTypeCore.bundle" ]; then
-            cp -R "$BUILD_DIR/PriType_PriTypeCore.bundle" "$RESOURCES_DIR/"
+        INFO_VERSION=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" Info.plist)
+        if [ "$INFO_VERSION" != "${{ steps.version.outputs.VERSION }}" ]; then
+          echo "Tag version ${{ steps.version.outputs.VERSION }} does not match Info.plist $INFO_VERSION" >&2
+          exit 1
         fi
     
     - name: Import Certificates
@@ -75,31 +61,7 @@ jobs:
         security set-key-partition-list -S apple-tool:,apple:,codesign: \
           -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
     
-    - name: Code Sign App Bundle
-      run: |
-        APP_SIGN_IDENTITY=$(security find-identity -v -p codesigning | grep "Developer ID Application:" | head -n 1 | awk -F'"' '{print $2}')
-        echo "Signing with: $APP_SIGN_IDENTITY"
-        codesign --force --options runtime --timestamp --sign "$APP_SIGN_IDENTITY" "Packaging/Payload/PriTypeV2.app"
-    
-    - name: Build & Sign PKG
-      run: |
-        PKG_SIGN_IDENTITY=$(security find-identity -v | grep "Developer ID Installer:" | head -n 1 | awk -F'"' '{print $2}')
-        
-        pkgbuild --analyze --root Packaging/Payload PriTypeV2_components.plist
-        plutil -replace 0.BundleIsRelocatable -bool NO PriTypeV2_components.plist
-        
-        pkgbuild --root Packaging/Payload \
-                 --component-plist PriTypeV2_components.plist \
-                 --install-location "/Library/Input Methods" \
-                 --scripts Packaging/scripts \
-                 --identifier "com.meapri.PriTypeV2" \
-                 --version "${{ steps.version.outputs.VERSION }}" \
-                 --sign "$PKG_SIGN_IDENTITY" \
-                 PriTypeV2_Release.pkg
-        
-        rm PriTypeV2_components.plist
-    
-    - name: Notarize PKG
+    - name: Store Notary Credentials
       env:
         APPLE_ID: ${{ secrets.APPLE_ID }}
         APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
@@ -109,12 +71,9 @@ jobs:
           --apple-id "$APPLE_ID" \
           --team-id "$APPLE_TEAM_ID" \
           --password "$APPLE_APP_PASSWORD"
-        
-        xcrun notarytool submit PriTypeV2_Release.pkg \
-          --keychain-profile "CI_NOTARY" \
-          --wait
-        
-        xcrun stapler staple PriTypeV2_Release.pkg
+
+    - name: Build, Sign, Notarize and Validate
+      run: KEYCHAIN_PROFILE=CI_NOTARY ./build_release.sh
     
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v2

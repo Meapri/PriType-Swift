@@ -32,4 +32,5 @@ pritype_logs.txt
 
 # Scratch files
 scratch_*.swift
+sim*.swift
 setup_github_secrets.sh

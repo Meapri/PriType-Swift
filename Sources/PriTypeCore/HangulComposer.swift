@@ -118,8 +118,7 @@ public class HangulComposer: @unchecked Sendable {
         self.configuration = configuration
         DebugLogger.log("HangulComposer init")
     }
-    
-    
+
     // MARK: - Public Methods
     
     /// Update the keyboard layout dynamically
@@ -883,7 +882,6 @@ public class HangulComposer: @unchecked Sendable {
         if let rect = getElementCaretPosition(axElement) {
             return rect
         }
-        
 
         DebugLogger.log("Hanja AX: all strategies failed")
         return nil

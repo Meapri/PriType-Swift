@@ -183,7 +183,6 @@ public final class UpdateChecker: @unchecked Sendable {
                 DebugLogger.log("UpdateChecker: Up to date")
                 return .upToDate
             }
-            
         } catch {
             DebugLogger.log("UpdateChecker: Error - \(error.localizedDescription)")
             return .error(error.localizedDescription)

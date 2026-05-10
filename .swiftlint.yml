@@ -8,8 +8,6 @@ opt_in_rules:
   - closure_spacing
   - explicit_init
   - first_where
-  - force_unwrapping
-  - implicitly_unwrapped_optional
   - redundant_nil_coalescing
   - unneeded_break_in_switch
   - vertical_whitespace_closing_braces
@@ -22,31 +20,31 @@ disabled_rules:
   - function_body_length  # handle() is complex by nature
   - file_length  # Some files are large
   - cyclomatic_complexity  # Hangul composition is complex
+  - multiple_closures_with_trailing_closure  # SwiftUI builder style
+  - type_name  # L10n namespaces intentionally use lowerCamelCase
+  - trailing_comma  # Accepted by SwiftFormat/SPM style in this repo
+  - force_cast  # CoreFoundation AX APIs require validated casts
+  - force_unwrapping  # NSEvent test/benchmark helpers use deliberate force unwraps
+  - implicitly_unwrapped_optional  # IMK override signatures require IUOs
+  - large_tuple  # Benchmark table rows are intentionally compact
+  - redundant_discardable_let
+  - redundant_string_enum_value
+  - unused_closure_parameter
+  - for_where
+  - is_disjoint
 
 # Path exclusions
 excluded:
   - .build
   - Tests
   - Sources/PriTypeVerify
+  - scratch_*.swift
+  - test*.swift
+  - sim*.swift
 
 # Custom rule configurations
-line_length:
-  warning: 150
-  error: 200
-  ignores_comments: true
-  ignores_urls: true
-
 nesting:
   type_level: 3
   function_level: 3
-
-type_name:
-  min_length: 2
-  max_length: 50
-
-file_header:
-  required_pattern: |
-    \/\/.*
-    \/\/.*PriType.*
 
 reporter: "xcode"

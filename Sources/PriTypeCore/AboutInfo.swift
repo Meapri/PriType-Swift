@@ -39,4 +39,3 @@ public struct AboutInfo: Sendable {
         alert.runModal()
     }
 }
-

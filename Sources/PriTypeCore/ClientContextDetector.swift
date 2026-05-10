@@ -57,7 +57,6 @@ public struct ClientContext: Sendable {
     public var shouldUseImmediateMode: Bool {
         isFinder && (!hasTextInputCapability || isLikelyDesktopArea)
     }
-    
 }
 
 // MARK: - ClientContextDetector
@@ -94,7 +93,7 @@ public struct ClientContextDetector: Sendable {
         // 2. Capabilities Check (Required for both Finder and standard apps)
         // Check text input capability via validAttributesForMarkedText
         let validAttrs = client.validAttributesForMarkedText() ?? []
-        let hasTextInputCapability = validAttrs.count > 0
+        let hasTextInputCapability = !validAttrs.isEmpty
         
         // 3. SECURE INPUT CHECK is no longer cached here.
         // It is checked dynamically in PriTypeInputController.handle() for better accuracy.
