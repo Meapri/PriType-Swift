@@ -150,6 +150,22 @@ struct HangulComposerTests {
         #expect(delegate.markedText.isEmpty)
     }
 
+    @Test("Return key uses GoodNotes compatibility newline")
+    func returnKeyGoodNotesCompatibility() {
+        let (composer, delegate, _) = makeComposer()
+        composer.markKeystroke(bundleId: "com.goodnotesapp.x")
+        _ = composer.handle(TestEventFactory.keyEvent(char: "r", keyCode: 15)!, delegate: delegate)
+        _ = composer.handle(TestEventFactory.keyEvent(char: "k", keyCode: 40)!, delegate: delegate)
+
+        let returnEvent = TestEventFactory.keyEvent(char: "\r", keyCode: KeyCode.`return`)!
+        let handled = composer.handle(returnEvent, delegate: delegate)
+
+        #expect(handled, "GoodNotes compatibility should consume Return after direct newline insertion")
+        #expect(delegate.insertedTexts.contains("가"))
+        #expect(delegate.insertedTexts.filter { $0 == "\n" }.count == 1)
+        #expect(delegate.markedText.isEmpty)
+    }
+
     @Test("Return key passes through without composition")
     func returnKeyPassthroughWithoutComposition() {
         let (composer, delegate, _) = makeComposer()

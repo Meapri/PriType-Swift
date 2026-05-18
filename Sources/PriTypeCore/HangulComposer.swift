@@ -211,6 +211,13 @@ public class HangulComposer: @unchecked Sendable {
                 delegate.setMarkedText("")
             }
             localTextBuffer = ""
+
+            if hadComposition && ClientCompatibilityPolicy.needsDirectNewlineAfterReturnCommit(bundleId: lastInputBundleId) {
+                delegate.insertText("\n")
+                DebugLogger.log("Return -> GoodNotes compatibility: inserted newline and consumed original Return")
+                return true
+            }
+
             DebugLogger.log("Return -> committed composition and passed original Return to app (hadComposition=\(hadComposition))")
             return false
         }

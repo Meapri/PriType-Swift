@@ -101,6 +101,16 @@ public struct ClientContext: Sendable {
     }
 }
 
+// MARK: - ClientCompatibilityPolicy
+
+public enum ClientCompatibilityPolicy {
+    private static let goodNotesBundleId = "com.goodnotesapp.x"
+
+    public static func needsDirectNewlineAfterReturnCommit(bundleId: String) -> Bool {
+        bundleId == goodNotesBundleId
+    }
+}
+
 // MARK: - ClientContextDetector
 
 /// Detects and analyzes the context of text input clients

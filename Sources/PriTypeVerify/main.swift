@@ -395,6 +395,19 @@ func verify() {
     }
 
     commit(delegate: delegate, composer: composer)
+    composer.markKeystroke(bundleId: "com.goodnotesapp.x")
+    _ = composer.handle(NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [], timestamp: 0, windowNumber: 0, context: nil, characters: "r", charactersIgnoringModifiers: "r", isARepeat: false, keyCode: 15)!, delegate: delegate)
+    _ = composer.handle(NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [], timestamp: 0, windowNumber: 0, context: nil, characters: "k", charactersIgnoringModifiers: "k", isARepeat: false, keyCode: 40)!, delegate: delegate)
+    let handledGoodNotesReturn = composer.handle(returnEvent, delegate: delegate)
+    if handledGoodNotesReturn && delegate.fullText == "가\n" {
+        print("PASS: GoodNotes compatibility inserted one newline and consumed Return")
+    } else {
+        print("FAIL: GoodNotes Return result handled=\(handledGoodNotesReturn), fullText='\(delegate.fullText)'")
+        exit(1)
+    }
+
+    commit(delegate: delegate, composer: composer)
+    composer.markKeystroke(bundleId: "")
     let handledPlainReturn = composer.handle(returnEvent, delegate: delegate)
     if !handledPlainReturn && delegate.fullText.isEmpty {
         print("PASS: Return without composition passes through")
