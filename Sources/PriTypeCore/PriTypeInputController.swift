@@ -62,6 +62,14 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
             guard !text.isEmpty else { return }
             client.insertText(text, replacementRange: NSRange(location: NSNotFound, length: NSNotFound))
         }
+
+        func insertLineBreak() {
+            if let textInputClient = client as? NSTextInputClient {
+                textInputClient.doCommand(by: #selector(NSResponder.insertNewline(_:)))
+            } else {
+                client.insertText("\n", replacementRange: NSRange(location: NSNotFound, length: NSNotFound))
+            }
+        }
         
         func setMarkedText(_ text: String) {
             // Default: no-op, subclasses override

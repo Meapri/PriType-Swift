@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 수정
+- 조합 중 Return/Enter 처리 시 줄바꿈 문자를 직접 삽입하지 않고 앱의 `insertNewline:` command를 한 번만 호출하도록 변경했습니다. 대부분 앱에서 Enter 액션을 두 번 눌러야 적용되던 문제를 수정합니다.
+
 ## [2.7.1] - 2026-05-18 (Stable)
 
 ### 수정
