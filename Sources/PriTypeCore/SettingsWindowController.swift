@@ -41,11 +41,27 @@ public class SettingsWindowController: NSObject {
         newWindow.backgroundColor = .clear
         newWindow.isOpaque = false
 
-        // Wrap content in NSGlassEffectView for proper Liquid Glass rendering
-        let glassView = NSGlassEffectView()
-        glassView.cornerRadius = 14
-        glassView.contentView = hostingController.view
-        newWindow.contentView = glassView
+        // Use native Liquid Glass on Tahoe and a vibrancy fallback on Sonoma/Sequoia.
+        if #available(macOS 26.0, *) {
+            let glassView = NSGlassEffectView()
+            glassView.cornerRadius = 14
+            glassView.contentView = hostingController.view
+            newWindow.contentView = glassView
+        } else {
+            let visualEffectView = NSVisualEffectView()
+            visualEffectView.material = .hudWindow
+            visualEffectView.blendingMode = .behindWindow
+            visualEffectView.state = .active
+            visualEffectView.addSubview(hostingController.view)
+            hostingController.view.translatesAutoresizingMaskIntoConstraints = false
+            NSLayoutConstraint.activate([
+                hostingController.view.leadingAnchor.constraint(equalTo: visualEffectView.leadingAnchor),
+                hostingController.view.trailingAnchor.constraint(equalTo: visualEffectView.trailingAnchor),
+                hostingController.view.topAnchor.constraint(equalTo: visualEffectView.topAnchor),
+                hostingController.view.bottomAnchor.constraint(equalTo: visualEffectView.bottomAnchor)
+            ])
+            newWindow.contentView = visualEffectView
+        }
 
         // Set proper size to avoid truncation
         newWindow.setContentSize(NSSize(width: PriTypeConfig.settingsWindowWidth, height: PriTypeConfig.settingsWindowHeight))
@@ -110,200 +126,10 @@ struct SettingsView: View {
                 .zIndex(1)
 
             ScrollView(.vertical, showsIndicators: false) {
-                GlassEffectContainer(spacing: 16) {
-                    VStack(alignment: .leading, spacing: 24) {
-                        // Keyboard Layout Section
-                        SettingsSection(
-                            title: L10n.keyboard.title,
-                            icon: "keyboard"
-                        ) {
-                            VStack(spacing: 2) {
-                                ForEach(keyboardOptions, id: \.0) { option in
-                                    SelectionRow(
-                                        title: option.1,
-                                        isSelected: selectedKeyboard == option.0,
-                                        action: { selectedKeyboard = option.0 }
-                                    )
-                                }
-                            }
-                        }
-                        .onChange(of: selectedKeyboard) { _, newValue in
-                            ConfigurationManager.shared.keyboardId = newValue
-                        }
-
-                        SettingsNoticeRow(
-                            icon: "capslock",
-                            text: L10n.keyBinding.capsLockSummary
-                        )
-
-                        CapsLockStatusRow(
-                            isEnabled: capsLockSwitchEnabled,
-                            openSettings: openInputSourceSettings
-                        )
-
-                        // Key Binding Section (replaces legacy Toggle Key preset)
-                        SettingsSection(
-                            title: L10n.keyBinding.title,
-                            icon: "command"
-                        ) {
-                            VStack(spacing: 0) {
-                                KeyRecorderRow(
-                                    label: L10n.keyBinding.toggleKey,
-                                    icon: "globe",
-                                    binding: $toggleKeyBinding,
-                                    conflictBinding: hanjaKeyBinding,
-                                    hasConflict: $hasKeyConflict,
-                                    isDisabled: capsLockSwitchEnabled,
-                                    onCapsLockBlocked: { showCapsLockBlockedAlert = true }
-                                )
-
-                                Divider()
-                                    .opacity(0.2)
-                                    .padding(.horizontal, 12)
-
-                                KeyRecorderRow(
-                                    label: L10n.keyBinding.hanjaKey,
-                                    icon: "character.book.closed",
-                                    binding: $hanjaKeyBinding,
-                                    conflictBinding: toggleKeyBinding,
-                                    hasConflict: $hasKeyConflict,
-                                    isDisabled: false,
-                                    onCapsLockBlocked: { showCapsLockBlockedAlert = true }
-                                )
-
-                                if hasKeyConflict {
-                                    HStack(spacing: 4) {
-                                        Image(systemName: "exclamationmark.triangle.fill")
-                                            .font(.system(size: 11))
-                                            .foregroundStyle(.orange)
-                                        Text(showKeyConflictRestored ? L10n.keyBinding.conflictRestored : L10n.keyBinding.conflict)
-                                            .font(.system(size: 12, weight: .medium))
-                                            .foregroundStyle(.orange)
-                                    }
-                                    .padding(.vertical, 6)
-                                    .padding(.horizontal, 12)
-                                    .transition(.opacity.combined(with: .move(edge: .top)))
-                                }
-
-                            }
-                        }
-                        .onChange(of: toggleKeyBinding) { _, newValue in
-                            if isRestoringKeyBinding {
-                                isRestoringKeyBinding = false
-                                return
-                            }
-                            if newValue == hanjaKeyBinding {
-                                showRestoredConflict()
-                                isRestoringKeyBinding = true
-                                toggleKeyBinding = ConfigurationManager.shared.toggleKeyBinding
-                                return
-                            }
-                            ConfigurationManager.shared.toggleKeyBinding = newValue
-                            clearKeyConflict()
-                        }
-                        .onChange(of: hanjaKeyBinding) { _, newValue in
-                            if isRestoringKeyBinding {
-                                isRestoringKeyBinding = false
-                                return
-                            }
-                            if newValue == toggleKeyBinding {
-                                showRestoredConflict()
-                                isRestoringKeyBinding = true
-                                hanjaKeyBinding = ConfigurationManager.shared.hanjaKeyBinding
-                                return
-                            }
-                            ConfigurationManager.shared.hanjaKeyBinding = newValue
-                            clearKeyConflict()
-                        }
-
-                        // Update Section
-                        SettingsSection(
-                            title: L10n.update.title,
-                            icon: "arrow.triangle.2.circlepath"
-                        ) {
-                            VStack(spacing: 0) {
-                                SettingsToggleRow(
-                                    title: L10n.update.autoCheck,
-                                    icon: "clock.arrow.2.circlepath",
-                                    isOn: $autoUpdateCheckEnabled
-                                )
-
-                                Divider()
-                                    .opacity(0.2)
-                                    .padding(.horizontal, 12)
-
-                                // Manual check button + status
-                                HStack(spacing: 10) {
-                                    Button(action: { checkForUpdates() }) {
-                                        HStack(spacing: 6) {
-                                            if updateStatus == .checking {
-                                                ProgressView()
-                                                    .controlSize(.small)
-                                            } else {
-                                                Image(systemName: "arrow.clockwise")
-                                                    .font(.system(size: 12, weight: .medium))
-                                            }
-                                            Text(L10n.update.checkButton)
-                                                .font(.system(size: 13, weight: .medium))
-                                        }
-                                    }
-                                    .buttonStyle(.bordered)
-                                    .buttonBorderShape(.roundedRectangle(radius: 7))
-                                    .controlSize(.small)
-                                    .disabled(updateStatus == .checking)
-
-                                    Spacer()
-
-                                    // Status indicator
-                                    updateStatusView
-                                }
-                                .padding(.vertical, 10)
-                                .padding(.horizontal, 12)
-                            }
-                        }
-                        .onChange(of: autoUpdateCheckEnabled) { _, newValue in
-                            ConfigurationManager.shared.autoUpdateCheckEnabled = newValue
-                        }
-
-                        // System Section
-                        SettingsSection(
-                            title: L10n.system.title,
-                            icon: "gearshape.2"
-                        ) {
-                            VStack(spacing: 0) {
-                                // Accessibility
-                                HStack(spacing: 10) {
-                                    SettingsRowIcon(systemName: "hand.raised")
-
-                                    Text(L10n.system.accessibility)
-                                        .font(.system(size: 14, weight: .regular))
-                                        .foregroundStyle(.primary)
-
-                                    Spacer()
-
-                                    if isAccessibilityGranted {
-                                        Text(L10n.system.accessibilityGranted)
-                                            .font(.system(size: 12, weight: .semibold))
-                                            .foregroundStyle(.green)
-                                    } else {
-                                        Button(action: { requestAccessibility() }) {
-                                            Text(L10n.system.accessibilityRequest)
-                                                .font(.system(size: 12, weight: .medium))
-                                        }
-                                        .buttonStyle(.bordered)
-                                        .buttonBorderShape(.roundedRectangle(radius: 7))
-                                        .controlSize(.small)
-                                    }
-                                }
-                                .padding(.vertical, 10)
-                                .padding(.horizontal, 12)
-                            }
-                        }
-                    }
+                settingsContent
                     .padding(.top, 16)
                     .padding(.bottom, 16)
                     .padding(.horizontal, 28)
-                }
             }
             .clipped()
 
@@ -330,6 +156,190 @@ struct SettingsView: View {
             Button("OK", role: .cancel) {}
         } message: {
             Text(L10n.keyBinding.capsLockBlockedMessage)
+        }
+    }
+
+    private var settingsContent: some View {
+        VStack(alignment: .leading, spacing: 24) {
+            SettingsSection(
+                title: L10n.keyboard.title,
+                icon: "keyboard"
+            ) {
+                VStack(spacing: 2) {
+                    ForEach(keyboardOptions, id: \.0) { option in
+                        SelectionRow(
+                            title: option.1,
+                            isSelected: selectedKeyboard == option.0,
+                            action: { selectedKeyboard = option.0 }
+                        )
+                    }
+                }
+            }
+            .onChange(of: selectedKeyboard) { _, newValue in
+                ConfigurationManager.shared.keyboardId = newValue
+            }
+
+            SettingsNoticeRow(
+                icon: "capslock",
+                text: L10n.keyBinding.capsLockSummary
+            )
+
+            CapsLockStatusRow(
+                isEnabled: capsLockSwitchEnabled,
+                openSettings: openInputSourceSettings
+            )
+
+            SettingsSection(
+                title: L10n.keyBinding.title,
+                icon: "command"
+            ) {
+                VStack(spacing: 0) {
+                    KeyRecorderRow(
+                        label: L10n.keyBinding.toggleKey,
+                        icon: "globe",
+                        binding: $toggleKeyBinding,
+                        conflictBinding: hanjaKeyBinding,
+                        hasConflict: $hasKeyConflict,
+                        isDisabled: capsLockSwitchEnabled,
+                        onCapsLockBlocked: { showCapsLockBlockedAlert = true }
+                    )
+
+                    Divider()
+                        .opacity(0.2)
+                        .padding(.horizontal, 12)
+
+                    KeyRecorderRow(
+                        label: L10n.keyBinding.hanjaKey,
+                        icon: "character.book.closed",
+                        binding: $hanjaKeyBinding,
+                        conflictBinding: toggleKeyBinding,
+                        hasConflict: $hasKeyConflict,
+                        isDisabled: false,
+                        onCapsLockBlocked: { showCapsLockBlockedAlert = true }
+                    )
+
+                    if hasKeyConflict {
+                        HStack(spacing: 4) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .font(.system(size: 11))
+                                .foregroundStyle(.orange)
+                            Text(showKeyConflictRestored ? L10n.keyBinding.conflictRestored : L10n.keyBinding.conflict)
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundStyle(.orange)
+                        }
+                        .padding(.vertical, 6)
+                        .padding(.horizontal, 12)
+                        .transition(.opacity.combined(with: .move(edge: .top)))
+                    }
+                }
+            }
+            .onChange(of: toggleKeyBinding) { _, newValue in
+                if isRestoringKeyBinding {
+                    isRestoringKeyBinding = false
+                    return
+                }
+                if newValue == hanjaKeyBinding {
+                    showRestoredConflict()
+                    isRestoringKeyBinding = true
+                    toggleKeyBinding = ConfigurationManager.shared.toggleKeyBinding
+                    return
+                }
+                ConfigurationManager.shared.toggleKeyBinding = newValue
+                clearKeyConflict()
+            }
+            .onChange(of: hanjaKeyBinding) { _, newValue in
+                if isRestoringKeyBinding {
+                    isRestoringKeyBinding = false
+                    return
+                }
+                if newValue == toggleKeyBinding {
+                    showRestoredConflict()
+                    isRestoringKeyBinding = true
+                    hanjaKeyBinding = ConfigurationManager.shared.hanjaKeyBinding
+                    return
+                }
+                ConfigurationManager.shared.hanjaKeyBinding = newValue
+                clearKeyConflict()
+            }
+
+            SettingsSection(
+                title: L10n.update.title,
+                icon: "arrow.triangle.2.circlepath"
+            ) {
+                VStack(spacing: 0) {
+                    SettingsToggleRow(
+                        title: L10n.update.autoCheck,
+                        icon: "clock.arrow.2.circlepath",
+                        isOn: $autoUpdateCheckEnabled
+                    )
+
+                    Divider()
+                        .opacity(0.2)
+                        .padding(.horizontal, 12)
+
+                    HStack(spacing: 10) {
+                        Button(action: { checkForUpdates() }) {
+                            HStack(spacing: 6) {
+                                if updateStatus == .checking {
+                                    ProgressView()
+                                        .controlSize(.small)
+                                } else {
+                                    Image(systemName: "arrow.clockwise")
+                                        .font(.system(size: 12, weight: .medium))
+                                }
+                                Text(L10n.update.checkButton)
+                                    .font(.system(size: 13, weight: .medium))
+                            }
+                        }
+                        .buttonStyle(.bordered)
+                        .buttonBorderShape(.roundedRectangle(radius: 7))
+                        .controlSize(.small)
+                        .disabled(updateStatus == .checking)
+
+                        Spacer()
+
+                        updateStatusView
+                    }
+                    .padding(.vertical, 10)
+                    .padding(.horizontal, 12)
+                }
+            }
+            .onChange(of: autoUpdateCheckEnabled) { _, newValue in
+                ConfigurationManager.shared.autoUpdateCheckEnabled = newValue
+            }
+
+            SettingsSection(
+                title: L10n.system.title,
+                icon: "gearshape.2"
+            ) {
+                VStack(spacing: 0) {
+                    HStack(spacing: 10) {
+                        SettingsRowIcon(systemName: "hand.raised")
+
+                        Text(L10n.system.accessibility)
+                            .font(.system(size: 14, weight: .regular))
+                            .foregroundStyle(.primary)
+
+                        Spacer()
+
+                        if isAccessibilityGranted {
+                            Text(L10n.system.accessibilityGranted)
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(.green)
+                        } else {
+                            Button(action: { requestAccessibility() }) {
+                                Text(L10n.system.accessibilityRequest)
+                                    .font(.system(size: 12, weight: .medium))
+                            }
+                            .buttonStyle(.bordered)
+                            .buttonBorderShape(.roundedRectangle(radius: 7))
+                            .controlSize(.small)
+                        }
+                    }
+                    .padding(.vertical, 10)
+                    .padding(.horizontal, 12)
+                }
+            }
         }
     }
 
@@ -566,6 +576,20 @@ struct VisualEffectView: NSViewRepresentable {
     }
 }
 
+private extension View {
+    @ViewBuilder
+    func pritypeGlassSurface(cornerRadius: CGFloat) -> some View {
+        if #available(macOS 26.0, *) {
+            self.glassEffect(.regular, in: .rect(cornerRadius: cornerRadius))
+        } else {
+            self.background(
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .fill(.regularMaterial)
+            )
+        }
+    }
+}
+
 // MARK: - Settings Components (Minimal Glass)
 
 struct SettingsNoticeRow: View {
@@ -588,7 +612,7 @@ struct SettingsNoticeRow: View {
         }
         .padding(.vertical, 9)
         .padding(.horizontal, 12)
-        .glassEffect(.regular, in: .rect(cornerRadius: 12))
+        .pritypeGlassSurface(cornerRadius: 12)
         .overlay(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .stroke(.primary.opacity(0.07), lineWidth: 1)
@@ -632,7 +656,7 @@ struct CapsLockStatusRow: View {
         }
         .padding(.vertical, 10)
         .padding(.horizontal, 12)
-        .glassEffect(.regular, in: .rect(cornerRadius: 12))
+        .pritypeGlassSurface(cornerRadius: 12)
         .overlay(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .stroke(.primary.opacity(0.07), lineWidth: 1)
@@ -681,7 +705,7 @@ struct SettingsSection<Content: View>: View {
                 content
             }
             .padding(.vertical, 4)
-            .glassEffect(.regular, in: .rect(cornerRadius: 14))
+            .pritypeGlassSurface(cornerRadius: 14)
             .overlay(
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
                     .stroke(.primary.opacity(0.07), lineWidth: 1)

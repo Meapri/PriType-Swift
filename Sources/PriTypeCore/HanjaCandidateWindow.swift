@@ -10,7 +10,7 @@ public final class HanjaCandidateWindow: @unchecked Sendable {
     public static let shared = HanjaCandidateWindow()
     
     private var window: NSWindow?
-    private var glassContainer: NSGlassEffectView?
+    private var contentContainer: NSView?
     private var candidates: [HanjaEntry] = []
     private var currentPage = 0
     private let pageSize = 9
@@ -84,11 +84,21 @@ public final class HanjaCandidateWindow: @unchecked Sendable {
             panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
             panel.isReleasedWhenClosed = false
             
-            // Create persistent Liquid Glass container
-            let glass = NSGlassEffectView()
-            glass.cornerRadius = 10
-            panel.contentView = glass
-            self.glassContainer = glass
+            // Create persistent Liquid Glass container on Tahoe, with a
+            // vibrancy fallback for Sonoma/Sequoia.
+            if #available(macOS 26.0, *) {
+                let glass = NSGlassEffectView()
+                glass.cornerRadius = 10
+                panel.contentView = glass
+                self.contentContainer = glass
+            } else {
+                let visualEffectView = NSVisualEffectView()
+                visualEffectView.material = .popover
+                visualEffectView.blendingMode = .behindWindow
+                visualEffectView.state = .active
+                panel.contentView = visualEffectView
+                self.contentContainer = visualEffectView
+            }
             
             self.window = panel
         }
@@ -244,9 +254,22 @@ public final class HanjaCandidateWindow: @unchecked Sendable {
         let hostView = NSHostingView(rootView: view)
         hostView.frame.size = hostView.fittingSize
         
-        // Update Liquid Glass container content
-        glassContainer?.contentView = hostView
-        glassContainer?.frame.size = hostView.fittingSize
+        // Update Liquid Glass/vibrancy container content
+        if #available(macOS 26.0, *), let glassContainer = contentContainer as? NSGlassEffectView {
+            glassContainer.contentView = hostView
+            glassContainer.frame.size = hostView.fittingSize
+        } else if let contentContainer {
+            contentContainer.subviews.forEach { $0.removeFromSuperview() }
+            contentContainer.addSubview(hostView)
+            hostView.translatesAutoresizingMaskIntoConstraints = false
+            NSLayoutConstraint.activate([
+                hostView.leadingAnchor.constraint(equalTo: contentContainer.leadingAnchor),
+                hostView.trailingAnchor.constraint(equalTo: contentContainer.trailingAnchor),
+                hostView.topAnchor.constraint(equalTo: contentContainer.topAnchor),
+                hostView.bottomAnchor.constraint(equalTo: contentContainer.bottomAnchor)
+            ])
+            contentContainer.frame.size = hostView.fittingSize
+        }
         window.setContentSize(hostView.fittingSize)
     }
     
