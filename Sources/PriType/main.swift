@@ -12,6 +12,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
     private var hasLaunchedBefore = false
 
     private func toggleLanguageInputSource() {
+        if ConfigurationManager.shared.capsLockInputSourceSwitchEnabled {
+            DebugLogger.log("PriType toggle ignored because macOS Caps Lock input-source switching is enabled")
+            return
+        }
+
         if let nextMode = InputSourceManager.shared.toggledInputMode(
             fallbackMode: PriTypeInputController.sharedComposer.inputMode
         ) {

@@ -240,6 +240,9 @@ public protocol ConfigurationProviding: AnyObject, Sendable {
     
     /// Whether Control+Space is configured as the toggle key
     var controlSpaceAsToggle: Bool { get }
+
+    /// Whether macOS owns Caps Lock input-source switching.
+    var capsLockInputSourceSwitchEnabled: Bool { get }
     
     /// Whether the system double-space period feature is enabled.
     var doubleSpacePeriodEnabled: Bool { get }
@@ -431,6 +434,29 @@ public final class ConfigurationManager: ConfigurationProviding, @unchecked Send
     /// Use this to conditionally handle Control+Space in the composer.
     public var controlSpaceAsToggle: Bool {
         return toggleKeyBinding.keyCode == 49 && toggleKeyBinding.modifiers == CGEventFlags.maskControl.rawValue
+    }
+
+    /// Mirrors macOS "Use the Caps Lock key to switch to and from ABC".
+    ///
+    /// When this is enabled, PriType should not also run its own language
+    /// toggle key. The system input-source switch becomes the single owner.
+    public var capsLockInputSourceSwitchEnabled: Bool {
+        if let value = CFPreferencesCopyValue(
+            "TISRomanSwitchState" as CFString,
+            kCFPreferencesAnyApplication,
+            kCFPreferencesCurrentUser,
+            kCFPreferencesAnyHost
+        ) {
+            if let number = value as? NSNumber {
+                return number.intValue != 0
+            }
+            if let bool = value as? Bool {
+                return bool
+            }
+        }
+
+        return UserDefaults.standard.object(forKey: "TISRomanSwitchState") != nil
+            && UserDefaults.standard.integer(forKey: "TISRomanSwitchState") != 0
     }
     
     // MARK: - Text Input Features

@@ -363,7 +363,8 @@ public class HangulComposer: @unchecked Sendable {
         
         // Control+Space: Language toggle (only if enabled in settings)
         if event.keyCode == KeyCode.space && event.modifierFlags.contains(.control) 
-            && configuration.controlSpaceAsToggle {
+            && configuration.controlSpaceAsToggle
+            && !configuration.capsLockInputSourceSwitchEnabled {
             DebugLogger.log("Control+Space -> Toggle mode")
             
             // Commit any composition before switching (preserve text)

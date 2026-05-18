@@ -153,6 +153,7 @@ struct SettingsView: View {
                                     binding: $toggleKeyBinding,
                                     conflictBinding: hanjaKeyBinding,
                                     hasConflict: $hasKeyConflict,
+                                    isDisabled: capsLockSwitchEnabled,
                                     onCapsLockBlocked: { showCapsLockBlockedAlert = true }
                                 )
 
@@ -166,6 +167,7 @@ struct SettingsView: View {
                                     binding: $hanjaKeyBinding,
                                     conflictBinding: toggleKeyBinding,
                                     hasConflict: $hasKeyConflict,
+                                    isDisabled: false,
                                     onCapsLockBlocked: { showCapsLockBlockedAlert = true }
                                 )
 
@@ -462,26 +464,7 @@ struct SettingsView: View {
     }
 
     private func refreshCapsLockSwitchState() {
-        capsLockSwitchEnabled = readCapsLockSwitchState()
-    }
-
-    private func readCapsLockSwitchState() -> Bool {
-        if let value = CFPreferencesCopyValue(
-            "TISRomanSwitchState" as CFString,
-            kCFPreferencesAnyApplication,
-            kCFPreferencesCurrentUser,
-            kCFPreferencesAnyHost
-        ) {
-            if let number = value as? NSNumber {
-                return number.intValue != 0
-            }
-            if let bool = value as? Bool {
-                return bool
-            }
-        }
-
-        return UserDefaults.standard.object(forKey: "TISRomanSwitchState") != nil
-            && UserDefaults.standard.integer(forKey: "TISRomanSwitchState") != 0
+        capsLockSwitchEnabled = ConfigurationManager.shared.capsLockInputSourceSwitchEnabled
     }
 
     private func showRestoredConflict() {
@@ -792,6 +775,7 @@ struct KeyRecorderRow: View {
     @Binding var binding: KeyBinding
     let conflictBinding: KeyBinding
     @Binding var hasConflict: Bool
+    let isDisabled: Bool
     let onCapsLockBlocked: () -> Void
 
     @State private var isRecording = false
@@ -810,6 +794,7 @@ struct KeyRecorderRow: View {
             Spacer()
 
             Button(action: {
+                guard !isDisabled else { return }
                 if isRecording {
                     stopRecording()
                 } else {
@@ -838,13 +823,20 @@ struct KeyRecorderRow: View {
             .buttonStyle(.bordered)
             .buttonBorderShape(.capsule)
             .controlSize(.small)
+            .disabled(isDisabled)
             .tint(isRecording ? Color.blue : nil)
             .onHover { hover in
                 isHovering = hover
             }
         }
+        .opacity(isDisabled ? 0.45 : 1)
         .padding(.vertical, 10)
         .padding(.horizontal, 12)
+        .onChange(of: isDisabled) { _, disabled in
+            if disabled {
+                stopRecording()
+            }
+        }
         .onDisappear {
             stopRecording()
         }

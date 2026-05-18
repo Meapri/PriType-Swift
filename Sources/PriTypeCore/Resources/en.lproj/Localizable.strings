@@ -26,7 +26,7 @@
 "keyBinding.conflict" = "Cannot use the same key";
 "keyBinding.conflictRestored" = "Cannot use the same key. Restored the previous setting.";
 "keyBinding.reset" = "Reset to Default";
-"keyBinding.capsLockSummary" = "Caps Lock follows macOS input-source settings. PriType's toggle key works separately.";
+"keyBinding.capsLockSummary" = "When Caps Lock input-source switching is on, PriType's toggle key is disabled.";
 "keyBinding.capsLockStatusTitle" = "Caps Lock input-source switch";
 "keyBinding.capsLockStatusOn" = "On";
 "keyBinding.capsLockStatusOff" = "Off";

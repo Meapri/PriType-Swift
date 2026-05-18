@@ -21,6 +21,7 @@ final class MockConfiguration: ConfigurationProviding, @unchecked Sendable {
     var toggleKey: ToggleKey = .rightCommand
     var rightCommandAsToggle: Bool { true }
     var controlSpaceAsToggle: Bool { false }
+    var capsLockInputSourceSwitchEnabled: Bool { false }
     var doubleSpacePeriodEnabled: Bool { true }
 }
 

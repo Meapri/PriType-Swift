@@ -167,6 +167,10 @@ public final class RightCommandSuppressor: @unchecked Sendable {
         let config = ConfigurationManager.shared
         let toggleBinding = config.toggleKeyBinding
         let hanjaBinding = config.hanjaKeyBinding
+        let priTypeToggleEnabled = !config.capsLockInputSourceSwitchEnabled
+        if !priTypeToggleEnabled {
+            toggleModifierIsDown = false
+        }
         
         // Key recording mode — capture the next key press for settings UI
         if isRecordingKey {
@@ -206,7 +210,7 @@ public final class RightCommandSuppressor: @unchecked Sendable {
             }
             
             // Dynamic toggle key — modifier key, single-key binding
-            if toggleBinding.isModifierKey && toggleBinding.isModifierOnly && keyCode == toggleBinding.keyCode {
+            if priTypeToggleEnabled && toggleBinding.isModifierKey && toggleBinding.isModifierOnly && keyCode == toggleBinding.keyCode {
                 let modifierMask = Self.modifierMask(for: keyCode)
                 let isPressed = flags.contains(modifierMask)
                 
@@ -258,7 +262,7 @@ public final class RightCommandSuppressor: @unchecked Sendable {
         // Handle keyDown
         if type == .keyDown {
             // Regular key (non-modifier) as toggle — single key or combo
-            if keyCode == toggleBinding.keyCode && !toggleBinding.isModifierKey {
+            if priTypeToggleEnabled && keyCode == toggleBinding.keyCode && !toggleBinding.isModifierKey {
                 if toggleBinding.isModifierOnly {
                     // Single regular key as toggle (e.g., F13, Caps Lock via keyDown)
                     DebugLogger.log("RightCommandSuppressor: Regular key toggle (\(toggleBinding.displayName)) - TOGGLE")
@@ -286,7 +290,7 @@ public final class RightCommandSuppressor: @unchecked Sendable {
             
             // When toggle modifier is held, strip its modifier from key events
             // This makes keys act as regular character input, not shortcuts
-            if toggleModifierIsDown && toggleBinding.isModifierKey {
+            if priTypeToggleEnabled && toggleModifierIsDown && toggleBinding.isModifierKey {
                 let modifierMask = Self.modifierMask(for: toggleBinding.keyCode)
                 var newFlags = event.flags
                 newFlags.remove(modifierMask)

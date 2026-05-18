@@ -162,13 +162,18 @@ public final class IOKitManager: @unchecked Sendable {
         let config = ConfigurationManager.shared
         let toggleBinding = config.toggleKeyBinding
         let hanjaBinding = config.hanjaKeyBinding
+        let priTypeToggleEnabled = !config.capsLockInputSourceSwitchEnabled
+        if !priTypeToggleEnabled {
+            toggleKeyIsDown = false
+            anyOtherKeyPressed = false
+        }
         
         // Get HID usages for configured keys
         let toggleUsage = Self.hidUsage(for: toggleBinding.keyCode)
         let hanjaUsage = Self.hidUsage(for: hanjaBinding.keyCode)
 
         // Check for toggle key (only for modifier-only bindings)
-        if toggleBinding.isModifierOnly, let expectedUsage = toggleUsage, usage == expectedUsage {
+        if priTypeToggleEnabled && toggleBinding.isModifierOnly, let expectedUsage = toggleUsage, usage == expectedUsage {
             if pressed {
                 // Toggle key pressed
                 toggleKeyIsDown = true
@@ -214,7 +219,7 @@ public final class IOKitManager: @unchecked Sendable {
                 hanjaKeyIsDown = false
                 DebugLogger.log("IOKitManager: Hanja key UP (\(hanjaBinding.displayName))")
             }
-        } else if toggleKeyIsDown && pressed && usage > 0 && usage < 0xE0 {
+        } else if priTypeToggleEnabled && toggleKeyIsDown && pressed && usage > 0 && usage < 0xE0 {
             // Non-modifier key pressed while toggle key is down
             anyOtherKeyPressed = true
             DebugLogger.log("IOKitManager: Key pressed while toggle key is down (combo)")
