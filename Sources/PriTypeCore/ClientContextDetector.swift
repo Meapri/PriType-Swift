@@ -65,9 +65,6 @@ public struct ClientContext: Sendable {
     /// Whether the client appears to be in a desktop/non-text area (coordinate heuristic)
     public let isLikelyDesktopArea: Bool
 
-    /// Whether the client needs conservative marked-text handling for game/Wine runtimes.
-    public let usesGameCompatibilityMode: Bool
-
     /// Whether this context intentionally skipped client IPC for activation speed.
     public let isLightweight: Bool
 
@@ -75,13 +72,11 @@ public struct ClientContext: Sendable {
         bundleId: String,
         hasTextInputCapability: Bool,
         isLikelyDesktopArea: Bool,
-        usesGameCompatibilityMode: Bool = false,
         isLightweight: Bool = false
     ) {
         self.bundleId = bundleId
         self.hasTextInputCapability = hasTextInputCapability
         self.isLikelyDesktopArea = isLikelyDesktopArea
-        self.usesGameCompatibilityMode = usesGameCompatibilityMode
         self.isLightweight = isLightweight
     }
     
@@ -138,10 +133,6 @@ public struct ClientContextDetector: Sendable {
             bundleId: bundleId,
             hasTextInputCapability: !isFinder,
             isLikelyDesktopArea: isFinder,
-            usesGameCompatibilityMode: usesGameCompatibilityMode(
-                bundleId: bundleId,
-                app: frontmostApp
-            ),
             isLightweight: true
         )
     }
@@ -187,49 +178,7 @@ public struct ClientContextDetector: Sendable {
         return ClientContext(
             bundleId: bundleId,
             hasTextInputCapability: hasTextInputCapability,
-            isLikelyDesktopArea: isLikelyDesktopArea,
-            usesGameCompatibilityMode: usesGameCompatibilityMode(
-                bundleId: bundleId,
-                app: frontmostApp
-            )
+            isLikelyDesktopArea: isLikelyDesktopArea
         )
-    }
-
-    private static func usesGameCompatibilityMode(
-        bundleId: String,
-        app: NSRunningApplication?
-    ) -> Bool {
-        usesGameCompatibilityMode(
-            bundleId: bundleId,
-            localizedName: app?.localizedName,
-            bundlePath: app?.bundleURL?.path,
-            executablePath: app?.executableURL?.path
-        )
-    }
-
-    static func usesGameCompatibilityMode(
-        bundleId: String,
-        localizedName: String?,
-        bundlePath: String?,
-        executablePath: String?
-    ) -> Bool {
-        let hints = [
-            bundleId,
-            localizedName ?? "",
-            bundlePath ?? "",
-            executablePath ?? ""
-        ]
-        .joined(separator: " ")
-        .lowercased()
-
-        let compatibilityMarkers = [
-            "maplestory",
-            "nexon",
-            "wine",
-            "crossover",
-            "whisky"
-        ]
-
-        return compatibilityMarkers.contains { hints.contains($0) }
     }
 }

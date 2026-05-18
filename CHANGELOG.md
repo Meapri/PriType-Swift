@@ -7,9 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.7.2] - 2026-05-18 (Stable)
+
 ### 수정
 - 조합 중 Return/Enter 처리 시 조합을 확정하고 marked text를 명시적으로 정리한 뒤 원래 Return 이벤트를 앱에 그대로 전달하도록 단순화했습니다. 추가 클라이언트 속성 조회나 synthetic key 재전달을 제거해 입력 지연 가능성을 줄였습니다.
 - GoodNotes의 IMK Return 재진입 문제를 알려진 앱 호환성 정책으로 처리합니다. GoodNotes에서 조합 중 Return은 조합을 확정한 뒤 줄바꿈을 직접 삽입하고 원래 Return을 소비해 중복 줄바꿈을 막습니다.
+- MapleStory/Wine 전용 입력 호환 실험 경로를 제거하고 일반 IMK 조합 처리로 되돌렸습니다.
 
 ## [2.7.1] - 2026-05-18 (Stable)
 

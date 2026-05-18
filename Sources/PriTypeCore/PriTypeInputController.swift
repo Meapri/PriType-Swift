@@ -100,22 +100,6 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
         }
     }
 
-    /// Conservative marked-text adapter for game/Wine text bridges.
-    ///
-    /// Some game runtimes leak a standalone initial Jamo marked text as committed
-    /// text, then also accept the later composed syllable. That produces strings
-    /// like "ㅂ박찬우". Suppress only single standalone Jamo preedit while keeping
-    /// normal syllable marked text and final commits intact.
-    private final class GameCompatibilityAdapter: ClientAdapter {
-        override func setMarkedText(_ text: String) {
-            guard !CompositionHelpers.isSingleStandaloneJamo(text) else {
-                DebugLogger.log("GameCompatibility: suppressed standalone jamo marked text")
-                return
-            }
-            super.setMarkedText(text)
-        }
-    }
-    
     /// Immediate mode adapter for non-text contexts (e.g., Finder desktop)
     /// Skips setMarkedText to prevent floating composition window
     private final class ImmediateModeAdapter: BaseClientAdapter {
@@ -132,9 +116,6 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
         if context.shouldUseImmediateMode {
             return ImmediateModeAdapter(client: client)
         }
-        if context.usesGameCompatibilityMode {
-            return GameCompatibilityAdapter(client: client)
-        }
         return ClientAdapter(client: client)
     }
 
@@ -142,10 +123,7 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
         if context.shouldUseImmediateMode {
             return adapter is ImmediateModeAdapter
         }
-        if context.usesGameCompatibilityMode {
-            return adapter is GameCompatibilityAdapter
-        }
-        return adapter is ClientAdapter && !(adapter is GameCompatibilityAdapter)
+        return adapter is ClientAdapter
     }
 
     private func syncRomanKeyboardLayout(for client: IMKTextInput, force: Bool = false) {
@@ -412,10 +390,6 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
         #if DEBUG
         assert(Thread.isMainThread, "IMK commitComposition must run on main thread")
         #endif
-        if let context = currentContext(for: sender), context.usesGameCompatibilityMode, composer.hasActiveComposition {
-            DebugLogger.log("GameCompatibility: ignored lifecycle commitComposition during active composition")
-            return
-        }
         if let client = sender as? IMKTextInput ?? lastClient {
             let adapter = currentAdapter ?? ClientAdapter(client: client)
             composer.forceCommit(delegate: adapter)
