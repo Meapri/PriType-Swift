@@ -64,12 +64,27 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
         }
 
         func insertLineBreak() {
+            if prefersDirectLineBreakInsertion() {
+                DebugLogger.log("Return forwarding: inserting newline text for native text client")
+                client.insertText("\n", replacementRange: NSRange(location: NSNotFound, length: NSNotFound))
+                return
+            }
+
             guard postReturnKeyEvent() else {
                 DebugLogger.log("Return forwarding: CGEvent unavailable, falling back to insertText newline")
                 client.insertText("\n", replacementRange: NSRange(location: NSNotFound, length: NSNotFound))
                 return
             }
             DebugLogger.log("Return forwarding: posted synthetic Return key")
+        }
+
+        private func prefersDirectLineBreakInsertion() -> Bool {
+            let attributes = client.validAttributesForMarkedText() ?? []
+            let selectedRange = client.selectedRange()
+            let markedRange = client.markedRange()
+            let shouldInsert = !attributes.isEmpty && selectedRange.location != NSNotFound
+            DebugLogger.log("Return forwarding: attrs=\(attributes.count) selected=\(selectedRange) marked=\(markedRange) directInsert=\(shouldInsert)")
+            return shouldInsert
         }
 
         private func postReturnKeyEvent() -> Bool {

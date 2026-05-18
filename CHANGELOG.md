@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### 수정
-- 조합 중 Return/Enter 처리 시 조합을 확정한 뒤 실제 Return 키 이벤트를 한 번 재전달하도록 변경했습니다. `insertNewline:` command를 무시하는 앱에서 Enter 액션을 두 번 눌러야 적용되던 문제를 수정합니다.
+- 조합 중 Return/Enter 처리 시 네이티브 텍스트 클라이언트는 줄바꿈 텍스트를 직접 삽입하고, 그 외 브리지/웹 입력 클라이언트는 실제 Return 키 이벤트를 한 번 재전달하도록 변경했습니다. 앱별 번들 하드코딩 없이 GoodNotes 줄바꿈과 카카오톡/코덱스 Enter 액션을 함께 맞춥니다.
 
 ## [2.7.1] - 2026-05-18 (Stable)
 
