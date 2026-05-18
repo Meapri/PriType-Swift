@@ -205,9 +205,14 @@ public class HangulComposer: @unchecked Sendable {
     private func handleSpecialKey(keyCode: UInt16, delegate: HangulComposerDelegate) -> Bool? {
         // Return / Enter
         if keyCode == KeyCode.return || keyCode == KeyCode.numpadEnter {
+            let hadComposition = !context.isEmpty()
             commitComposition(delegate: delegate)
             localTextBuffer = ""
-            return false  // Let system insert newline
+            guard hadComposition else {
+                return false  // Let the app handle Return actions when PriType has no composition.
+            }
+            delegate.insertLineBreak()
+            return true
         }
         
         // Escape - only consume if there's an active composition to cancel

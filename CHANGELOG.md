@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.7.1] - 2026-05-18 (Stable)
+
+### 수정
+- 한글 조합 중 Return/Enter를 눌렀을 때 일부 앱에서 줄바꿈이 두 번 입력되던 문제를 수정했습니다.
+- 조합 중 Enter는 PriType이 조합을 확정하고 줄바꿈을 한 번만 삽입한 뒤 원래 Enter 이벤트를 소비합니다.
+- 조합이 없는 상태의 Enter는 기존처럼 앱에 그대로 전달합니다.
+
+### 호환성
+- 최소 지원 버전을 macOS 14.0 Sonoma로 낮췄습니다.
+- macOS 26 Tahoe 전용 Liquid Glass API는 Tahoe 이상에서만 사용하고, Sonoma/Sequoia에서는 기본 vibrancy fallback을 사용하도록 정리했습니다.
+
+### 문서
+- Release 빌드 기준으로 벤치마크를 다시 측정하고 `BENCHMARK.md`를 갱신했습니다.
+- README를 현재 설치 방식, Caps Lock 전환 정책, Sonoma 지원 기준에 맞게 정리했습니다.
+
+### 검증
+- `swift build -c release`
+- `swift run -c release PriTypeVerify`
+- `swift build -c debug --product PriType`
+- PriTypeBenchmark 실행 및 macOS 최소 버전 `14.0` 확인
+
 ## [2.7] - 2026-05-18 (Stable)
 
 ### 핵심 변경

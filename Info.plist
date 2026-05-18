@@ -21,9 +21,9 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>2.7</string>
+	<string>2.7.1</string>
 	<key>CFBundleVersion</key>
-	<string>35</string>
+	<string>36</string>
 	<key>InputMethodConnectionName</key>
 	<string>PriType_InputString_v2</string>
 	<key>InputMethodServerControllerClass</key>

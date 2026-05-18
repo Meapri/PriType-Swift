@@ -30,6 +30,10 @@ class MockDelegate: HangulComposerDelegate {
         
         print("Inserted: '\(text)'")
     }
+
+    func insertLineBreak() {
+        insertText("\n")
+    }
     
     func setMarkedText(_ text: String) {
         markedText = text
@@ -377,8 +381,34 @@ func verify() {
     composer.updateKeyboardLayout(id: originalLayout)
     print("PASS: Layout restored to '\(originalLayout)'")
     
-    // Test 13: Arrow key commits composition
-    print("\nTest 13: Arrow key commits composition")
+    // Test 13: Return key commits composition and inserts exactly one newline
+    print("\nTest 13: Return key commits composition once")
+    commit(delegate: delegate, composer: composer)
+
+    _ = composer.handle(NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [], timestamp: 0, windowNumber: 0, context: nil, characters: "r", charactersIgnoringModifiers: "r", isARepeat: false, keyCode: 15)!, delegate: delegate)
+    _ = composer.handle(NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [], timestamp: 0, windowNumber: 0, context: nil, characters: "k", charactersIgnoringModifiers: "k", isARepeat: false, keyCode: 40)!, delegate: delegate)
+
+    let returnEvent = NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [], timestamp: 0, windowNumber: 0, context: nil, characters: "\r", charactersIgnoringModifiers: "\r", isARepeat: false, keyCode: KeyCode.return)!
+    let handledReturn = composer.handle(returnEvent, delegate: delegate)
+
+    if handledReturn && delegate.fullText == "가\n" {
+        print("PASS: Return committed composition and inserted one newline")
+    } else {
+        print("FAIL: Return result handled=\(handledReturn), fullText='\(delegate.fullText)'")
+        exit(1)
+    }
+
+    commit(delegate: delegate, composer: composer)
+    let handledPlainReturn = composer.handle(returnEvent, delegate: delegate)
+    if !handledPlainReturn && delegate.fullText.isEmpty {
+        print("PASS: Return without composition passes through")
+    } else {
+        print("FAIL: Return without composition should pass through, handled=\(handledPlainReturn), fullText='\(delegate.fullText)'")
+        exit(1)
+    }
+
+    // Test 14: Arrow key commits composition
+    print("\nTest 14: Arrow key commits composition")
     commit(delegate: delegate, composer: composer)
     
     // Type "가"
@@ -401,8 +431,8 @@ func verify() {
         print("INFO: insertedText = '\(delegate.insertedText)' (may have been committed)")
     }
     
-    // Test 14: Edge Case - Arrow Keys Clear localTextBuffer
-    print("\nTest 14: Arrow Keys clear localTextBuffer")
+    // Test 15: Edge Case - Arrow Keys Clear localTextBuffer
+    print("\nTest 15: Arrow Keys clear localTextBuffer")
     commit(delegate: delegate, composer: composer)
     
     // Switch to English mode
@@ -432,8 +462,8 @@ func verify() {
         exit(1)
     }
     
-    // Test 15: Edge Case - forceCommit Clears localTextBuffer
-    print("\nTest 15: forceCommit clears localTextBuffer")
+    // Test 16: Edge Case - forceCommit Clears localTextBuffer
+    print("\nTest 16: forceCommit clears localTextBuffer")
     _ = composer.handle(NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [], timestamp: 0, windowNumber: 0, context: nil, characters: "C", charactersIgnoringModifiers: "C", isARepeat: false, keyCode: 8)!, delegate: delegate)
     
     if composer.localTextBuffer == "C" {
@@ -457,8 +487,8 @@ func verify() {
         exit(1)
     }
 
-    // Test 16: Edge Case - System Shortcuts Clear localTextBuffer
-    print("\nTest 16: System Shortcuts (Cmd+V) clear localTextBuffer")
+    // Test 17: Edge Case - System Shortcuts Clear localTextBuffer
+    print("\nTest 17: System Shortcuts (Cmd+V) clear localTextBuffer")
     _ = composer.handle(NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [], timestamp: 0, windowNumber: 0, context: nil, characters: "D", charactersIgnoringModifiers: "D", isARepeat: false, keyCode: 2)!, delegate: delegate)
     
     if composer.localTextBuffer == "D" {
@@ -485,6 +515,7 @@ func commit(delegate: MockDelegate, composer: HangulComposer) {
     composer.reset(delegate: delegate)
     delegate.insertedText = ""
     delegate.markedText = ""
+    delegate.fullText = ""
 }
 
 // MARK: - Resolution & Multi-Monitor Tests
