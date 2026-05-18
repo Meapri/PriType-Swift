@@ -211,6 +211,7 @@ public class HangulComposer: @unchecked Sendable {
             guard hadComposition else {
                 return false  // Let the app handle Return actions when PriType has no composition.
             }
+            DebugLogger.log("Return with composition -> commit and forward one Return action")
             delegate.insertLineBreak()
             return true
         }

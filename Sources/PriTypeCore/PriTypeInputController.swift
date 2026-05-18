@@ -64,11 +64,24 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
         }
 
         func insertLineBreak() {
-            if let textInputClient = client as? NSTextInputClient {
-                textInputClient.doCommand(by: #selector(NSResponder.insertNewline(_:)))
-            } else {
+            guard postReturnKeyEvent() else {
+                DebugLogger.log("Return forwarding: CGEvent unavailable, falling back to insertText newline")
                 client.insertText("\n", replacementRange: NSRange(location: NSNotFound, length: NSNotFound))
+                return
             }
+            DebugLogger.log("Return forwarding: posted synthetic Return key")
+        }
+
+        private func postReturnKeyEvent() -> Bool {
+            guard let source = CGEventSource(stateID: .hidSystemState),
+                  let keyDown = CGEvent(keyboardEventSource: source, virtualKey: CGKeyCode(KeyCode.return), keyDown: true),
+                  let keyUp = CGEvent(keyboardEventSource: source, virtualKey: CGKeyCode(KeyCode.return), keyDown: false) else {
+                return false
+            }
+
+            keyDown.post(tap: .cghidEventTap)
+            keyUp.post(tap: .cghidEventTap)
+            return true
         }
         
         func setMarkedText(_ text: String) {
