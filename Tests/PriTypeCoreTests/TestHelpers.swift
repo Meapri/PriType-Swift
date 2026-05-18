@@ -42,12 +42,6 @@ final class MockComposerDelegate: HangulComposerDelegate {
         fullText.append(text)
     }
 
-    func insertLineBreak() {
-        insertedTexts.append("\n")
-        markedText = ""
-        fullText.append("\n")
-    }
-    
     func setMarkedText(_ text: String) {
         markedText = text
         if backspaceCompositionUpdateDepth > 0 {

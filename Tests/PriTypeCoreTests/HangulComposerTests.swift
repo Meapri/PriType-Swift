@@ -144,9 +144,10 @@ struct HangulComposerTests {
         let returnEvent = TestEventFactory.keyEvent(char: "\r", keyCode: KeyCode.`return`)!
         let handled = composer.handle(returnEvent, delegate: delegate)
         
-        #expect(handled, "Return should be consumed when composition is active")
+        #expect(!handled, "Return should pass through after committing composition")
         #expect(delegate.insertedTexts.contains("가"))
-        #expect(delegate.insertedTexts.filter { $0 == "\n" }.count == 1)
+        #expect(delegate.insertedTexts.filter { $0 == "\n" }.isEmpty)
+        #expect(delegate.markedText.isEmpty)
     }
 
     @Test("Return key passes through without composition")

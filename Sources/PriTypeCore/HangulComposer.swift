@@ -207,13 +207,12 @@ public class HangulComposer: @unchecked Sendable {
         if keyCode == KeyCode.return || keyCode == KeyCode.numpadEnter {
             let hadComposition = !context.isEmpty()
             commitComposition(delegate: delegate)
-            localTextBuffer = ""
-            guard hadComposition else {
-                return false  // Let the app handle Return actions when PriType has no composition.
+            if hadComposition {
+                delegate.setMarkedText("")
             }
-            DebugLogger.log("Return with composition -> commit and forward one Return action")
-            delegate.insertLineBreak()
-            return true
+            localTextBuffer = ""
+            DebugLogger.log("Return -> committed composition and passed original Return to app (hadComposition=\(hadComposition))")
+            return false
         }
         
         // Escape - only consume if there's an active composition to cancel

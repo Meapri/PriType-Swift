@@ -62,42 +62,6 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
             guard !text.isEmpty else { return }
             client.insertText(text, replacementRange: NSRange(location: NSNotFound, length: NSNotFound))
         }
-
-        func insertLineBreak() {
-            if prefersDirectLineBreakInsertion() {
-                DebugLogger.log("Return forwarding: inserting newline text for native text client")
-                client.insertText("\n", replacementRange: NSRange(location: NSNotFound, length: NSNotFound))
-                return
-            }
-
-            guard postReturnKeyEvent() else {
-                DebugLogger.log("Return forwarding: CGEvent unavailable, falling back to insertText newline")
-                client.insertText("\n", replacementRange: NSRange(location: NSNotFound, length: NSNotFound))
-                return
-            }
-            DebugLogger.log("Return forwarding: posted synthetic Return key")
-        }
-
-        private func prefersDirectLineBreakInsertion() -> Bool {
-            let attributes = client.validAttributesForMarkedText() ?? []
-            let selectedRange = client.selectedRange()
-            let markedRange = client.markedRange()
-            let shouldInsert = !attributes.isEmpty && selectedRange.location != NSNotFound
-            DebugLogger.log("Return forwarding: attrs=\(attributes.count) selected=\(selectedRange) marked=\(markedRange) directInsert=\(shouldInsert)")
-            return shouldInsert
-        }
-
-        private func postReturnKeyEvent() -> Bool {
-            guard let source = CGEventSource(stateID: .hidSystemState),
-                  let keyDown = CGEvent(keyboardEventSource: source, virtualKey: CGKeyCode(KeyCode.return), keyDown: true),
-                  let keyUp = CGEvent(keyboardEventSource: source, virtualKey: CGKeyCode(KeyCode.return), keyDown: false) else {
-                return false
-            }
-
-            keyDown.post(tap: .cghidEventTap)
-            keyUp.post(tap: .cghidEventTap)
-            return true
-        }
         
         func setMarkedText(_ text: String) {
             // Default: no-op, subclasses override

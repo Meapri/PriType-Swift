@@ -31,10 +31,6 @@ class MockDelegate: HangulComposerDelegate {
         print("Inserted: '\(text)'")
     }
 
-    func insertLineBreak() {
-        insertText("\n")
-    }
-    
     func setMarkedText(_ text: String) {
         markedText = text
         print("Marked: '\(text)'")
@@ -381,8 +377,8 @@ func verify() {
     composer.updateKeyboardLayout(id: originalLayout)
     print("PASS: Layout restored to '\(originalLayout)'")
     
-    // Test 13: Return key commits composition and inserts exactly one newline
-    print("\nTest 13: Return key commits composition once")
+    // Test 13: Return key commits composition and passes original Return through
+    print("\nTest 13: Return key commits composition and passes through")
     commit(delegate: delegate, composer: composer)
 
     _ = composer.handle(NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [], timestamp: 0, windowNumber: 0, context: nil, characters: "r", charactersIgnoringModifiers: "r", isARepeat: false, keyCode: 15)!, delegate: delegate)
@@ -391,8 +387,8 @@ func verify() {
     let returnEvent = NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [], timestamp: 0, windowNumber: 0, context: nil, characters: "\r", charactersIgnoringModifiers: "\r", isARepeat: false, keyCode: KeyCode.return)!
     let handledReturn = composer.handle(returnEvent, delegate: delegate)
 
-    if handledReturn && delegate.fullText == "가\n" {
-        print("PASS: Return committed composition and inserted one newline")
+    if !handledReturn && delegate.fullText == "가" {
+        print("PASS: Return committed composition and passed original Return through")
     } else {
         print("FAIL: Return result handled=\(handledReturn), fullText='\(delegate.fullText)'")
         exit(1)

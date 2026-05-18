@@ -23,12 +23,6 @@ public protocol HangulComposerDelegate: AnyObject {
     /// - Parameter text: The text to insert (already composed Hangul syllables)
     func insertText(_ text: String)
 
-    /// Called when Return should create one line break after committing composition.
-    ///
-    /// PriType consumes Return when there is active Hangul composition to avoid
-    /// clients applying both composition confirmation and the raw Return event.
-    func insertLineBreak()
-    
     /// Called when the in-progress composition text should be displayed
     /// - Parameter text: The preedit text (incomplete Hangul being composed)
     func setMarkedText(_ text: String)
@@ -44,12 +38,6 @@ public protocol HangulComposerDelegate: AnyObject {
     ///   - length: Number of characters to replace (counting backwards from cursor)
     ///   - text: The new text to insert
     func replaceTextBeforeCursor(length: Int, with text: String)
-}
-
-public extension HangulComposerDelegate {
-    func insertLineBreak() {
-        insertText("\n")
-    }
 }
 
 // MARK: - InputMode Enum
