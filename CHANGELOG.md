@@ -7,25 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
-- Localization support with L10n.swift for type-safe string access
-- Korean (ko) and English (en) Localizable.strings
-- Multi-monitor Finder heuristic tests
-- SwiftLint configuration (.swiftlint.yml)
-- Extended KeyCode constants with helper methods
+## [2.7] - 2026-05-18 (Stable)
 
-### Changed
-- InputSourceManager refactored to TIS API only (removed shell commands)
-- HangulComposer separated TextConvenience logic to dedicated handler
-- Adapter classes refactored with BaseClientAdapter inheritance
-- Finder detection improved with validAttributesForMarkedText
+### 핵심 변경
+- 영어 입력은 PriType 내부 영어 모드가 아니라 macOS 기본 `ABC` 입력 소스를 사용하도록 전환했습니다. PriType은 한글 입력 소스 역할에 집중합니다.
+- Caps Lock 한/영 전환을 PriType 자체 키 가로채기 경로에서 제거하고 macOS 입력 소스 전환 설정을 따르도록 정리했습니다.
+- PriType 입력 소스 등록을 단일 한글 입력 소스(`com.pritype.inputmethod.v2.korean`)로 정리해 메뉴 막대에 `한글`이 중복 표시되던 문제를 해결했습니다.
+- 오래된 PriType 영어 입력 소스, component input mode, Apple Korean 입력 모드 잔여 등록을 정리하는 복구 로직을 추가했습니다.
 
-### Fixed
-- Cmd/Ctrl/Option+Arrow and Fn+Arrow (Home/End/PageUp/PageDown) shortcuts now work correctly during Hangul composition. The in-progress preedit is committed and marked text is cleared before the event is passed to the host application, preventing the shortcut from being ignored or misapplied.
+### 개선
+- 우측 Command/우측 Option 등 PriType 사용자 지정 전환키는 CGEventTap/IOKit 경로를 유지하면서 실제 macOS 입력 소스 선택과 동기화되도록 정리했습니다.
+- 자동 문장 대문자 옵션을 제거했습니다. 영어 입력이 macOS `ABC`로 이동했기 때문에 해당 동작은 macOS 기본 입력기가 담당합니다.
+- 스페이스 두 번으로 마침표를 입력하는 동작은 PriType 별도 설정 대신 macOS `NSAutomaticPeriodSubstitutionEnabled` 설정을 따르도록 변경했습니다.
+- 앱 활성화, 창 전환, 키 입력 중 불필요한 Accessibility/컨텍스트 검사를 줄여 입력 지연이 발생할 수 있는 경로를 완화했습니다.
+- 비밀번호/보안 입력 필드에서는 조합 상태를 정리하고 즉시 패스스루하도록 보강했습니다.
 
-### Security
-- Removed all shell command execution (PlistBuddy, killall cfprefsd)
-- Added -strict-concurrency=complete Swift flag
+### 설정 및 UX
+- 설정창을 macOS Liquid Glass 스타일에 맞게 정리하고, 기본 시스템 폰트와 새 PriType 앱 아이콘 헤더를 사용하도록 변경했습니다.
+- Caps Lock은 PriType 전환키로 직접 지정하지 못하게 막고 macOS 입력 소스 설정 상태, 안내 문구, 설정 바로가기를 제공하도록 변경했습니다.
+- 키 설정 충돌 시 기존 설정을 복원했다는 피드백을 표시하도록 했습니다.
+- 더 이상 필요하지 않은 기본 영어 입력기 제거 기능, 자동 대문자 옵션, PriType 전용 더블스페이스 옵션을 제거했습니다.
+
+### 아이콘 및 입력 소스 표시
+- 앱 아이콘과 입력 소스 메뉴/팔레트 아이콘을 새 자산으로 교체했습니다.
+- 한글 입력 소스 이름과 아이콘 리소스를 패키지와 로컬 설치 경로에 함께 포함하도록 정리했습니다.
+
+### 패키징
+- 릴리즈/디버그 패키징 스크립트가 임시 payload 디렉터리를 사용하도록 변경해 빌드 잔여물이 LaunchServices에 등록되지 않게 했습니다.
+- 설치 후 Script Editor 알림을 띄우던 AppleScript 의존성을 제거하고 TextInput 관련 프로세스 재등록 범위를 보강했습니다.
+- 버전을 `2.7`, 빌드를 `35`, 릴리즈 채널을 `stable`로 갱신했습니다.
+
+### 검증
+- `swift build -c release`
+- `swift run -c release PriTypeVerify`
+- Release/Debug PKG 서명, 공증, 스테이플, Gatekeeper 검증
 
 ## [2.6.5] - 2026-05-10 (Stable)
 

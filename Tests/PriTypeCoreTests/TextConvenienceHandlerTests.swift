@@ -48,50 +48,6 @@ struct TextConvenienceHandlerTests {
         #expect(result == .normalSpace)
     }
     
-    // MARK: - Auto Capitalize Tests
-    
-    @Test("Should capitalize at document start")
-    func capitalizeAtDocumentStart() {
-        let handler = TextConvenienceHandler()
-        #expect(handler.shouldAutoCapitalize(buffer: ""))
-    }
-    
-    @Test("Should capitalize after period")
-    func capitalizeAfterPeriod() {
-        let handler = TextConvenienceHandler()
-        #expect(handler.shouldAutoCapitalize(buffer: "Hello. "))
-    }
-    
-    @Test("Should capitalize after exclamation")
-    func capitalizeAfterExclamation() {
-        let handler = TextConvenienceHandler()
-        #expect(handler.shouldAutoCapitalize(buffer: "Wow! "))
-    }
-    
-    @Test("Should capitalize after question mark")
-    func capitalizeAfterQuestion() {
-        let handler = TextConvenienceHandler()
-        #expect(handler.shouldAutoCapitalize(buffer: "Really? "))
-    }
-    
-    @Test("Should capitalize after newline")
-    func capitalizeAfterNewline() {
-        let handler = TextConvenienceHandler()
-        #expect(handler.shouldAutoCapitalize(buffer: "Line one\n"))
-    }
-    
-    @Test("Should NOT capitalize mid-sentence")
-    func shouldNotCapitalizeMidSentence() {
-        let handler = TextConvenienceHandler()
-        #expect(!handler.shouldAutoCapitalize(buffer: "Hello "))
-    }
-    
-    @Test("Should NOT capitalize after comma")
-    func shouldNotCapitalizeAfterComma() {
-        let handler = TextConvenienceHandler()
-        #expect(!handler.shouldAutoCapitalize(buffer: "Hello, "))
-    }
-    
     // MARK: - Hangul Detection Tests
     
     @Test("Hangul syllable detection")

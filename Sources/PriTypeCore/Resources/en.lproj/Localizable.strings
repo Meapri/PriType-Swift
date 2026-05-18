@@ -24,12 +24,15 @@
 "keyBinding.recording" = "Press a key...";
 "keyBinding.change" = "Change";
 "keyBinding.conflict" = "Cannot use the same key";
+"keyBinding.conflictRestored" = "Cannot use the same key. Restored the previous setting.";
 "keyBinding.reset" = "Reset to Default";
-
-/* Text Input */
-"textInput.title" = "Text Input";
-"textInput.autoCapitalize" = "Auto-capitalize sentences";
-"textInput.doubleSpacePeriod" = "Double-space for period";
+"keyBinding.capsLockSummary" = "Caps Lock follows macOS input-source settings. PriType's toggle key works separately.";
+"keyBinding.capsLockStatusTitle" = "Caps Lock input-source switch";
+"keyBinding.capsLockStatusOn" = "On";
+"keyBinding.capsLockStatusOff" = "Off";
+"keyBinding.capsLockBlockedTitle" = "Set Caps Lock in macOS";
+"keyBinding.capsLockBlockedMessage" = "Caps Lock is not a PriType custom key. Enable Caps Lock switching in macOS Input Source settings.";
+"keyBinding.capsLockOpenSettings" = "Open Input Source Settings";
 
 /* About */
 "about.title" = "About";
@@ -57,6 +60,3 @@
 "system.accessibility" = "Accessibility Permission";
 "system.accessibilityGranted" = "Granted";
 "system.accessibilityRequest" = "Request Permission";
-"system.removeABC" = "Disable Default English Keyboard (ABC)";
-"system.removeABCSuccess" = "Disabled";
-"system.removeABCFailed" = "Failed to Disable";

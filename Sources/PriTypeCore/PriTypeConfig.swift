@@ -31,4 +31,5 @@ public struct PriTypeConfig: Sendable {
     
     /// 더블 스페이스 감지 시간 임계값 (초)
     public static let doubleSpaceThreshold: TimeInterval = 0.45
+
 }

@@ -49,7 +49,7 @@ public final class RightCommandSuppressor: @unchecked Sendable {
     
     /// Debounce timer for Hanja trigger to prevent double-fire
     private var lastHanjaTriggerTime: DispatchTime = .init(uptimeNanoseconds: 0)
-    
+
     /// Track Control state for Control+Space
     private var controlIsDown = false
     
@@ -172,8 +172,10 @@ public final class RightCommandSuppressor: @unchecked Sendable {
         if isRecordingKey {
             if type == .flagsChanged {
                 let flags = event.flags
-                // Only fire on key DOWN (when a new modifier appears)
-                let isModifierDown = flags.rawValue & 0xFFFF0000 != 0
+                // Only fire on key DOWN (when a new modifier appears).
+                // Caps Lock is special: its flag is the toggled lock state, so
+                // record the keyCode itself even when the flag is transitioning off.
+                let isModifierDown = flags.rawValue & 0xFFFF0000 != 0 || keyCode == 57
                 if isModifierDown {
                     let recordCallback = onKeyRecorded
                     DispatchQueue.main.async {
@@ -198,6 +200,10 @@ public final class RightCommandSuppressor: @unchecked Sendable {
             
             // Track Control key state (for Control+Space combo)
             controlIsDown = flags.contains(.maskControl)
+
+            if keyCode == 57 {
+                return Unmanaged.passUnretained(event)
+            }
             
             // Dynamic toggle key — modifier key, single-key binding
             if toggleBinding.isModifierKey && toggleBinding.isModifierOnly && keyCode == toggleBinding.keyCode {
@@ -311,7 +317,7 @@ public final class RightCommandSuppressor: @unchecked Sendable {
     private static func hasRequiredModifiers(flags: CGEventFlags, required: CGEventFlags) -> Bool {
         return flags.intersection(required) == required
     }
-    
+
     private func triggerToggle() {
         let callback = onToggle
         DispatchQueue.main.async {

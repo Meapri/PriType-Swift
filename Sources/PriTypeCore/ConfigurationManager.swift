@@ -241,11 +241,9 @@ public protocol ConfigurationProviding: AnyObject, Sendable {
     /// Whether Control+Space is configured as the toggle key
     var controlSpaceAsToggle: Bool { get }
     
-    /// Whether to auto-capitalize first letter of sentences in English mode
-    var autoCapitalizeEnabled: Bool { get set }
-    
-    /// Whether double-space inserts a period
-    var doubleSpacePeriodEnabled: Bool { get set }
+    /// Whether the system double-space period feature is enabled.
+    var doubleSpacePeriodEnabled: Bool { get }
+
 }
 
 // MARK: - ConfigurationManager
@@ -283,7 +281,10 @@ public final class ConfigurationManager: ConfigurationProviding, @unchecked Send
     
     private let defaults = UserDefaults.standard
     
-    private init() {}
+    private init() {
+        defaults.removeObject(forKey: "com.pritype.autoCapitalize")
+        defaults.removeObject(forKey: "com.pritype.doubleSpacePeriod")
+    }
     
     // MARK: - Keys
     
@@ -292,8 +293,6 @@ public final class ConfigurationManager: ConfigurationProviding, @unchecked Send
         static let toggleKey = "com.pritype.toggleKey"  // Legacy
         static let toggleKeyBinding = "com.pritype.toggleKeyBinding"
         static let hanjaKeyBinding = "com.pritype.hanjaKeyBinding"
-        static let autoCapitalize = "com.pritype.autoCapitalize"
-        static let doubleSpacePeriod = "com.pritype.doubleSpacePeriod"
         static let lastUpdateCheck = "com.pritype.lastUpdateCheck"
         static let autoUpdateCheck = "com.pritype.autoUpdateCheck"
     }
@@ -365,8 +364,8 @@ public final class ConfigurationManager: ConfigurationProviding, @unchecked Send
             let binding: KeyBinding
             if let data = defaults.data(forKey: Keys.toggleKeyBinding),
                let decoded = try? JSONDecoder().decode(KeyBinding.self, from: data) {
-                // Sanitize: Fn key (63) is not supported in CGEventTap
-                binding = decoded.keyCode == 63 ? .defaultToggle : decoded
+                // Fn and Caps Lock are not supported as PriType custom toggle keys.
+                binding = (decoded.keyCode == 63 || decoded.keyCode == 57) ? .defaultToggle : decoded
             } else {
                 // Migrate from legacy toggleKey
                 binding = toggleKey.asKeyBinding
@@ -436,34 +435,13 @@ public final class ConfigurationManager: ConfigurationProviding, @unchecked Send
     
     // MARK: - Text Input Features
     
-    /// Whether to auto-capitalize first letter of sentences in English mode
-    /// Default: enabled
-    public var autoCapitalizeEnabled: Bool {
-        get {
-            if defaults.object(forKey: Keys.autoCapitalize) == nil {
-                return true  // Default enabled
-            }
-            return defaults.bool(forKey: Keys.autoCapitalize)
-        }
-        set {
-            defaults.set(newValue, forKey: Keys.autoCapitalize)
-        }
-    }
-    
-    /// Whether double-space inserts a period
-    /// Default: enabled
+    /// Mirrors macOS "Add period with double-space" for PriType Korean input.
     public var doubleSpacePeriodEnabled: Bool {
-        get {
-            if defaults.object(forKey: Keys.doubleSpacePeriod) == nil {
-                return true  // Default enabled
-            }
-            return defaults.bool(forKey: Keys.doubleSpacePeriod)
-        }
-        set {
-            defaults.set(newValue, forKey: Keys.doubleSpacePeriod)
-        }
+        defaults.object(forKey: "NSAutomaticPeriodSubstitutionEnabled") == nil
+            ? true
+            : defaults.bool(forKey: "NSAutomaticPeriodSubstitutionEnabled")
     }
-    
+
     // MARK: - Update Settings
     
     /// Timestamp of the last successful update check

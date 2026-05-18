@@ -68,16 +68,21 @@ public struct ClientContext: Sendable {
     /// Whether the client needs conservative marked-text handling for game/Wine runtimes.
     public let usesGameCompatibilityMode: Bool
 
+    /// Whether this context intentionally skipped client IPC for activation speed.
+    public let isLightweight: Bool
+
     public init(
         bundleId: String,
         hasTextInputCapability: Bool,
         isLikelyDesktopArea: Bool,
-        usesGameCompatibilityMode: Bool = false
+        usesGameCompatibilityMode: Bool = false,
+        isLightweight: Bool = false
     ) {
         self.bundleId = bundleId
         self.hasTextInputCapability = hasTextInputCapability
         self.isLikelyDesktopArea = isLikelyDesktopArea
         self.usesGameCompatibilityMode = usesGameCompatibilityMode
+        self.isLightweight = isLightweight
     }
     
     // MARK: - Derived Properties
@@ -111,6 +116,26 @@ public struct ClientContext: Sendable {
 /// }
 /// ```
 public struct ClientContextDetector: Sendable {
+    public static func analyzeForActivation(client: IMKTextInput) -> ClientContext {
+        let frontmostApp = NSWorkspace.shared.frontmostApplication
+        var bundleId = frontmostApp?.bundleIdentifier ?? ""
+        if bundleId.isEmpty {
+            bundleId = client.bundleIdentifier() ?? ""
+        }
+        let isFinder = bundleId == "com.apple.finder"
+
+        return ClientContext(
+            bundleId: bundleId,
+            hasTextInputCapability: !isFinder,
+            isLikelyDesktopArea: isFinder,
+            usesGameCompatibilityMode: usesGameCompatibilityMode(
+                bundleId: bundleId,
+                app: frontmostApp
+            ),
+            isLightweight: true
+        )
+    }
+
     /// Analyzes an IMKTextInput client and returns its context
     ///
     /// - Parameter client: The text input client to analyze

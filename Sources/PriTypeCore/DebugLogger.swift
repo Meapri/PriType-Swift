@@ -40,6 +40,8 @@ public final class DebugLogger: @unchecked Sendable {
     /// Cached file handle for performance
     /// - Note: Protected by logQueue serial dispatch
     nonisolated(unsafe) private static var cachedHandle: FileHandle?
+
+    private static let maxLogFileSize = 5 * 1024 * 1024
     
     /// Flag to prevent infinite recursion on logging errors
     /// - Note: Protected by logQueue serial dispatch
@@ -112,6 +114,8 @@ public final class DebugLogger: @unchecked Sendable {
         if !FileManager.default.fileExists(atPath: directory.path) {
             try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         }
+
+        try rotateLogIfNeeded(at: url)
         
         // Create file if it doesn't exist
         if !FileManager.default.fileExists(atPath: PriTypeConfig.logPath) {
@@ -130,6 +134,23 @@ public final class DebugLogger: @unchecked Sendable {
         
         try handle.seekToEnd()
         try handle.write(contentsOf: data)
+    }
+
+    private static func rotateLogIfNeeded(at url: URL) throws {
+        guard cachedHandle == nil else { return }
+
+        let fileManager = FileManager.default
+        guard fileManager.fileExists(atPath: url.path),
+              let attributes = try? fileManager.attributesOfItem(atPath: url.path),
+              let size = attributes[.size] as? NSNumber,
+              size.intValue > maxLogFileSize else {
+            return
+        }
+
+        let rotatedURL = url.deletingPathExtension().appendingPathExtension("log.1")
+        try? fileManager.removeItem(at: rotatedURL)
+        try fileManager.moveItem(at: url, to: rotatedURL)
+        fileManager.createFile(atPath: url.path, contents: nil)
     }
     
     private static func logToConsole(_ msg: String, isError: Bool) {

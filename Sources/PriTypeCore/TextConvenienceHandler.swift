@@ -1,12 +1,11 @@
 import Foundation
 
-/// Handles text convenience features like auto-capitalize and double-space period
+/// Handles text convenience features like double-space period
 ///
 /// This class separates text convenience functionality from the core Hangul composition engine,
 /// following the Single Responsibility Principle.
 ///
 /// ## Features
-/// - Auto-capitalize first letter of sentences (English mode)
 /// - Double-space to period conversion (both Korean and English modes)
 /// - English mode input handling with pass-through
 ///
@@ -83,7 +82,7 @@ public final class TextConvenienceHandler: @unchecked Sendable {
     
     /// Result of English mode input handling
     public enum EnglishInputResult {
-        /// Input was handled (consumed) - auto-capitalized or double-space period
+        /// Input was handled (consumed) - double-space period
         case handled
         /// Input should pass through to system
         case passThrough
@@ -96,7 +95,11 @@ public final class TextConvenienceHandler: @unchecked Sendable {
     ///   - buffer: The local text buffer to query
     ///   - delegate: The delegate for text operations
     /// - Returns: Result indicating whether input was handled
-    public func handleEnglishModeInput(char: Character, buffer: inout String, delegate: HangulComposerDelegate) -> EnglishInputResult {
+    public func handleEnglishModeInput(
+        char: Character,
+        buffer: inout String,
+        delegate: HangulComposerDelegate
+    ) -> EnglishInputResult {
         // Handle space key
         if char == " " {
             let result = handleDoubleSpacePeriod(buffer: &buffer, delegate: delegate, checkHangul: false)
@@ -106,57 +109,7 @@ public final class TextConvenienceHandler: @unchecked Sendable {
         // Non-space character
         resetSpaceState()
         
-        // Auto-capitalize: Only if enabled
-        if ConfigurationManager.shared.autoCapitalizeEnabled && char.isLetter {
-            if shouldAutoCapitalize(buffer: buffer) {
-                let uppercased = String(char).uppercased()
-                delegate.insertText(uppercased)
-                buffer.append(uppercased)
-                if buffer.count > 15 { buffer = String(buffer.suffix(15)) }
-                DebugLogger.log("Auto-capitalized: \(char) -> \(uppercased)")
-                return .handled
-            }
-        }
-        
         return .passThrough
-    }
-    
-    // MARK: - Auto-Capitalize
-    
-    /// Determines if the next character should be auto-capitalized based on document context
-    ///
-    /// Checks for:
-    /// - Start of document
-    /// - After newline
-    /// - Sentence ending (. ! ?) followed by space
-    ///
-    /// - Parameter buffer: The local text buffer to query context from
-    /// - Returns: `true` if the next character should be capitalized
-    public func shouldAutoCapitalize(buffer: String) -> Bool {
-        // Use local buffer instead of IPC call to `delegate.textBeforeCursor`
-        let text = buffer
-        
-        if text.isEmpty { return true }
-        
-        // 1. Check for Newline (immediate capitalization)
-        if let last = text.last {
-            if last == "\n" || last == "\r" { return true }
-        }
-        
-        // 2. Check for Sentence Ending Pattern
-        guard let lastChar = text.last, lastChar.isWhitespace else {
-            return false // Cursor is right after a non-space char
-        }
-        
-        // Find the last non-whitespace character
-        let trimmed = text.trimmingCharacters(in: .whitespaces)
-        if let lastNonSpace = trimmed.last {
-            if lastNonSpace == "." || lastNonSpace == "!" || lastNonSpace == "?" {
-                return true
-            }
-        }
-        
-        return false
     }
     
     // MARK: - Helpers
@@ -172,4 +125,5 @@ public final class TextConvenienceHandler: @unchecked Sendable {
                (val >= 0x3130 && val <= 0x318F) ||
                (val >= 0x1100 && val <= 0x11FF)
     }
+
 }

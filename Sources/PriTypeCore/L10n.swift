@@ -69,15 +69,15 @@ public enum L10n {
         public static var recording: String { localized("keyBinding.recording") }
         public static var change: String { localized("keyBinding.change") }
         public static var conflict: String { localized("keyBinding.conflict") }
+        public static var conflictRestored: String { localized("keyBinding.conflictRestored") }
         public static var reset: String { localized("keyBinding.reset") }
-    }
-    
-    // MARK: - Text Input
-    
-    public enum textInput {
-        public static var title: String { localized("textInput.title") }
-        public static var autoCapitalize: String { localized("textInput.autoCapitalize") }
-        public static var doubleSpacePeriod: String { localized("textInput.doubleSpacePeriod") }
+        public static var capsLockSummary: String { localized("keyBinding.capsLockSummary") }
+        public static var capsLockStatusTitle: String { localized("keyBinding.capsLockStatusTitle") }
+        public static var capsLockStatusOn: String { localized("keyBinding.capsLockStatusOn") }
+        public static var capsLockStatusOff: String { localized("keyBinding.capsLockStatusOff") }
+        public static var capsLockBlockedTitle: String { localized("keyBinding.capsLockBlockedTitle") }
+        public static var capsLockBlockedMessage: String { localized("keyBinding.capsLockBlockedMessage") }
+        public static var capsLockOpenSettings: String { localized("keyBinding.capsLockOpenSettings") }
     }
     
     // MARK: - About
@@ -118,8 +118,5 @@ public enum L10n {
         public static var accessibility: String { localized("system.accessibility") }
         public static var accessibilityGranted: String { localized("system.accessibilityGranted") }
         public static var accessibilityRequest: String { localized("system.accessibilityRequest") }
-        public static var removeABC: String { localized("system.removeABC") }
-        public static var removeABCSuccess: String { localized("system.removeABCSuccess") }
-        public static var removeABCFailed: String { localized("system.removeABCFailed") }
     }
 }

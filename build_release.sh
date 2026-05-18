@@ -4,7 +4,9 @@ set -e
 # Define variables
 APP_NAME="PriTypeV2"
 BUILD_DIR=".build/release"
-PAYLOAD_DIR="Packaging/Payload"
+LEGACY_PAYLOAD_DIR="Packaging/Payload"
+TMP_ROOT=$(mktemp -d "${TMPDIR:-/tmp}/pritype-release-payload.XXXXXX")
+PAYLOAD_DIR="$TMP_ROOT/Payload"
 INSTALL_DIR="/Library/Input Methods"
 APP_BUNDLE="${APP_NAME}.app"
 CONTENTS_DIR="${PAYLOAD_DIR}/${APP_BUNDLE}/Contents"
@@ -14,7 +16,13 @@ PKG_OUTPUT="PriTypeV2_Release.pkg"
 COMPONENT_PLIST="PriTypeV2_components.plist"
 KEYCHAIN_PROFILE="${KEYCHAIN_PROFILE:-PriTypeNotary}"
 
-trap 'rm -f "$COMPONENT_PLIST"' EXIT
+cleanup() {
+    /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister \
+        -u "$PAYLOAD_DIR/$APP_BUNDLE" >/dev/null 2>&1 || true
+    rm -rf "$TMP_ROOT"
+    rm -f "$COMPONENT_PLIST"
+}
+trap cleanup EXIT
 
 echo "=========================================="
 echo "    PriType Release Build & Packaging     "
@@ -24,7 +32,11 @@ echo "[1/6] Building release..."
 swift build -c release
 
 echo "[2/6] Creating bundle structure..."
-rm -rf "$PAYLOAD_DIR"
+if [ -d "$LEGACY_PAYLOAD_DIR/$APP_BUNDLE" ]; then
+    /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister \
+        -u "$LEGACY_PAYLOAD_DIR/$APP_BUNDLE" >/dev/null 2>&1 || true
+fi
+rm -rf "$LEGACY_PAYLOAD_DIR"
 mkdir -p "$MACOS_DIR"
 mkdir -p "$RESOURCES_DIR"
 
@@ -36,6 +48,7 @@ cp Info.plist "$CONTENTS_DIR/"
 cp -R Resources/* "$RESOURCES_DIR/" 2>/dev/null || true
 cp "AppIcon.icns" "$RESOURCES_DIR/" 2>/dev/null || true
 cp "icon.tiff" "$RESOURCES_DIR/" 2>/dev/null || true
+cp "palette-ko.tiff" "$RESOURCES_DIR/" 2>/dev/null || true
 if [ -d "$BUILD_DIR/PriType_PriTypeCore.bundle" ]; then
     cp -R "$BUILD_DIR/PriType_PriTypeCore.bundle" "$RESOURCES_DIR/"
 fi

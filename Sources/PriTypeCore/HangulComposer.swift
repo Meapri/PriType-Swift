@@ -75,8 +75,7 @@ public class HangulComposer: @unchecked Sendable {
     /// reuse the last successful position instead of jumping to mouse cursor.
     nonisolated(unsafe) static var lastKnownCursorRect: NSRect?
     
-    /// Local cache of recently typed text (English mode primarily) to avoid IPC calls
-    /// Maintains the last 15 characters to support auto-capitalization and double-space detection
+    /// Local cache of recently typed text to support double-space detection and Hanja lookup
     public var localTextBuffer: String = ""
     
     /// Maximum buffer size for local text tracking
@@ -100,7 +99,7 @@ public class HangulComposer: @unchecked Sendable {
        return ctx
     }()
     
-    /// Text convenience handler (auto-capitalize, double-space period)
+    /// Text convenience handler (double-space period)
     /// Owns all state for text convenience features
     private let textConvenience = TextConvenienceHandler()
     
@@ -133,7 +132,6 @@ public class HangulComposer: @unchecked Sendable {
         // the context every time resets the composition state, causing the
         // first character to appear in English.
         guard currentKeyboardId != id else {
-            DebugLogger.log("HangulComposer: Layout '\(id)' unchanged, skipping")
             return
         }
         
@@ -168,6 +166,29 @@ public class HangulComposer: @unchecked Sendable {
         
         switchMode()
     }
+
+    /// Set Korean or English mode from Text Input Services.
+    ///
+    /// Caps Lock language switching arrives through IMK as an input-mode value
+    /// change. Applying it directly avoids synthesizing Caps Lock events, which
+    /// can also toggle the hardware Caps Lock latch.
+    public func setInputMode(_ mode: InputMode) {
+        guard inputMode != mode else {
+            return
+        }
+
+        DebugLogger.log("setInputMode called externally: \(mode)")
+
+        if let delegate = lastDelegate, !context.isEmpty() {
+            commitComposition(delegate: delegate)
+            DebugLogger.log("Composition committed before explicit mode switch")
+        }
+
+        inputMode = mode
+        localTextBuffer = ""
+        statusBar.setMode(inputMode)
+        DebugLogger.log("Mode set to: \(inputMode)")
+    }
     
     // MARK: - Private Helpers
     
@@ -184,7 +205,6 @@ public class HangulComposer: @unchecked Sendable {
     private func handleSpecialKey(keyCode: UInt16, delegate: HangulComposerDelegate) -> Bool? {
         // Return / Enter
         if keyCode == KeyCode.return || keyCode == KeyCode.numpadEnter {
-            DebugLogger.log("Return key -> commit")
             commitComposition(delegate: delegate)
             localTextBuffer = ""
             return false  // Let system insert newline
@@ -210,7 +230,6 @@ public class HangulComposer: @unchecked Sendable {
                 DebugLogger.log("Double-space -> period (Korean mode)")
                 return true
             }
-            DebugLogger.log("Space -> flush and space")
             delegate.insertText(" ")
             appendToBuffer(" ")
             return true
@@ -222,7 +241,6 @@ public class HangulComposer: @unchecked Sendable {
         // Arrow keys
         if keyCode == KeyCode.leftArrow || keyCode == KeyCode.rightArrow ||
            keyCode == KeyCode.upArrow || keyCode == KeyCode.downArrow {
-            DebugLogger.log("Arrow key -> commit and pass to system")
             commitComposition(delegate: delegate)
             localTextBuffer = ""
             return false
@@ -230,7 +248,6 @@ public class HangulComposer: @unchecked Sendable {
         
         // Tab
         if keyCode == KeyCode.tab {
-            DebugLogger.log("Tab key -> commit")
             commitComposition(delegate: delegate)
             localTextBuffer = ""
             return false
@@ -238,17 +255,14 @@ public class HangulComposer: @unchecked Sendable {
         
         // Backspace
         if keyCode == KeyCode.backspace {
-            DebugLogger.log("Backspace")
             if !localTextBuffer.isEmpty {
                 localTextBuffer.removeLast()
             }
             if !context.isEmpty() {
                 if context.backspace() {
-                    DebugLogger.log("Engine backspace success")
                     updateComposition(delegate: delegate)
                     return true
                 } else {
-                    DebugLogger.log("Engine backspace caused empty")
                     updateComposition(delegate: delegate)
                     return true
                 }
@@ -269,11 +283,8 @@ public class HangulComposer: @unchecked Sendable {
             return false
         }
         
-        DebugLogger.logSensitive("Processing char code", sensitiveContent: "\(charCode)")
-        
         // Primary attempt
         if context.process(Character(char)) {
-            DebugLogger.log("Process success")
             updateComposition(delegate: delegate)
             return true
         }
@@ -367,8 +378,6 @@ public class HangulComposer: @unchecked Sendable {
         
         // English mode: delegate to TextConvenienceHandler
         if inputMode == .english {
-            DebugLogger.log("English mode")
-            
             guard let chars = event.characters, chars.count == 1, let char = chars.first else {
                 return false
             }
@@ -378,7 +387,11 @@ public class HangulComposer: @unchecked Sendable {
                 return false
             }
             
-            let result = textConvenience.handleEnglishModeInput(char: char, buffer: &localTextBuffer, delegate: delegate)
+            let result = textConvenience.handleEnglishModeInput(
+                char: char,
+                buffer: &localTextBuffer,
+                delegate: delegate
+            )
             
             // If passThrough, we still need to track it in our buffer
             if result == .passThrough {
@@ -428,9 +441,6 @@ public class HangulComposer: @unchecked Sendable {
         if let result = handleSpecialKey(keyCode: keyCode, delegate: delegate) {
             return result
         }
-        
-        // 2. Alphanumeric Keys (Typing)
-        DebugLogger.logSensitive("Handle key code \(keyCode)", sensitiveContent: inputCharacters)
         
         // Filter: If input contains non-printable characters (e.g., function keys, arrows)
         // This catches Fn+Arrow (Home/End/PageUp/PageDown) and other navigation keys
@@ -499,9 +509,7 @@ public class HangulComposer: @unchecked Sendable {
         // Flush context
         let flushed = context.flush()
         let commitStr = CompositionHelpers.convertToString(flushed)
-        
-        DebugLogger.logSensitive("commitComposition flushed=\(flushed)", sensitiveContent: "'\(commitStr)'")
-        
+
         if !commitStr.isEmpty {
             // insertText replaces the marked text automatically
             let finalStr = CompositionHelpers.convertAndNormalize(flushed)

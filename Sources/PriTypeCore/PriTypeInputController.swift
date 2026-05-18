@@ -4,7 +4,12 @@ import LibHangul
 import Carbon.HIToolbox
 
 @objc(PriTypeInputController)
-public class PriTypeInputController: IMKInputController {
+public class PriTypeInputController: IMKInputController, @unchecked Sendable {
+    private static let priTypeInputSourceID = "com.pritype.inputmethod.v2"
+    private static let priTypeKoreanInputModeID = "com.pritype.inputmethod.v2.korean"
+    private static let priTypeEnglishInputModeID = "com.pritype.inputmethod.v2.english"
+    private static let romanKeyboardLayoutID = "com.apple.keylayout.US"
+    nonisolated(unsafe) public static var lastInputModePropertyUpdateTime: CFAbsoluteTime = 0
     
     // MARK: - Shared State
     //
@@ -33,6 +38,11 @@ public class PriTypeInputController: IMKInputController {
     
     // Strong reference to prevent client being released during rapid switching
     private var lastClient: IMKTextInput?
+    private var lastKnownInputClient: IMKTextInput?
+
+    private var debugHandleLogCount = 0
+    private var lastKeyboardOverrideClientID: ObjectIdentifier?
+    private var lastKeyboardOverrideTime: CFAbsoluteTime = 0
     
     // Keep adapter alive for external toggle calls
     public private(set) var currentAdapter: (any HangulComposerDelegate)?
@@ -111,7 +121,7 @@ public class PriTypeInputController: IMKInputController {
     private final class ImmediateModeAdapter: BaseClientAdapter {
         // Inherits no-op setMarkedText from base class
     }
-    
+
     // MARK: - State Management
     
     /// Cached client context to avoid expensive IPC calls on every keystroke
@@ -137,6 +147,55 @@ public class PriTypeInputController: IMKInputController {
         }
         return adapter is ClientAdapter && !(adapter is GameCompatibilityAdapter)
     }
+
+    private func syncRomanKeyboardLayout(for client: IMKTextInput, force: Bool = false) {
+        let clientID = ObjectIdentifier(client as AnyObject)
+        let now = CFAbsoluteTimeGetCurrent()
+        guard force || lastKeyboardOverrideClientID != clientID || now - lastKeyboardOverrideTime > 0.5 else {
+            return
+        }
+
+        let selector = NSSelectorFromString("overrideKeyboardWithKeyboardNamed:")
+        let object = client as AnyObject
+        guard object.responds(to: selector) else {
+            DebugLogger.log("PriTypeInputController: client does not support keyboard override")
+            return
+        }
+
+        _ = object.perform(selector, with: Self.romanKeyboardLayoutID)
+        lastKeyboardOverrideClientID = clientID
+        lastKeyboardOverrideTime = now
+        DebugLogger.log("PriTypeInputController: override keyboard layout -> \(Self.romanKeyboardLayoutID)")
+    }
+
+    public func selectInputModeForCurrentClient(_ mode: InputMode) {
+        let inputModeID: String
+        switch mode {
+        case .korean:
+            inputModeID = Self.priTypeKoreanInputModeID
+        case .english:
+            inputModeID = "com.apple.keylayout.ABC"
+        }
+
+        guard let client = lastClient ?? lastKnownInputClient else {
+            DebugLogger.log("PriTypeInputController: no current client for selectInputMode(\(inputModeID))")
+            return
+        }
+
+        let selector = NSSelectorFromString("selectInputMode:")
+        let object = client as AnyObject
+        guard object.responds(to: selector) else {
+            DebugLogger.log("PriTypeInputController: client does not support selectInputMode:")
+            return
+        }
+
+        _ = object.perform(selector, with: inputModeID)
+        DebugLogger.log("PriTypeInputController: client selectInputMode -> \(inputModeID)")
+
+        if mode == .korean {
+            syncRomanKeyboardLayout(for: client, force: true)
+        }
+    }
     
     // 입력기가 활성화될 때 호출 - 새 세션 시작
     override public func activateServer(_ sender: Any!) {
@@ -147,13 +206,15 @@ public class PriTypeInputController: IMKInputController {
         // 클라이언트 저장
         if let client = sender as? IMKTextInput {
             lastClient = client
+            lastKnownInputClient = client
+            syncRomanKeyboardLayout(for: client, force: true)
             
             // PERFORMANCE: Analyze context ONCE per session and cache it.
             // This avoids heavy IPC calls (bundleId check, coordinate calculation) on every keystroke.
-            let context = ClientContextDetector.analyze(client: client)
+            let context = ClientContextDetector.analyzeForActivation(client: client)
             self.cachedContext = context
             currentAdapter = makeAdapter(for: client, context: context)
-            DebugLogger.log("Activated for client: \(self.cachedContext?.bundleId ?? "unknown") (Cached Context)")
+            DebugLogger.log("Activated for client: \(self.cachedContext?.bundleId ?? "unknown") (Lightweight Context)")
         } else {
             // Fallback if sender is not IMKTextInput (rare)
             self.cachedContext = nil
@@ -201,12 +262,52 @@ public class PriTypeInputController: IMKInputController {
         composer.updateKeyboardLayout(id: newId)
     }
     
-    // Tell IMK which events we want to receive in handle()
-    // By default, only keyDown events are delivered. We need flagsChanged for Caps Lock detection.
+    // Match the native IMK path used by DINKIssTyle: ask IMK for flagsChanged
+    // so TIS can drive Caps Lock language switching, then pass modifier events
+    // through without doing any work in handle().
     override public func recognizedEvents(_ sender: Any!) -> Int {
-        let keyDown = NSEvent.EventTypeMask.keyDown.rawValue
-        let flagsChanged = NSEvent.EventTypeMask.flagsChanged.rawValue
-        return Int(keyDown | flagsChanged)
+        Int(NSEvent.EventTypeMask.keyDown.rawValue | NSEvent.EventTypeMask.flagsChanged.rawValue)
+    }
+
+    override public func setValue(_ value: Any!, forTag tag: Int, client sender: Any!) {
+        if tag == Int(kTextServiceInputModePropertyTag) {
+            guard let inputModeID = value as? String, !inputModeID.isEmpty else {
+                DebugLogger.log("PriTypeInputController: ignored empty input mode property")
+                return
+            }
+
+            let isPriTypeMode = Self.isPriTypeInputMode(inputModeID)
+            DebugLogger.log("PriTypeInputController: setValue inputMode='\(inputModeID)' priType=\(isPriTypeMode) current=\(composer.inputMode)")
+            guard isPriTypeMode else {
+                super.setValue(value, forTag: tag, client: sender)
+                return
+            }
+
+            Self.lastInputModePropertyUpdateTime = CFAbsoluteTimeGetCurrent()
+            let mode = Self.inputMode(forPriTypeInputModeID: inputModeID)
+            if mode == .korean, let client = sender as? IMKTextInput {
+                syncRomanKeyboardLayout(for: client, force: true)
+            }
+
+            if composer.inputMode != mode {
+                DebugLogger.log("PriTypeInputController: TIS input mode '\(inputModeID)' -> \(mode)")
+                composer.setInputMode(mode)
+            }
+            return
+        }
+
+        super.setValue(value, forTag: tag, client: sender)
+    }
+
+    private static func isPriTypeInputMode(_ inputModeID: String) -> Bool {
+        inputModeID == priTypeInputSourceID || inputModeID.hasPrefix("\(priTypeInputSourceID).")
+    }
+
+    private static func inputMode(forPriTypeInputModeID inputModeID: String) -> InputMode {
+        if inputModeID == priTypeEnglishInputModeID {
+            return .english
+        }
+        return .korean
     }
     
     override public func handle(_ event: NSEvent!, client sender: Any!) -> Bool {
@@ -214,14 +315,23 @@ public class PriTypeInputController: IMKInputController {
         assert(Thread.isMainThread, "IMK handle must run on main thread")
         #endif
         guard let event = event, let client = sender as? IMKTextInput else { return false }
-        
+
+        guard event.type == .keyDown else {
+            return false
+        }
+
         // 1. Resolve context FIRST — all subsequent logic must use fresh bundleId.
         // Context is invalidated when the client object changes (app switch without activateServer).
         // When lastClient is nil (after deactivateServer), always re-analyze to avoid
         // using stale context from a previous app/field.
         var context: ClientContext
         if let cached = self.cachedContext, let last = lastClient, last === client {
-            context = cached
+            if cached.isLightweight && cached.isFinder {
+                context = ClientContextDetector.analyze(client: client)
+                self.cachedContext = context
+            } else {
+                context = cached
+            }
         } else {
             DebugLogger.log("cachedContext miss: client changed or nil, analyzing (Slow Path)")
             context = ClientContextDetector.analyze(client: client)
@@ -229,25 +339,28 @@ public class PriTypeInputController: IMKInputController {
             // Do not update self.lastClient here. It must be updated alongside currentAdapter
             // below to ensure the adapter is correctly recreated when the client changes.
         }
+
+        if debugHandleLogCount < 200 {
+            debugHandleLogCount += 1
+            DebugLogger.log("PriTypeInputController: handle keyCode=\(event.keyCode) mode=\(composer.inputMode) chars='\(event.characters ?? "")' modifiers=\(event.modifierFlags.rawValue) bundle=\(context.bundleId) lightweight=\(context.isLightweight) immediate=\(context.shouldUseImmediateMode) clientChanged=\(lastClient !== client)")
+        }
         
         // 2. Mark keystroke with current app's bundleId for cross-app hanja validation
         composer.markKeystroke(bundleId: context.bundleId)
-        
-        // Debug: Log all incoming events to diagnose Caps Lock issue
-        DebugLogger.log("InputController.handle() event type: \(event.type.rawValue) keyCode: \(event.keyCode)")
-        
+
         // 3. DYNAMIC CHECK: Secure Input (password fields)
         if shouldPassThroughSecureInput(client: client, context: context) {
             composer.discardCompositionForPassThrough()
             return false
         }
-        
+
         // Finder-specific handling
         if context.shouldUseImmediateMode {
             DebugLogger.log("Finder: ImmediateMode (context=\(context))")
             // Only recreate adapter if client changed or type mismatch
             if lastClient !== client || !adapterMatchesContext(currentAdapter, context: context) {
                 lastClient = client
+                syncRomanKeyboardLayout(for: client)
                 currentAdapter = makeAdapter(for: client, context: context)
             }
             return composer.handle(event, delegate: currentAdapter!)
@@ -257,35 +370,8 @@ public class PriTypeInputController: IMKInputController {
         // This avoids ~20 heap allocations/second during fast typing
         if lastClient !== client || currentAdapter == nil || !adapterMatchesContext(currentAdapter, context: context) {
             lastClient = client
+            syncRomanKeyboardLayout(for: client)
             currentAdapter = makeAdapter(for: client, context: context)
-        }
-        
-        // Proactively cache cursor position during Korean composition.
-        // Chromium blocks coordinate queries during hanja lookup but may allow
-        // them during normal typing. Try multiple strategies to populate cache.
-        if composer.inputMode == .korean {
-            var lineRect = NSRect.zero
-            var cached = false
-            let markedRange = client.markedRange()
-            
-            // Strategy A: firstRect for markedRange
-            if !cached && markedRange.location != NSNotFound {
-                var actualRange = NSRange(location: NSNotFound, length: 0)
-                let rect = client.firstRect(forCharacterRange: markedRange, actualRange: &actualRange)
-                if HangulComposer.isValidCursorRect(rect) {
-                    HangulComposer.lastKnownCursorRect = rect
-                    cached = true
-                }
-            }
-            
-            // Strategy B: attributes(pos-1)
-            if !cached && markedRange.location != NSNotFound && markedRange.location > 0 {
-                client.attributes(forCharacterIndex: markedRange.location - 1, lineHeightRectangle: &lineRect)
-                if HangulComposer.isValidCursorRect(lineRect) {
-                    HangulComposer.lastKnownCursorRect = lineRect
-                    cached = true
-                }
-            }
         }
         
         return composer.handle(event, delegate: currentAdapter!)
@@ -299,27 +385,28 @@ public class PriTypeInputController: IMKInputController {
             return true
         }
 
-        let selectionRange = client.selectedRange()
-        let hasInvalidSelection = selectionRange.location == NSNotFound
         let hasGlobalSecureInput = IsSecureEventInputEnabled()
-
-        guard hasInvalidSelection || hasGlobalSecureInput else {
-            return false
-        }
-
-        if hasInvalidSelection {
-            DebugLogger.log("Secure Input: invalid selection in '\(bundleId)', passing through")
-            return true
-        }
 
         if hasGlobalSecureInput {
             DebugLogger.log("Secure Input: global secure input active in '\(bundleId)', passing through")
             return true
         }
 
+        guard !context.hasTextInputCapability else {
+            return false
+        }
+
+        let selectionRange = client.selectedRange()
+        let hasInvalidSelection = selectionRange.location == NSNotFound
+
+        if hasInvalidSelection {
+            DebugLogger.log("Secure Input: invalid selection in '\(bundleId)', passing through")
+            return true
+        }
+
         return false
     }
-    
+
     // 마우스 클릭 등으로 조합 영역 외부 클릭 시 조합 커밋
     override public func commitComposition(_ sender: Any!) {
         #if DEBUG
@@ -342,7 +429,7 @@ public class PriTypeInputController: IMKInputController {
             if let cachedContext, lastClient === client {
                 return cachedContext
             }
-            return ClientContextDetector.analyze(client: client)
+            return nil
         }
         return cachedContext
     }

@@ -166,7 +166,7 @@ public final class IOKitManager: @unchecked Sendable {
         // Get HID usages for configured keys
         let toggleUsage = Self.hidUsage(for: toggleBinding.keyCode)
         let hanjaUsage = Self.hidUsage(for: hanjaBinding.keyCode)
-        
+
         // Check for toggle key (only for modifier-only bindings)
         if toggleBinding.isModifierOnly, let expectedUsage = toggleUsage, usage == expectedUsage {
             if pressed {

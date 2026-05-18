@@ -152,39 +152,9 @@ struct ConfigurationManagerTests {
         #expect(!ConfigurationManager.shared.controlSpaceAsToggle)
     }
     
-    // MARK: - Text Input Feature Tests
-    
-    @Test("Default auto-capitalize is enabled")
-    func defaultAutoCapitalize() {
-        #expect(ConfigurationManager.shared.autoCapitalizeEnabled)
-    }
-    
-    @Test("Auto-capitalize persists")
-    func autoCapitalizePersistence() {
-        let original = ConfigurationManager.shared.autoCapitalizeEnabled
-        defer { ConfigurationManager.shared.autoCapitalizeEnabled = original }
-        
-        ConfigurationManager.shared.autoCapitalizeEnabled = false
-        #expect(!ConfigurationManager.shared.autoCapitalizeEnabled)
-        
-        ConfigurationManager.shared.autoCapitalizeEnabled = true
-        #expect(ConfigurationManager.shared.autoCapitalizeEnabled)
-    }
-    
-    @Test("Default double-space-period is enabled")
-    func defaultDoubleSpacePeriod() {
-        #expect(ConfigurationManager.shared.doubleSpacePeriodEnabled)
-    }
-    
-    @Test("Double-space-period persists")
-    func doubleSpacePeriodPersistence() {
-        let original = ConfigurationManager.shared.doubleSpacePeriodEnabled
-        defer { ConfigurationManager.shared.doubleSpacePeriodEnabled = original }
-        
-        ConfigurationManager.shared.doubleSpacePeriodEnabled = false
-        #expect(!ConfigurationManager.shared.doubleSpacePeriodEnabled)
-        
-        ConfigurationManager.shared.doubleSpacePeriodEnabled = true
-        #expect(ConfigurationManager.shared.doubleSpacePeriodEnabled)
+    @Test("System double-space-period setting is readable")
+    func systemDoubleSpacePeriodSettingIsReadable() {
+        let value = ConfigurationManager.shared.doubleSpacePeriodEnabled
+        #expect(value == true || value == false)
     }
 }

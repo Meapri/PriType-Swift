@@ -9,16 +9,12 @@ xattr -cr "$APP_PATH" 2>/dev/null || true
 # 2. Force macOS to re-register the input method
 #    Kill the TextInputMenuAgent so it picks up the new bundle
 killall TextInputMenuAgent 2>/dev/null || true
+killall TextInputSwitcher 2>/dev/null || true
+killall keyboardservicesd 2>/dev/null || true
+killall imklaunchagent 2>/dev/null || true
 killall PriTypeV2 2>/dev/null || true
 
-# 3. Launch the new PriTypeV2 process
-#    macOS InputMethodKit will auto-relaunch if it was previously registered,
-#    but we explicitly launch it to cover first-install and edge cases.
-sleep 0.5
-open "$APP_PATH" || true
-
-# 4. Determine if this is a fresh install or an update
-#    Check if PriTypeV2 is already in the user's input sources
+# 3. Determine if this is a fresh install or an update before migration.
 IS_UPDATE=false
 CURRENT_USER=$(stat -f "%Su" /dev/console 2>/dev/null || echo "")
 if [ -n "$CURRENT_USER" ]; then
@@ -29,13 +25,20 @@ if [ -n "$CURRENT_USER" ]; then
     fi
 fi
 
+# 4. Launch the new PriTypeV2 process
+#    macOS InputMethodKit will auto-relaunch if it was previously registered,
+#    but we explicitly launch it to cover first-install, input-source migration,
+#    and re-enable edge cases without relying on optional system scripting runtimes.
+sleep 0.5
+open "$APP_PATH" || true
+
 if [ "$IS_UPDATE" = true ]; then
-    # Update: just show a brief success message
-    osascript -e 'display notification "PriType가 최신 버전으로 업데이트되었습니다." with title "PriType 업데이트 완료" sound name "Glass"' || true
+    # Update: no UI prompt. The installer success screen is enough, and avoiding
+    # osascript prevents macOS from showing Script Editor-style notifications.
+    true
 else
-    # Fresh install: guide the user to add the input source
+    # Fresh install: guide the user to add the input source without AppleScript.
     open "x-apple.systempreferences:com.apple.preference.keyboard?InputSources" || true
-    osascript -e 'display dialog "PriType 입력기 설치가 완료되었습니다.\n\n시스템 설정 > 키보드 > 텍스트 입력의 [입력 소스 편집]에서 PriTypeV2를 추가해 주세요." buttons {"확인"} default button "확인" with title "PriType 설치 완료" with icon note' || true
 fi
 
 exit 0

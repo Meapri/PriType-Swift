@@ -2,3 +2,5 @@
 "CFBundleName" = "PriType";
 "CFBundleDisplayName" = "PriType";
 "com.pritype.inputmethod.v2" = "PriType";
+"com.pritype.inputmethod.v2.korean" = "한글";
+"com.pritype.inputmethod.v2.english" = "영어";

@@ -10,6 +10,15 @@ let kConnectionName = "PriType_InputString_v2"
 class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
     
     private var hasLaunchedBefore = false
+
+    private func toggleLanguageInputSource() {
+        if let nextMode = InputSourceManager.shared.toggledInputMode(
+            fallbackMode: PriTypeInputController.sharedComposer.inputMode
+        ) {
+            PriTypeInputController.sharedController?.selectInputModeForCurrentClient(nextMode)
+            PriTypeInputController.sharedComposer.setInputMode(nextMode)
+        }
+    }
     
     func applicationDidFinishLaunching(_ notification: Notification) {
         DebugLogger.log("AppDelegate: applicationDidFinishLaunching")
@@ -18,12 +27,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
         _ = IMKServer(name: kConnectionName, bundleIdentifier: Bundle.main.bundleIdentifier)
         DebugLogger.log("IMKServer initialized")
         
-        // Setup status bar indicator
-        DispatchQueue.main.async {
-            StatusBarManager.shared.setup()
-        }
+        InputSourceManager.shared.ensureDefaultEnglishInputSourceEnabled()
         
-        // Setup Right Command toggle via IOKit
+        // Setup toggle key monitoring
         setupIOKit()
         
         // Pre-load Hanja dictionary in background for instant lookup
@@ -75,7 +81,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
         
         // Set callback for CGEventTap toggle handler (handles all toggle keys)
         RightCommandSuppressor.shared.onToggle = {
-            PriTypeInputController.sharedComposer.toggleInputMode()
+            self.toggleLanguageInputSource()
         }
         
         // Set callback for Right Option key → Hanja lookup
@@ -93,7 +99,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
             RightCommandSuppressor.shared.onTapFailed = {
                 DebugLogger.log("CGEventTap failed repeatedly — activating IOKit fallback")
                 IOKitManager.shared.onRightCommandToggle = {
-                    PriTypeInputController.sharedComposer.toggleInputMode()
+                    self.toggleLanguageInputSource()
                 }
                 IOKitManager.shared.onRightOptionHanja = {
                     PriTypeInputController.sharedComposer.triggerHanjaLookup()
@@ -104,7 +110,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
             DebugLogger.log("Primary: CGEventTap FAILED - IOKit taking over as primary")
             // IOKit takes over as primary toggle handler
             IOKitManager.shared.onRightCommandToggle = {
-                PriTypeInputController.sharedComposer.toggleInputMode()
+                self.toggleLanguageInputSource()
             }
             IOKitManager.shared.onRightOptionHanja = {
                 PriTypeInputController.sharedComposer.triggerHanjaLookup()

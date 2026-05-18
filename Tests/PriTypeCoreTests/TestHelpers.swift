@@ -21,8 +21,7 @@ final class MockConfiguration: ConfigurationProviding, @unchecked Sendable {
     var toggleKey: ToggleKey = .rightCommand
     var rightCommandAsToggle: Bool { true }
     var controlSpaceAsToggle: Bool { false }
-    var autoCapitalizeEnabled: Bool = true
-    var doubleSpacePeriodEnabled: Bool = true
+    var doubleSpacePeriodEnabled: Bool { true }
 }
 
 /// Mock implementation of HangulComposerDelegate for tests

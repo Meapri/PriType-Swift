@@ -539,11 +539,7 @@ func verifyConfigurationManager() {
     // Restore
     config.toggleKey = originalToggle
     
-    // Test 3: Auto-capitalize default (should be true)
-    assert(config.autoCapitalizeEnabled == true || config.autoCapitalizeEnabled == false, "FAIL: autoCapitalizeEnabled accessible")
-    print("PASS: autoCapitalizeEnabled is accessible")
-    
-    // Test 4: Double-space period default
+    // Test 3: Double-space period default
     assert(config.doubleSpacePeriodEnabled == true || config.doubleSpacePeriodEnabled == false, "FAIL: doubleSpacePeriodEnabled accessible")
     print("PASS: doubleSpacePeriodEnabled is accessible")
     
@@ -563,24 +559,9 @@ func verifyTextConvenienceHandler() {
     assert(handler.isHangul("A") == false, "FAIL: A should not be Hangul")
     print("PASS: isHangul works correctly")
     
-    // Test 2: shouldAutoCapitalize at document start
-    var buffer = ""
-    assert(handler.shouldAutoCapitalize(buffer: buffer) == true, "FAIL: Should capitalize at start")
-    print("PASS: shouldAutoCapitalize at document start")
-    
-    // Test 3: shouldAutoCapitalize after period
-    buffer = "Hello. "
-    assert(handler.shouldAutoCapitalize(buffer: buffer) == true, "FAIL: Should capitalize after period")
-    print("PASS: shouldAutoCapitalize after period")
-    
-    // Test 4: shouldAutoCapitalize mid-sentence
-    buffer = "Hello "
-    assert(handler.shouldAutoCapitalize(buffer: buffer) == false, "FAIL: Should not capitalize mid-sentence")
-    print("PASS: shouldAutoCapitalize mid-sentence (false)")
-    
-    // Test 5: Double-space period (basic check)
+    // Test 2: Double-space period (basic check)
     handler.resetSpaceState()
-    buffer = "Hello "
+    var buffer = "Hello "
     _ = handler.handleDoubleSpacePeriod(buffer: &buffer, delegate: delegate, checkHangul: false)
     // First space recorded
     let result = handler.handleDoubleSpacePeriod(buffer: &buffer, delegate: delegate, checkHangul: false)
@@ -599,4 +580,3 @@ verify()
 verifyFinderHeuristic()
 verifyConfigurationManager()
 verifyTextConvenienceHandler()
-
