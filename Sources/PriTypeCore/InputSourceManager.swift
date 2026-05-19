@@ -142,9 +142,11 @@ public final class InputSourceManager: @unchecked Sendable {
         return nil
     }
 
-    /// Keep PriType as the Korean input source and Apple's ABC as the English
-    /// input source. Older experimental builds registered PriType as component
-    /// input modes; remove those legacy entries so the menu has one Korean row.
+    /// Keep Apple's ABC available and remove stale legacy entries.
+    ///
+    /// This method intentionally does not enable PriType itself. Calling
+    /// `TISEnableInputSource` for the running input method can make macOS show
+    /// an "add input source" confirmation again on startup.
     public func ensurePriTypeInputModesEnabled() {
         ensureDefaultEnglishInputSourceEnabled()
     }
@@ -173,15 +175,6 @@ public final class InputSourceManager: @unchecked Sendable {
             ])
         }
 
-        if let priTypeSource = inputSource(id: Self.priTypeKoreanInputSourceID) {
-            let status = TISEnableInputSource(priTypeSource)
-            if status != noErr {
-                DebugLogger.log("InputSourceManager: failed to enable PriType source, status=\(status)")
-            }
-        } else {
-            DebugLogger.log("InputSourceManager: PriType input source not found while enabling")
-        }
-
         var didChange = !Self.inputSourcesEqual(enabledSources, originalEnabledSources)
         if didChange {
             defaults.set(enabledSources, forKey: "AppleEnabledInputSources")
@@ -199,13 +192,13 @@ public final class InputSourceManager: @unchecked Sendable {
         }
 
         guard didChange else {
-            DebugLogger.log("InputSourceManager: PriType + Apple ABC input sources already enabled")
+            DebugLogger.log("InputSourceManager: Apple ABC and legacy input-source cleanup already current")
             return
         }
 
         defaults.synchronize()
         CFPreferencesAppSynchronize("com.apple.HIToolbox" as CFString)
-        DebugLogger.log("InputSourceManager: enabled PriType + Apple ABC; removed stale PriType/Apple Korean duplicates if present")
+        DebugLogger.log("InputSourceManager: ensured Apple ABC; removed stale PriType/Apple Korean duplicates if present")
     }
 
     private func inputSource(id: String) -> TISInputSource? {

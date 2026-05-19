@@ -113,6 +113,13 @@ struct ClientContextTests {
             hasMarkedTextSupport: true
         )))
     }
+
+    @Test("KakaoTalk commits composition when app deactivates")
+    func kakaoTalkNeedsCommitOnApplicationDeactivate() {
+        #expect(ClientCompatibilityPolicy.needsCommitOnApplicationDeactivate(bundleId: "com.kakao.KakaoTalkMac"))
+        #expect(!ClientCompatibilityPolicy.needsCommitOnApplicationDeactivate(bundleId: "com.apple.finder"))
+        #expect(!ClientCompatibilityPolicy.needsCommitOnApplicationDeactivate(bundleId: "com.google.Chrome"))
+    }
     
     // MARK: - Resolution / Desktop Detection (migrated from ResolutionTests.swift)
     

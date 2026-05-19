@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.7.3] - 2026-05-20 (Stable)
+
+### 수정
+- KakaoTalk에서 한글 조합 중 다른 앱으로 포커스를 옮겼다가 돌아오면 마지막 조합 글자가 확정되지 않고 다음 입력으로 덮어써지던 문제를 보완했습니다.
+- KakaoTalk이 앱 비활성화 후에도 IMK marked composition을 오래 붙잡는 경우를 처리하기 위해, KakaoTalk 비활성화 시 조합 중인 글자를 즉시 커밋하도록 호환성 정책을 추가했습니다.
+- PriType 실행 시 자기 입력 소스를 다시 활성화하던 자동 입력 소스 제어 경로를 제거했습니다. 재부팅할 때마다 macOS가 PriType 입력 소스 추가 확인창을 반복 표시할 수 있던 원인을 줄였습니다.
+
+### 검증
+- `swift test`
+- `swift run -c debug PriTypeVerify`
+- `swift run -c release PriTypeBenchmark`
+
 ## [2.7.2] - 2026-05-18 (Stable)
 
 ### 수정

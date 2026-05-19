@@ -100,9 +100,14 @@ public struct ClientContext: Sendable {
 
 public enum ClientCompatibilityPolicy {
     private static let goodNotesBundleId = "com.goodnotesapp.x"
+    private static let kakaoTalkBundleId = "com.kakao.KakaoTalkMac"
 
     public static func needsDirectNewlineAfterReturnCommit(bundleId: String) -> Bool {
         bundleId == goodNotesBundleId
+    }
+
+    public static func needsCommitOnApplicationDeactivate(bundleId: String) -> Bool {
+        bundleId == kakaoTalkBundleId
     }
 }
 

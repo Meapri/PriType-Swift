@@ -32,8 +32,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
         _ = IMKServer(name: kConnectionName, bundleIdentifier: Bundle.main.bundleIdentifier)
         DebugLogger.log("IMKServer initialized")
         
-        InputSourceManager.shared.ensureDefaultEnglishInputSourceEnabled()
-        
         // Setup toggle key monitoring
         setupIOKit()
         
