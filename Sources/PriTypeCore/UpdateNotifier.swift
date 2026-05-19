@@ -63,10 +63,14 @@ public final class UpdateNotifier: NSObject, @unchecked Sendable, UNUserNotifica
         
         center.setNotificationCategories([category])
         
-        // Do not request notification permission during app startup. PriType can
-        // be auto-launched by IMK/login, so ask only when there is an update
-        // notification to deliver.
-        DebugLogger.log("UpdateNotifier: setup completed without startup permission prompt")
+        // Request permission (non-blocking)
+        center.requestAuthorization(options: [.alert, .sound]) { granted, error in
+            if let error = error {
+                DebugLogger.log("UpdateNotifier: Permission error - \(error.localizedDescription)")
+            } else {
+                DebugLogger.log("UpdateNotifier: Permission \(granted ? "granted" : "denied")")
+            }
+        }
     }
     
     // MARK: - Send Notification
@@ -75,48 +79,25 @@ public final class UpdateNotifier: NSObject, @unchecked Sendable, UNUserNotifica
     ///
     /// - Parameter update: The update information to display
     public func notifyUpdateAvailable(_ update: UpdateChecker.UpdateInfo) {
-        UNUserNotificationCenter.current().getNotificationSettings { settings in
-            switch settings.authorizationStatus {
-            case .authorized, .provisional:
-                self.deliverUpdateNotification(update)
-            case .notDetermined:
-                UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { granted, error in
-                    if let error = error {
-                        DebugLogger.log("UpdateNotifier: Permission error - \(error.localizedDescription)")
-                    }
-                    guard granted else {
-                        DebugLogger.log("UpdateNotifier: permission denied while update notification was pending")
-                        return
-                    }
-                    self.deliverUpdateNotification(update)
-                }
-            default:
-                DebugLogger.log("UpdateNotifier: skipped update notification; permission status=\(settings.authorizationStatus.rawValue)")
-                return
-            }
-        }
-    }
-
-    private func deliverUpdateNotification(_ update: UpdateChecker.UpdateInfo) {
         // Store the URL for when the user interacts with the notification
         self.pendingReleaseURL = update.releasePageURL
-
+        
         let content = UNMutableNotificationContent()
         content.title = L10n.update.notificationTitle
         content.body = String(format: L10n.update.notificationBody, update.version)
         content.sound = .default
-        content.categoryIdentifier = self.categoryIdentifier
-
+        content.categoryIdentifier = categoryIdentifier
+        
         // Store the release URL in userInfo for the delegate callback
         content.userInfo = ["releaseURL": update.releasePageURL.absoluteString]
-
+        
         // Deliver immediately (no trigger = immediate)
         let request = UNNotificationRequest(
             identifier: "pritype-update-\(update.version)",
             content: content,
             trigger: nil
         )
-
+        
         UNUserNotificationCenter.current().add(request) { error in
             if let error = error {
                 DebugLogger.log("UpdateNotifier: Failed to send - \(error.localizedDescription)")

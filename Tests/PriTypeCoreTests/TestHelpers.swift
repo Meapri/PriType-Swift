@@ -30,6 +30,11 @@ final class MockComposerDelegate: HangulComposerDelegate {
     var insertedTexts: [String] = []
     var markedText: String = ""
     var fullText: String = ""
+    var backspaceCompositionUpdateDepth = 0
+    var backspaceCompositionUpdateCallCount = 0
+    var markedTextDuringBackspaceUpdates: [String] = []
+    var shouldPassThroughBackspaceAfterClearingComposition = false
+    var passThroughBackspaceAfterClearingCompositionCallCount = 0
     
     func insertText(_ text: String) {
         insertedTexts.append(text)
@@ -39,6 +44,27 @@ final class MockComposerDelegate: HangulComposerDelegate {
 
     func setMarkedText(_ text: String) {
         markedText = text
+        if backspaceCompositionUpdateDepth > 0 {
+            markedTextDuringBackspaceUpdates.append(text)
+        }
+    }
+
+    func beginBackspaceCompositionUpdate() {
+        backspaceCompositionUpdateDepth += 1
+        backspaceCompositionUpdateCallCount += 1
+    }
+
+    func endBackspaceCompositionUpdate() {
+        backspaceCompositionUpdateDepth -= 1
+    }
+
+    func prepareForSystemBackspaceAfterClearingComposition() -> Bool {
+        passThroughBackspaceAfterClearingCompositionCallCount += 1
+        guard shouldPassThroughBackspaceAfterClearingComposition else {
+            return false
+        }
+        markedText = ""
+        return true
     }
     
     func textBeforeCursor(length: Int) -> String? {
@@ -60,6 +86,11 @@ final class MockComposerDelegate: HangulComposerDelegate {
         insertedTexts = []
         markedText = ""
         fullText = ""
+        backspaceCompositionUpdateDepth = 0
+        backspaceCompositionUpdateCallCount = 0
+        markedTextDuringBackspaceUpdates = []
+        shouldPassThroughBackspaceAfterClearingComposition = false
+        passThroughBackspaceAfterClearingCompositionCallCount = 0
     }
 }
 

@@ -769,7 +769,6 @@ struct SelectionRow: View {
 /// A toggle row — icon uses plain background instead of glass
 struct SettingsToggleRow: View {
     let title: String
-    var subtitle: String?
     let icon: String
     @Binding var isOn: Bool
 
@@ -777,23 +776,10 @@ struct SettingsToggleRow: View {
         HStack(spacing: 10) {
             SettingsRowIcon(systemName: icon)
 
-            VStack(alignment: .leading, spacing: 3) {
-                Text(title)
-                    .font(.system(size: 14, weight: .regular))
-                    .foregroundStyle(.primary)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                if let subtitle {
-                    Text(subtitle)
-                        .font(.system(size: 11, weight: .regular))
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            }
-            .layoutPriority(1)
-
+            Text(title)
+                .font(.system(size: 14, weight: .regular))
+                .foregroundStyle(.primary)
             Spacer()
-
             Toggle("", isOn: $isOn)
                 .toggleStyle(.switch)
                 .labelsHidden()

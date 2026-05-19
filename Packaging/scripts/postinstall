@@ -25,11 +25,12 @@ if [ -n "$CURRENT_USER" ]; then
     fi
 fi
 
-# 4. Register the bundle without launching the app. Launching the input method
-#    process here can trigger app-level reopen/permission flows during install
-#    or the next login session. IMK will start it when the user selects PriType.
-/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister \
-    -f "$APP_PATH" >/dev/null 2>&1 || true
+# 4. Launch the new PriTypeV2 process
+#    macOS InputMethodKit will auto-relaunch if it was previously registered,
+#    but we explicitly launch it to cover first-install, input-source migration,
+#    and re-enable edge cases without relying on optional system scripting runtimes.
+sleep 0.5
+open "$APP_PATH" || true
 
 if [ "$IS_UPDATE" = true ]; then
     # Update: no UI prompt. The installer success screen is enough, and avoiding
