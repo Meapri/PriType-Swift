@@ -50,9 +50,6 @@ public final class RightCommandSuppressor: @unchecked Sendable {
     /// Debounce timer for Hanja trigger to prevent double-fire
     private var lastHanjaTriggerTime: DispatchTime = .init(uptimeNanoseconds: 0)
 
-    /// Track Control state for Control+Space
-    private var controlIsDown = false
-    
     /// Track CGEventTap disable events for auto-recovery
     private var tapDisableCount = 0
     private var lastTapDisableTime: CFAbsoluteTime = 0
@@ -202,9 +199,6 @@ public final class RightCommandSuppressor: @unchecked Sendable {
         if type == .flagsChanged {
             let flags = event.flags
             
-            // Track Control key state (for Control+Space combo)
-            controlIsDown = flags.contains(.maskControl)
-
             if keyCode == 57 {
                 return Unmanaged.passUnretained(event)
             }

@@ -282,9 +282,20 @@ if composer.inputMode != .korean {
 }
 
 // =============================================
-// 7. 최종 메모리 보고
+// 7. 시스템 설정 조회 hot path
 // =============================================
-separator("7️⃣  최종 메모리 보고")
+separator("7️⃣  시스템 설정 조회 hot path")
+
+let config = ConfigurationManager.shared
+config.refreshSystemSettingsCache()
+measure("Caps Lock 입력소스 설정 캐시 조회 (100,000회)", iterations: 100000) {
+    _ = config.capsLockInputSourceSwitchEnabled
+}
+
+// =============================================
+// 8. 최종 메모리 보고
+// =============================================
+separator("8️⃣  최종 메모리 보고")
 let finalMemory = memoryUsageMB()
 print("  초기:       \(String(format: "%6.1f", baseMemory))MB")
 print("  사전 로딩:  \(String(format: "%6.1f", afterDictMemory))MB (\(String(format: "+%.1f", afterDictMemory - baseMemory))MB)")
