@@ -1,4 +1,5 @@
 import Testing
+import Foundation
 @testable import PriTypeCore
 
 // MARK: - TextConvenienceHandler Tests
@@ -10,6 +11,17 @@ struct TextConvenienceHandlerTests {
     
     @Test("Double space converts to period")
     func doubleSpacePeriodConversion() {
+        let defaults = UserDefaults.standard
+        let originalValue = defaults.object(forKey: "NSAutomaticPeriodSubstitutionEnabled")
+        defer {
+            if let originalValue {
+                defaults.set(originalValue, forKey: "NSAutomaticPeriodSubstitutionEnabled")
+            } else {
+                defaults.removeObject(forKey: "NSAutomaticPeriodSubstitutionEnabled")
+            }
+        }
+        defaults.set(true, forKey: "NSAutomaticPeriodSubstitutionEnabled")
+
         let handler = TextConvenienceHandler()
         let delegate = MockComposerDelegate()
         delegate.fullText = "Hello "

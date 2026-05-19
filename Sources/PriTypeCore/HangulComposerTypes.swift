@@ -40,6 +40,12 @@ public protocol HangulComposerDelegate: AnyObject {
     func replaceTextBeforeCursor(length: Int, with text: String)
 }
 
+public protocol DirectCompositionDelegate: HangulComposerDelegate {
+    func updateDirectComposition(commit: String, preedit: String)
+    func commitDirectComposition(_ text: String)
+    func clearDirectComposition()
+}
+
 // MARK: - InputMode Enum
 
 /// Input mode for the Hangul composer

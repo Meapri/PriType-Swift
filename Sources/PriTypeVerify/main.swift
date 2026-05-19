@@ -51,6 +51,12 @@ class MockDelegate: HangulComposerDelegate {
             print("Replaced last \(length) chars with '\(text)'")
         }
     }
+
+    func reset() {
+        markedText = ""
+        insertedText = ""
+        fullText = ""
+    }
 }
 
 func verify() {
@@ -313,6 +319,21 @@ func verify() {
         print("PASS: Backspace on empty context passes through")
     } else {
         print("FAIL: Backspace on empty context was consumed")
+        exit(1)
+    }
+
+    delegate.reset()
+    composer.clearLocalBuffer()
+    _ = composer.handle(NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [], timestamp: 0, windowNumber: 0, context: nil, characters: "r", charactersIgnoringModifiers: "r", isARepeat: false, keyCode: 15)!, delegate: delegate)
+    _ = composer.handle(NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [], timestamp: 0, windowNumber: 0, context: nil, characters: "k", charactersIgnoringModifiers: "k", isARepeat: false, keyCode: 40)!, delegate: delegate)
+    _ = composer.handle(NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [], timestamp: 0, windowNumber: 0, context: nil, characters: " ", charactersIgnoringModifiers: " ", isARepeat: false, keyCode: KeyCode.space)!, delegate: delegate)
+    let bufferAfterCommittedSpace = composer.localTextBuffer
+    _ = composer.handle(NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [], timestamp: 0, windowNumber: 0, context: nil, characters: "d", charactersIgnoringModifiers: "d", isARepeat: false, keyCode: 2)!, delegate: delegate)
+    let handledPreeditBS = composer.handle(backspaceEvent, delegate: delegate)
+    if handledPreeditBS && composer.localTextBuffer == bufferAfterCommittedSpace {
+        print("PASS: Backspace during preedit preserves committed context buffer")
+    } else {
+        print("FAIL: Backspace during preedit changed committed context buffer from '\(bufferAfterCommittedSpace)' to '\(composer.localTextBuffer)'")
         exit(1)
     }
     
@@ -582,7 +603,7 @@ func verifyConfigurationManager() {
     // Test 3: Double-space period default
     assert(config.doubleSpacePeriodEnabled == true || config.doubleSpacePeriodEnabled == false, "FAIL: doubleSpacePeriodEnabled accessible")
     print("PASS: doubleSpacePeriodEnabled is accessible")
-    
+
     print("PASS: ConfigurationManager tests completed")
 }
 
@@ -616,7 +637,16 @@ func verifyTextConvenienceHandler() {
     print("PASS: TextConvenienceHandler tests completed")
 }
 
+func verifyClientCompatibilityPolicy() {
+    print("\n--- Test 17: ClientCompatibilityPolicy ---")
+
+    assert(ClientCompatibilityPolicy.needsDirectNewlineAfterReturnCommit(bundleId: "com.goodnotesapp.x"), "FAIL: GoodNotes return compatibility")
+    assert(!ClientCompatibilityPolicy.needsDirectNewlineAfterReturnCommit(bundleId: "com.apple.TextEdit"), "FAIL: unrelated apps should not use GoodNotes return compatibility")
+    print("PASS: Client compatibility policy tests completed")
+}
+
 verify()
 verifyFinderHeuristic()
 verifyConfigurationManager()
 verifyTextConvenienceHandler()
+verifyClientCompatibilityPolicy()

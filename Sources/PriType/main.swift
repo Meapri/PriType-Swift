@@ -8,9 +8,6 @@ let kConnectionName = "PriType_InputString_v2"
 // MARK: - App Delegate
 
 class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
-    
-    private var hasLaunchedBefore = false
-
     private func toggleLanguageInputSource() {
         if ConfigurationManager.shared.capsLockInputSourceSwitchEnabled {
             DebugLogger.log("PriType toggle ignored because macOS Caps Lock input-source switching is enabled")
@@ -31,8 +28,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
         // Initialize IMK Server
         _ = IMKServer(name: kConnectionName, bundleIdentifier: Bundle.main.bundleIdentifier)
         DebugLogger.log("IMKServer initialized")
-        
-        InputSourceManager.shared.ensureDefaultEnglishInputSourceEnabled()
         
         // Setup toggle key monitoring
         setupIOKit()
@@ -55,8 +50,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
             }
         }
         
-        // Mark as launched (don't show settings on first boot)
-        hasLaunchedBefore = true
     }
     
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {

@@ -1,53 +1,6 @@
 import Cocoa
 import InputMethodKit
 
-// MARK: - SecureInputPolicy
-
-/// Pure policy for deciding whether a secure-input-looking client should bypass IMK composition.
-///
-/// Password fields can still expose partial IMK capabilities. Avoid Accessibility
-/// probing on the keystroke hot path; prefer raw passthrough whenever the client
-/// selection is unavailable or macOS Secure Event Input is active.
-struct SecureInputSignals: Sendable {
-    let bundleId: String
-    let hasTextInputCapability: Bool
-    let hasInvalidSelection: Bool
-    let hasGlobalSecureInput: Bool
-    let hasMarkedTextSupport: Bool
-}
-
-struct SecureInputPolicy: Sendable {
-    static func isSystemSecureClient(_ bundleId: String) -> Bool {
-        bundleId == "com.apple.SecurityAgent" ||
-            bundleId == "com.apple.loginwindow" ||
-            bundleId == "com.apple.screencaptureui"
-    }
-
-    static func shouldPassThrough(_ signals: SecureInputSignals) -> Bool {
-        if isSystemSecureClient(signals.bundleId) {
-            return true
-        }
-
-        guard signals.hasInvalidSelection || signals.hasGlobalSecureInput else {
-            return false
-        }
-
-        if signals.hasInvalidSelection && !signals.hasTextInputCapability {
-            return true
-        }
-
-        if !signals.hasMarkedTextSupport || !signals.hasTextInputCapability {
-            return true
-        }
-
-        if signals.hasInvalidSelection {
-            return true
-        }
-
-        return signals.hasGlobalSecureInput
-    }
-}
-
 // MARK: - ClientContext
 
 /// Represents the context of the current text input client
@@ -123,9 +76,9 @@ public enum ClientCompatibilityPolicy {
 public struct ClientContextDetector: Sendable {
     public static func analyzeForActivation(client: IMKTextInput) -> ClientContext {
         let frontmostApp = NSWorkspace.shared.frontmostApplication
-        var bundleId = frontmostApp?.bundleIdentifier ?? ""
+        var bundleId = client.bundleIdentifier() ?? ""
         if bundleId.isEmpty {
-            bundleId = client.bundleIdentifier() ?? ""
+            bundleId = frontmostApp?.bundleIdentifier ?? ""
         }
         let isFinder = bundleId == "com.apple.finder"
 
@@ -157,10 +110,7 @@ public struct ClientContextDetector: Sendable {
         let validAttrs = client.validAttributesForMarkedText() ?? []
         let hasTextInputCapability = !validAttrs.isEmpty
         
-        // 3. SECURE INPUT CHECK is no longer cached here.
-        // It is checked dynamically in PriTypeInputController.handle() for better accuracy.
-        
-        // 4. CONDITIONAL HEURISTIC: Coordinate check ONLY for Finder
+        // 3. CONDITIONAL HEURISTIC: Coordinate check ONLY for Finder
         // This prevents false positives in other apps (e.g. Safari tabs at top of screen)
         var isLikelyDesktopArea = false
         if isFinder {

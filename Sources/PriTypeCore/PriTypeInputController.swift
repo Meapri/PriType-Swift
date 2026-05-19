@@ -35,14 +35,24 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
     /// Last active controller reference for external toggle access
     /// - Warning: Access from main thread only (guaranteed by IMK, not compiler-enforced)
     nonisolated(unsafe) public static weak var sharedController: PriTypeInputController?
-    
+    nonisolated(unsafe) private static var activationSerial: UInt64 = 0
+    nonisolated(unsafe) private static var forcedMarkedTextBundleIDs: Set<String> = []
+    nonisolated(unsafe) private static var directCompositionBundleIDs: Set<String> = {
+        let stored = UserDefaults.standard.stringArray(forKey: "DirectCompositionBundleIDs") ?? []
+        return Set(stored)
+    }()
     // Strong reference to prevent client being released during rapid switching
     private var lastClient: IMKTextInput?
     private var lastKnownInputClient: IMKTextInput?
 
+    #if DEBUG
     private var debugHandleLogCount = 0
+    private var debugHandleSnapshotCount = 0
+    #endif
     private var lastKeyboardOverrideClientID: ObjectIdentifier?
     private var lastKeyboardOverrideTime: CFAbsoluteTime = 0
+    private var lastMarkedKeystrokeBundleId = ""
+    private var lastBackspaceCompositionEndTime: CFAbsoluteTime = 0
     
     // Keep adapter alive for external toggle calls
     public private(set) var currentAdapter: (any HangulComposerDelegate)?
@@ -51,16 +61,140 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
     
     /// Base adapter class with common IMKTextInput operations
     /// Subclasses override setMarkedText for different behaviors
-    private class BaseClientAdapter: NSObject, HangulComposerDelegate {
+    class BaseClientAdapter: NSObject, HangulComposerDelegate {
         let client: IMKTextInput
         
         init(client: IMKTextInput) {
             self.client = client
         }
+
+        #if DEBUG
+        private func formatRange(_ range: NSRange) -> String {
+            if range.location == NSNotFound {
+                return "NSNotFound,len=\(range.length)"
+            }
+            return "loc=\(range.location),len=\(range.length)"
+        }
+
+        func debugClientSnapshot(_ label: String) {
+            let object = client as AnyObject
+            let selected = client.selectedRange()
+            let marked = client.markedRange()
+            DebugLogger.log("ClientAdapter[\(label)]: class=\(type(of: client)) object=\(ObjectIdentifier(object)) selected={\(formatRange(selected))} marked={\(formatRange(marked))}")
+        }
+        #endif
         
+        static func insertionReplacementRange(selectedRange: NSRange, markedRange: NSRange) -> NSRange {
+            if markedRange.location != NSNotFound,
+               markedRange.length > 0 {
+                return markedRange
+            }
+            return NSRange(location: NSNotFound, length: NSNotFound)
+        }
+
+        static func markedTextClearingReplacementRange(markedRange: NSRange) -> NSRange? {
+            guard markedRange.location != NSNotFound, markedRange.length > 0 else {
+                return nil
+            }
+            return markedRange
+        }
+
+        static func isUsableInsertionSelection(_ range: NSRange) -> Bool {
+            range.location != NSNotFound && range.location < 10_000_000 && range.length == 0
+        }
+
+        static func hasNoHostMarkedRange(_ range: NSRange) -> Bool {
+            range.location == NSNotFound
+        }
+
+        static func hasHostMarkedSession(_ range: NSRange) -> Bool {
+            range.location != NSNotFound
+        }
+
+        static func hasHostMarkedRange(_ range: NSRange) -> Bool {
+            range.location != NSNotFound && range.length > 0
+        }
+
+        static func directCompositionReplacementRange(compositionRange: NSRange, selectedRange: NSRange) -> NSRange {
+            if compositionRange.location != NSNotFound {
+                return compositionRange
+            }
+            if isUsableInsertionSelection(selectedRange) {
+                return NSRange(location: selectedRange.location, length: 0)
+            }
+            return NSRange(location: NSNotFound, length: NSNotFound)
+        }
+
+        func clearClientMarkedTextIfNeeded(reason: String) {
+            let markedRange = client.markedRange()
+            guard let replacementRange = Self.markedTextClearingReplacementRange(markedRange: markedRange) else {
+                DebugLogger.log("ClientAdapter.clearMarked skipped reason=\(reason); no non-empty marked range")
+                return
+            }
+
+            DebugLogger.log("ClientAdapter.clearMarked reason=\(reason) loc=\(replacementRange.location) len=\(replacementRange.length)")
+            let attributed = NSAttributedString(string: "", attributes: [:])
+            client.setMarkedText(
+                attributed,
+                selectionRange: NSRange(location: 0, length: 0),
+                replacementRange: replacementRange
+            )
+            #if DEBUG
+            debugClientSnapshot("clearMarked.after reason=\(reason)")
+            #endif
+        }
+
+        @discardableResult
+        func finishMarkedText(reason: String) -> Bool {
+            DebugLogger.log("ClientAdapter.finishMarkedText reason=\(reason)")
+            #if DEBUG
+            debugClientSnapshot("finishMarkedText.before reason=\(reason)")
+            #endif
+            unmarkClientText(reason: reason)
+            #if DEBUG
+            debugClientSnapshot("finishMarkedText.after reason=\(reason)")
+            #endif
+            return true
+        }
+
+        func finishMarkedTextAfterDirectCommit(reason: String) {
+            DebugLogger.log("ClientAdapter.finishMarkedTextAfterDirectCommit reason=\(reason)")
+            #if DEBUG
+            debugClientSnapshot("finishAfterDirectCommit.before reason=\(reason)")
+            #endif
+            unmarkClientText(reason: reason)
+            #if DEBUG
+            debugClientSnapshot("finishAfterDirectCommit.after reason=\(reason)")
+            #endif
+        }
+
+        func unmarkClientText(reason: String) {
+            let object = client as AnyObject
+            let selector = Selector(("unmarkText"))
+            guard object.responds(to: selector) else {
+                DebugLogger.log("ClientAdapter.unmarkText unavailable reason=\(reason)")
+                return
+            }
+            DebugLogger.log("ClientAdapter.unmarkText reason=\(reason)")
+            _ = object.perform(selector)
+        }
+
         func insertText(_ text: String) {
             guard !text.isEmpty else { return }
-            client.insertText(text, replacementRange: NSRange(location: NSNotFound, length: NSNotFound))
+            #if DEBUG
+            debugClientSnapshot("insertText.before len=\(text.utf16.count)")
+            #endif
+            let replacementRange = Self.insertionReplacementRange(
+                selectedRange: client.selectedRange(),
+                markedRange: client.markedRange()
+            )
+            if replacementRange.location != NSNotFound {
+                DebugLogger.log("ClientAdapter.insertText using marked replacement range loc=\(replacementRange.location) len=\(replacementRange.length)")
+            }
+            client.insertText(text, replacementRange: replacementRange)
+            #if DEBUG
+            debugClientSnapshot("insertText.after len=\(text.utf16.count)")
+            #endif
         }
         
         func setMarkedText(_ text: String) {
@@ -88,22 +222,218 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
         }
     }
     
-    /// Standard adapter with underlined marked text for composition display
-    private class ClientAdapter: BaseClientAdapter {
+    /// Standard IMK marked-text adapter.
+    class ClientAdapter: BaseClientAdapter {
         override func setMarkedText(_ text: String) {
-            let attributes: [NSAttributedString.Key: Any] = [
-                .underlineStyle: NSUnderlineStyle.single.rawValue,
-                .underlineColor: NSColor.textColor
-            ]
-            let attributed = NSAttributedString(string: text, attributes: attributes)
-            client.setMarkedText(attributed, selectionRange: NSRange(location: text.utf16.count, length: 0), replacementRange: NSRange(location: NSNotFound, length: NSNotFound))
+            #if DEBUG
+            debugClientSnapshot("setMarkedText.before len=\(text.utf16.count)")
+            #endif
+            guard !text.isEmpty else {
+                unmarkClientText(reason: "setMarkedText.empty")
+                #if DEBUG
+                debugClientSnapshot("setMarkedText.after len=0")
+                #endif
+                return
+            }
+            let attributed = NSAttributedString(
+                string: text,
+                attributes: [:]
+            )
+            client.setMarkedText(
+                attributed,
+                selectionRange: NSRange(location: text.utf16.count, length: 0),
+                replacementRange: NSRange(location: NSNotFound, length: NSNotFound)
+            )
+            #if DEBUG
+            debugClientSnapshot("setMarkedText.after len=\(text.utf16.count)")
+            #endif
         }
     }
 
     /// Immediate mode adapter for non-text contexts (e.g., Finder desktop)
     /// Skips setMarkedText to prevent floating composition window
-    private final class ImmediateModeAdapter: BaseClientAdapter {
+    final class ImmediateModeAdapter: BaseClientAdapter {
         // Inherits no-op setMarkedText from base class
+        override func finishMarkedText(reason: String) -> Bool {
+            DebugLogger.log("ImmediateModeAdapter.finishMarkedText skipped reason=\(reason)")
+            return false
+        }
+    }
+
+    /// Direct composition adapter for clients that do not reliably render or clear
+    /// IMK marked text attributes but do support normal replacement ranges.
+    final class DirectCompositionAdapter: BaseClientAdapter, DirectCompositionDelegate {
+        private var directCompositionRange = NSRange(location: NSNotFound, length: 0)
+        private var shouldPassThroughBackspaceAfterFailedClear = false
+        private let bundleId: String
+        private let forceMarkedText: (String) -> Void
+
+        init(client: IMKTextInput, bundleId: String, forceMarkedText: @escaping (String) -> Void) {
+            self.bundleId = bundleId
+            self.forceMarkedText = forceMarkedText
+            super.init(client: client)
+        }
+
+        private func verifyCursor(startLocation: Int, insertedLength: Int, reason: String) {
+            guard startLocation != NSNotFound else { return }
+            guard insertedLength > 0 else { return }
+            let expectedLocation = startLocation + insertedLength
+            let selectedRange = client.selectedRange()
+            guard selectedRange.location != NSNotFound else {
+                DebugLogger.log("DirectCompositionAdapter: cursor unavailable bundle=\(bundleId) reason=\(reason) expected=\(expectedLocation) selected=\(selectedRange)")
+                return
+            }
+            guard selectedRange.location == expectedLocation, selectedRange.length == 0 else {
+                DebugLogger.log("DirectCompositionAdapter: cursor mismatch bundle=\(bundleId) reason=\(reason) expected=\(expectedLocation) selected=\(selectedRange)")
+                forceMarkedText(reason)
+                return
+            }
+        }
+
+        func consumeBackspacePassThroughAfterFailedDirectClear() -> Bool {
+            defer { shouldPassThroughBackspaceAfterFailedClear = false }
+            return shouldPassThroughBackspaceAfterFailedClear
+        }
+
+        func updateDirectComposition(commit: String, preedit: String) {
+            #if DEBUG
+            debugClientSnapshot("direct.update.before commitLen=\(commit.utf16.count) preeditLen=\(preedit.utf16.count)")
+            #endif
+            let replacement = commit + preedit
+            if replacement.isEmpty {
+                shouldPassThroughBackspaceAfterFailedClear = false
+            }
+            let replacementRange = Self.directCompositionReplacementRange(
+                compositionRange: directCompositionRange,
+                selectedRange: client.selectedRange()
+            )
+            let isClearingDirectPreedit = replacement.isEmpty
+                && replacementRange.location != NSNotFound
+            guard !replacement.isEmpty || replacementRange.location != NSNotFound else {
+                directCompositionRange = NSRange(location: NSNotFound, length: 0)
+                return
+            }
+
+            let startLocation = replacementRange.location
+            client.insertText(replacement, replacementRange: replacementRange)
+            let selectedRange = client.selectedRange()
+            if isClearingDirectPreedit,
+               selectedRange.location != NSNotFound,
+               (selectedRange.location != startLocation || selectedRange.length != 0) {
+                shouldPassThroughBackspaceAfterFailedClear = true
+                DebugLogger.log("DirectCompositionAdapter: direct clear did not move cursor; will pass through Backspace bundle=\(bundleId) expected=\(startLocation) selected=\(selectedRange)")
+            }
+            if Self.isUsableInsertionSelection(selectedRange), !preedit.isEmpty {
+                directCompositionRange = NSRange(
+                    location: max(0, selectedRange.location - preedit.utf16.count),
+                    length: preedit.utf16.count
+                )
+            } else if startLocation != NSNotFound, !preedit.isEmpty {
+                directCompositionRange = NSRange(
+                    location: startLocation + commit.utf16.count,
+                    length: preedit.utf16.count
+                )
+            } else {
+                directCompositionRange = NSRange(location: NSNotFound, length: 0)
+            }
+            verifyCursor(
+                startLocation: startLocation,
+                insertedLength: replacement.utf16.count,
+                reason: "direct update"
+            )
+            #if DEBUG
+            debugClientSnapshot("direct.update.after commitLen=\(commit.utf16.count) preeditLen=\(preedit.utf16.count)")
+            #endif
+        }
+
+        func commitDirectComposition(_ text: String) {
+            guard !text.isEmpty else {
+                directCompositionRange = NSRange(location: NSNotFound, length: 0)
+                return
+            }
+            #if DEBUG
+            debugClientSnapshot("direct.commit.before len=\(text.utf16.count)")
+            #endif
+            let replacementRange = Self.directCompositionReplacementRange(
+                compositionRange: directCompositionRange,
+                selectedRange: client.selectedRange()
+            )
+            let startLocation = replacementRange.location
+            client.insertText(text, replacementRange: replacementRange)
+            directCompositionRange = NSRange(location: NSNotFound, length: 0)
+            verifyCursor(startLocation: startLocation, insertedLength: text.utf16.count, reason: "direct commit")
+            #if DEBUG
+            debugClientSnapshot("direct.commit.after len=\(text.utf16.count)")
+            #endif
+        }
+
+        func clearDirectComposition() {
+            updateDirectComposition(commit: "", preedit: "")
+        }
+
+        override func finishMarkedText(reason: String) -> Bool {
+            clearDirectComposition()
+            return super.finishMarkedText(reason: reason)
+        }
+
+        override func insertText(_ text: String) {
+            guard !text.isEmpty else { return }
+            #if DEBUG
+            debugClientSnapshot("direct.insertText.before len=\(text.utf16.count)")
+            #endif
+            let replacementRange = Self.directCompositionReplacementRange(
+                compositionRange: directCompositionRange,
+                selectedRange: client.selectedRange()
+            )
+            let startLocation = replacementRange.location
+            client.insertText(text, replacementRange: replacementRange)
+            directCompositionRange = NSRange(location: NSNotFound, length: 0)
+            verifyCursor(startLocation: startLocation, insertedLength: text.utf16.count, reason: "direct insert")
+            #if DEBUG
+            debugClientSnapshot("direct.insertText.after len=\(text.utf16.count)")
+            #endif
+        }
+
+        override func setMarkedText(_ text: String) {
+            #if DEBUG
+            debugClientSnapshot("direct.setMarkedText.before len=\(text.utf16.count)")
+            #endif
+            let replacementRange = Self.directCompositionReplacementRange(
+                compositionRange: directCompositionRange,
+                selectedRange: client.selectedRange()
+            )
+            guard !text.isEmpty else {
+                shouldPassThroughBackspaceAfterFailedClear = false
+                if replacementRange.location != NSNotFound {
+                    let startLocation = replacementRange.location
+                    client.insertText("", replacementRange: replacementRange)
+                    let selectedRange = client.selectedRange()
+                    if selectedRange.location != NSNotFound,
+                       (selectedRange.location != startLocation || selectedRange.length != 0) {
+                        shouldPassThroughBackspaceAfterFailedClear = true
+                        DebugLogger.log("DirectCompositionAdapter: direct clear preedit failed; will pass through Backspace bundle=\(bundleId) expected=\(startLocation) selected=\(selectedRange)")
+                    }
+                    verifyCursor(startLocation: startLocation, insertedLength: 0, reason: "direct clear")
+                }
+                directCompositionRange = NSRange(location: NSNotFound, length: 0)
+                #if DEBUG
+                debugClientSnapshot("direct.setMarkedText.after len=0")
+                #endif
+                return
+            }
+
+            let startLocation = replacementRange.location
+            client.insertText(text, replacementRange: replacementRange)
+            if startLocation != NSNotFound {
+                directCompositionRange = NSRange(location: startLocation, length: text.utf16.count)
+            } else {
+                directCompositionRange = NSRange(location: NSNotFound, length: 0)
+            }
+            verifyCursor(startLocation: startLocation, insertedLength: text.utf16.count, reason: "direct preedit")
+            #if DEBUG
+            debugClientSnapshot("direct.setMarkedText.after len=\(text.utf16.count)")
+            #endif
+        }
     }
 
     // MARK: - State Management
@@ -116,20 +446,111 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
         if context.shouldUseImmediateMode {
             return ImmediateModeAdapter(client: client)
         }
+        if shouldUseDirectComposition(client: client, context: context) {
+            return DirectCompositionAdapter(client: client, bundleId: context.bundleId) { [weak self] reason in
+                self?.forceMarkedText(for: context.bundleId, reason: reason)
+            }
+        }
         return ClientAdapter(client: client)
+    }
+
+    private func shouldUseDirectComposition(client: IMKTextInput, context: ClientContext) -> Bool {
+        Self.directCompositionBundleIDs.contains(context.bundleId) &&
+            !Self.forcedMarkedTextBundleIDs.contains(context.bundleId)
+    }
+
+    private func forceMarkedText(for bundleId: String, reason: String) {
+        guard !bundleId.isEmpty else { return }
+        Self.forcedMarkedTextBundleIDs.insert(bundleId)
+        DebugLogger.log("PriTypeInputController: forcing marked text for bundle=\(bundleId) reason=\(reason)")
+    }
+
+    private func forceDirectComposition(for bundleId: String, reason: String) {
+        guard !bundleId.isEmpty, !Self.forcedMarkedTextBundleIDs.contains(bundleId) else { return }
+        let inserted = Self.directCompositionBundleIDs.insert(bundleId).inserted
+        if inserted {
+            UserDefaults.standard.set(Array(Self.directCompositionBundleIDs).sorted(), forKey: "DirectCompositionBundleIDs")
+        }
+        DebugLogger.log("PriTypeInputController: forcing direct composition for bundle=\(bundleId) reason=\(reason) inserted=\(inserted)")
+    }
+
+    private func installAdapter(for client: IMKTextInput, context: ClientContext) {
+        currentAdapter = makeAdapter(for: client, context: context)
+        DebugLogger.log("PriTypeInputController: installed adapter=\(type(of: currentAdapter!)) bundle=\(context.bundleId) lightweight=\(context.isLightweight)")
     }
 
     private func adapterMatchesContext(_ adapter: (any HangulComposerDelegate)?, context: ClientContext) -> Bool {
         if context.shouldUseImmediateMode {
             return adapter is ImmediateModeAdapter
         }
+        guard let client = (adapter as? BaseClientAdapter)?.client else {
+            return false
+        }
+        if shouldUseDirectComposition(client: client, context: context) {
+            return adapter is DirectCompositionAdapter
+        }
         return adapter is ClientAdapter
     }
 
-    private func syncRomanKeyboardLayout(for client: IMKTextInput, force: Bool = false) {
+    private func commitBeforeClientSwitch(to client: IMKTextInput, context: ClientContext) {
+        guard lastClient != nil, lastClient !== client, composer.hasActiveComposition else {
+            return
+        }
+
+        if let adapter = currentAdapter {
+            DebugLogger.log("PriTypeInputController: committing composition before client switch bundle=\(context.bundleId)")
+            composer.forceCommit(delegate: adapter)
+            (adapter as? BaseClientAdapter)?.finishMarkedText(reason: "clientSwitch")
+            composer.clearLocalBuffer()
+        } else if let previousClient = lastClient {
+            DebugLogger.log("PriTypeInputController: committing composition before client switch with temp adapter bundle=\(context.bundleId)")
+            let adapter = ClientAdapter(client: previousClient)
+            composer.forceCommit(delegate: adapter)
+            adapter.finishMarkedText(reason: "clientSwitch.temp")
+            composer.clearLocalBuffer()
+        }
+    }
+
+    private func finalizeEndedCompositionIfNeeded(
+        client: IMKTextInput,
+        adapter: (any HangulComposerDelegate)?,
+        reason: String
+    ) {
+        guard let baseAdapter = adapter as? BaseClientAdapter else {
+            return
+        }
+
+        let markedRange = client.markedRange()
+        guard BaseClientAdapter.hasHostMarkedRange(markedRange) else {
+            return
+        }
+
+        DebugLogger.log("PriTypeInputController: finalize ended composition reason=\(reason) marked=\(markedRange)")
+        baseAdapter.finishMarkedText(reason: "finalizeEndedComposition.\(reason)")
+        super.commitComposition(client)
+        #if DEBUG
+        baseAdapter.debugClientSnapshot("finalizeEndedComposition.after \(reason)")
+        #endif
+    }
+
+    private func syncRomanKeyboardLayout(
+        for client: IMKTextInput,
+        context: ClientContext? = nil,
+        force: Bool = false
+    ) {
+        guard composer.inputMode == .korean else {
+            DebugLogger.log("PriTypeInputController: keyboard override skipped mode=\(composer.inputMode)")
+            return
+        }
+        if let context, context.shouldUseImmediateMode || !context.hasTextInputCapability {
+            DebugLogger.log("PriTypeInputController: keyboard override skipped non-text context bundle=\(context.bundleId) immediate=\(context.shouldUseImmediateMode) text=\(context.hasTextInputCapability)")
+            return
+        }
+
         let clientID = ObjectIdentifier(client as AnyObject)
         let now = CFAbsoluteTimeGetCurrent()
         guard force || lastKeyboardOverrideClientID != clientID || now - lastKeyboardOverrideTime > 0.5 else {
+            DebugLogger.log("PriTypeInputController: keyboard override skipped by throttle client=\(clientID)")
             return
         }
 
@@ -171,7 +592,7 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
         DebugLogger.log("PriTypeInputController: client selectInputMode -> \(inputModeID)")
 
         if mode == .korean {
-            syncRomanKeyboardLayout(for: client, force: true)
+            syncRomanKeyboardLayout(for: client, context: cachedContext, force: true)
         }
     }
     
@@ -180,22 +601,54 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
         #if DEBUG
         assert(Thread.isMainThread, "IMK activateServer must run on main thread")
         #endif
+        Self.activationSerial &+= 1
+        let activationToken = Self.activationSerial
         super.activateServer(sender)
+
+        guard activationToken == Self.activationSerial else {
+            DebugLogger.log("PriTypeInputController: ignored stale activateServer before setup token=\(activationToken) current=\(Self.activationSerial)")
+            return
+        }
+
         // 클라이언트 저장
         if let client = sender as? IMKTextInput {
-            lastClient = client
-            lastKnownInputClient = client
-            syncRomanKeyboardLayout(for: client, force: true)
+            DebugLogger.log("PriTypeInputController: activateServer sender client object=\(ObjectIdentifier(client as AnyObject)) class=\(type(of: client)) bundle=\(client.bundleIdentifier() ?? "unknown")")
             
             // PERFORMANCE: Analyze context ONCE per session and cache it.
             // This avoids heavy IPC calls (bundleId check, coordinate calculation) on every keystroke.
             let context = ClientContextDetector.analyzeForActivation(client: client)
+
+            guard activationToken == Self.activationSerial else {
+                DebugLogger.log("PriTypeInputController: ignored stale activateServer after analyze token=\(activationToken) current=\(Self.activationSerial)")
+                return
+            }
+
+            commitBeforeClientSwitch(to: client, context: context)
+            lastClient = client
+            lastKnownInputClient = client
             self.cachedContext = context
-            currentAdapter = makeAdapter(for: client, context: context)
+            installAdapter(for: client, context: context)
+            #if DEBUG
+            (currentAdapter as? BaseClientAdapter)?.debugClientSnapshot("activateServer.after-adapter")
+            #endif
+
             DebugLogger.log("Activated for client: \(self.cachedContext?.bundleId ?? "unknown") (Lightweight Context)")
+
+            let clientID = ObjectIdentifier(client as AnyObject)
+            DispatchQueue.main.async { [weak self] in
+                guard let self else { return }
+                guard activationToken == Self.activationSerial,
+                      let currentClient = self.lastClient,
+                      ObjectIdentifier(currentClient as AnyObject) == clientID else {
+                    DebugLogger.log("PriTypeInputController: ignored stale keyboard override token=\(activationToken) current=\(Self.activationSerial)")
+                    return
+                }
+                self.syncRomanKeyboardLayout(for: currentClient, context: self.cachedContext, force: true)
+            }
         } else {
             // Fallback if sender is not IMKTextInput (rare)
             self.cachedContext = nil
+            DebugLogger.log("PriTypeInputController: activateServer without IMKTextInput sender=\(String(describing: sender))")
         }
         
         // Set as active controller for toggle access
@@ -213,14 +666,88 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
         #if DEBUG
         assert(Thread.isMainThread, "IMK deactivateServer must run on main thread")
         #endif
+        let deactivatingClient = (sender as? IMKTextInput)
+            ?? (currentAdapter as? BaseClientAdapter)?.client
+            ?? lastClient
+        let deactivatingClientID = deactivatingClient.map { ObjectIdentifier($0 as AnyObject) }
         // 반드시 조합 중인 내용을 커밋
         // Use the existing currentAdapter if available (not a stale temp adapter)
         if let adapter = currentAdapter {
+            let hadComposition = composer.hasActiveComposition
+            let baseAdapter = adapter as? BaseClientAdapter
+            let markedRange = baseAdapter?.client.markedRange() ?? NSRange(location: NSNotFound, length: NSNotFound)
+            guard hadComposition || BaseClientAdapter.hasHostMarkedRange(markedRange) else {
+                DebugLogger.log("PriTypeInputController: deactivateServer no-op active=false marked=\(markedRange) sender=\(String(describing: type(of: sender)))")
+                baseAdapter?.finishMarkedText(reason: "deactivateServer.no-op")
+                super.deactivateServer(sender)
+                if let deactivatingClientID {
+                    let currentClientID = lastClient.map { ObjectIdentifier($0 as AnyObject) }
+                    if currentClientID == deactivatingClientID {
+                        lastClient = nil
+                    } else {
+                        DebugLogger.log("PriTypeInputController: deactivateServer preserved newer lastClient current=\(String(describing: currentClientID)) deactivating=\(deactivatingClientID)")
+                    }
+                } else {
+                    lastClient = nil
+                }
+                NotificationCenter.default.removeObserver(self, name: .keyboardLayoutChanged, object: nil)
+                return
+            }
+            DebugLogger.log("PriTypeInputController: deactivateServer forceCommit currentAdapter active=\(hadComposition) sender=\(String(describing: type(of: sender)))")
+            #if DEBUG
+            (adapter as? BaseClientAdapter)?.debugClientSnapshot("deactivateServer.before-currentAdapter")
+            #endif
+            if hadComposition,
+               let baseAdapter,
+               baseAdapter.client.selectedRange().location == NSNotFound,
+               BaseClientAdapter.hasHostMarkedRange(baseAdapter.client.markedRange()) {
+                let bundleId = cachedContext?.bundleId ?? baseAdapter.client.bundleIdentifier() ?? ""
+                forceDirectComposition(for: bundleId, reason: "invalid-selection-live-marked-on-deactivate")
+            }
             composer.forceCommit(delegate: adapter)
+            if hadComposition {
+                (adapter as? BaseClientAdapter)?.finishMarkedTextAfterDirectCommit(reason: "deactivateServer")
+            }
+            let didFinishMarkedText = (adapter as? BaseClientAdapter)?.finishMarkedText(reason: "deactivateServer") ?? false
+            if hadComposition, !didFinishMarkedText {
+                DebugLogger.log("PriTypeInputController: deactivateServer skipped unsafe marked finalize after direct commit")
+            }
+            if hadComposition {
+                DebugLogger.log("PriTypeInputController: deactivateServer notifying IMK commit after direct commit")
+                super.commitComposition(sender)
+                composer.clearLocalBuffer()
+                DebugLogger.log("PriTypeInputController: deactivateServer committed active composition")
+            }
+            #if DEBUG
+            (adapter as? BaseClientAdapter)?.debugClientSnapshot("deactivateServer.after-currentAdapter")
+            #endif
         } else if let client = sender as? IMKTextInput ?? lastClient {
             let adapter = ClientAdapter(client: client)
+            let hadComposition = composer.hasActiveComposition
+            DebugLogger.log("PriTypeInputController: deactivateServer forceCommit tempAdapter active=\(hadComposition) client=\(ObjectIdentifier(client as AnyObject)) sender=\(String(describing: type(of: sender)))")
+            #if DEBUG
+            adapter.debugClientSnapshot("deactivateServer.before-tempAdapter")
+            #endif
             composer.forceCommit(delegate: adapter)
+            if hadComposition {
+                adapter.finishMarkedTextAfterDirectCommit(reason: "deactivateServer.temp")
+                let didFinishMarkedText = adapter.finishMarkedText(reason: "deactivateServer.temp")
+                if !didFinishMarkedText {
+                    DebugLogger.log("PriTypeInputController: deactivateServer temp delegating unsafe marked finalize to IMK")
+                    super.commitComposition(sender)
+                }
+                DebugLogger.log("PriTypeInputController: deactivateServer temp notifying IMK commit after direct commit")
+                super.commitComposition(sender)
+                composer.clearLocalBuffer()
+                DebugLogger.log("PriTypeInputController: deactivateServer committed active composition with temp adapter")
+            }
+            #if DEBUG
+            adapter.debugClientSnapshot("deactivateServer.after-tempAdapter")
+            #endif
+        } else {
+            DebugLogger.log("PriTypeInputController: deactivateServer no adapter/client active=\(composer.hasActiveComposition) sender=\(String(describing: type(of: sender)))")
         }
+
         // NOTE: Do NOT clear localTextBuffer here.
         // Cross-app hanja leaking is prevented by bundleId matching in handleHanjaLookup(),
         // not by clearing the buffer. Clearing would make same-app hanja lookup impossible.
@@ -228,7 +755,16 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
         // Do NOT clear currentAdapter here.
         // CGEventTap triggerHanjaLookup() is dispatched async and needs a valid adapter.
         // The next activateServer() will replace it with the new client's adapter.
-        lastClient = nil
+        if let deactivatingClientID {
+            let currentClientID = lastClient.map { ObjectIdentifier($0 as AnyObject) }
+            if currentClientID == deactivatingClientID {
+                lastClient = nil
+            } else {
+                DebugLogger.log("PriTypeInputController: deactivateServer preserved newer lastClient current=\(String(describing: currentClientID)) deactivating=\(deactivatingClientID)")
+            }
+        } else {
+            lastClient = nil
+        }
         // Keep cachedContext alive — activateServer() will replace it with the new client's context.
         // Clearing it here causes unnecessary slow path if handle() arrives before activateServer().
         NotificationCenter.default.removeObserver(self, name: .keyboardLayoutChanged, object: nil)
@@ -264,7 +800,7 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
             Self.lastInputModePropertyUpdateTime = CFAbsoluteTimeGetCurrent()
             let mode = Self.inputMode(forPriTypeInputModeID: inputModeID)
             if mode == .korean, let client = sender as? IMKTextInput {
-                syncRomanKeyboardLayout(for: client, force: true)
+                syncRomanKeyboardLayout(for: client, context: currentContext(for: sender), force: true)
             }
 
             if composer.inputMode != mode {
@@ -318,18 +854,21 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
             // below to ensure the adapter is correctly recreated when the client changes.
         }
 
-        if debugHandleLogCount < 200 {
+        #if DEBUG
+        if debugHandleLogCount < 1200 {
             debugHandleLogCount += 1
             DebugLogger.log("PriTypeInputController: handle keyCode=\(event.keyCode) mode=\(composer.inputMode) chars='\(event.characters ?? "")' modifiers=\(event.modifierFlags.rawValue) bundle=\(context.bundleId) lightweight=\(context.isLightweight) immediate=\(context.shouldUseImmediateMode) clientChanged=\(lastClient !== client)")
+            if debugHandleSnapshotCount < 120, event.keyCode != KeyCode.backspace {
+                debugHandleSnapshotCount += 1
+                ClientAdapter(client: client).debugClientSnapshot("handle.before keyCode=\(event.keyCode)")
+            }
         }
+        #endif
         
-        // 2. Mark keystroke with current app's bundleId for cross-app hanja validation
-        composer.markKeystroke(bundleId: context.bundleId)
-
-        // 3. DYNAMIC CHECK: Secure Input (password fields)
-        if shouldPassThroughSecureInput(client: client, context: context) {
-            composer.discardCompositionForPassThrough()
-            return false
+        // 2. Mark current app for Hanja validation only when it changes.
+        if lastMarkedKeystrokeBundleId != context.bundleId {
+            composer.markKeystroke(bundleId: context.bundleId)
+            lastMarkedKeystrokeBundleId = context.bundleId
         }
 
         // Finder-specific handling
@@ -337,52 +876,99 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
             DebugLogger.log("Finder: ImmediateMode (context=\(context))")
             // Only recreate adapter if client changed or type mismatch
             if lastClient !== client || !adapterMatchesContext(currentAdapter, context: context) {
+                #if DEBUG
+                if let currentAdapter = currentAdapter as? BaseClientAdapter {
+                    currentAdapter.debugClientSnapshot("handle.immediate.before-adapter-replace")
+                }
+                #endif
+                commitBeforeClientSwitch(to: client, context: context)
                 lastClient = client
-                syncRomanKeyboardLayout(for: client)
-                currentAdapter = makeAdapter(for: client, context: context)
+                syncRomanKeyboardLayout(for: client, context: context)
+                installAdapter(for: client, context: context)
+                #if DEBUG
+                (currentAdapter as? BaseClientAdapter)?.debugClientSnapshot("handle.immediate.after-adapter-replace")
+                #endif
             }
-            return composer.handle(event, delegate: currentAdapter!)
+            let activeBefore = composer.hasActiveComposition
+            if event.keyCode == KeyCode.backspace,
+               event.isARepeat,
+               !activeBefore,
+               CFAbsoluteTimeGetCurrent() - lastBackspaceCompositionEndTime < 0.30 {
+                DebugLogger.log("PriTypeInputController: swallowed immediate Backspace repeat immediately after composition clear")
+                return true
+            }
+            let handled = composer.handle(event, delegate: currentAdapter!)
+            let activeAfter = composer.hasActiveComposition
+            if handled && activeBefore && !activeAfter {
+                if event.keyCode == KeyCode.backspace {
+                    lastBackspaceCompositionEndTime = CFAbsoluteTimeGetCurrent()
+                }
+                finalizeEndedCompositionIfNeeded(
+                    client: client,
+                    adapter: currentAdapter,
+                    reason: "immediate keyCode=\(event.keyCode)"
+                )
+            }
+            DebugLogger.log("PriTypeInputController: handle result immediate handled=\(handled) activeBefore=\(activeBefore) activeAfter=\(activeAfter)")
+            #if DEBUG
+            (currentAdapter as? BaseClientAdapter)?.debugClientSnapshot("handle.immediate.after keyCode=\(event.keyCode)")
+            #endif
+            return handled
         }
         
         // Reuse adapter from activateServer if client hasn't changed
         // This avoids ~20 heap allocations/second during fast typing
         if lastClient !== client || currentAdapter == nil || !adapterMatchesContext(currentAdapter, context: context) {
+            #if DEBUG
+            if let currentAdapter = currentAdapter as? BaseClientAdapter {
+                currentAdapter.debugClientSnapshot("handle.standard.before-adapter-replace")
+            }
+            #endif
+            commitBeforeClientSwitch(to: client, context: context)
             lastClient = client
-            syncRomanKeyboardLayout(for: client)
-            currentAdapter = makeAdapter(for: client, context: context)
+            syncRomanKeyboardLayout(for: client, context: context)
+            installAdapter(for: client, context: context)
+            #if DEBUG
+            (currentAdapter as? BaseClientAdapter)?.debugClientSnapshot("handle.standard.after-adapter-replace")
+            #endif
         }
         
-        return composer.handle(event, delegate: currentAdapter!)
-    }
-
-    private func shouldPassThroughSecureInput(client: IMKTextInput, context: ClientContext) -> Bool {
-        let bundleId = context.bundleId
-
-        if SecureInputPolicy.isSystemSecureClient(bundleId) {
-            DebugLogger.log("Secure Input: System secure client (\(bundleId)), passing through")
+        let activeBefore = composer.hasActiveComposition
+        if event.keyCode == KeyCode.backspace,
+           event.isARepeat,
+           !activeBefore,
+           CFAbsoluteTimeGetCurrent() - lastBackspaceCompositionEndTime < 0.30 {
+            DebugLogger.log("PriTypeInputController: swallowed Backspace repeat immediately after composition clear")
             return true
         }
-
-        let hasGlobalSecureInput = IsSecureEventInputEnabled()
-
-        if hasGlobalSecureInput {
-            DebugLogger.log("Secure Input: global secure input active in '\(bundleId)', passing through")
-            return true
-        }
-
-        guard !context.hasTextInputCapability else {
+        let handled = composer.handle(event, delegate: currentAdapter!)
+        let activeAfter = composer.hasActiveComposition
+        if handled,
+           event.keyCode == KeyCode.backspace,
+           activeBefore,
+           !activeAfter,
+           (currentAdapter as? DirectCompositionAdapter)?.consumeBackspacePassThroughAfterFailedDirectClear() == true {
+            DebugLogger.log("PriTypeInputController: passing through Backspace after failed direct clear")
             return false
         }
-
-        let selectionRange = client.selectedRange()
-        let hasInvalidSelection = selectionRange.location == NSNotFound
-
-        if hasInvalidSelection {
-            DebugLogger.log("Secure Input: invalid selection in '\(bundleId)', passing through")
-            return true
+        if handled && activeBefore && !activeAfter {
+            if event.keyCode == KeyCode.backspace {
+                lastBackspaceCompositionEndTime = CFAbsoluteTimeGetCurrent()
+            }
+            finalizeEndedCompositionIfNeeded(
+                client: client,
+                adapter: currentAdapter,
+                reason: "standard keyCode=\(event.keyCode)"
+            )
         }
-
-        return false
+        DebugLogger.log("PriTypeInputController: handle result standard handled=\(handled) activeBefore=\(activeBefore) activeAfter=\(activeAfter)")
+        #if DEBUG
+        if debugHandleSnapshotCount < 120, event.keyCode != KeyCode.backspace {
+            debugHandleSnapshotCount += 1
+            (currentAdapter as? BaseClientAdapter)?.debugClientSnapshot("handle.standard.after keyCode=\(event.keyCode)")
+        }
+        #endif
+        return handled
     }
 
     // 마우스 클릭 등으로 조합 영역 외부 클릭 시 조합 커밋
@@ -392,7 +978,36 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
         #endif
         if let client = sender as? IMKTextInput ?? lastClient {
             let adapter = currentAdapter ?? ClientAdapter(client: client)
+            let markedRange = (adapter as? BaseClientAdapter)?.client.markedRange() ?? client.markedRange()
+            if !composer.hasActiveComposition,
+               !BaseClientAdapter.hasHostMarkedSession(markedRange) {
+                DebugLogger.log("PriTypeInputController: commitComposition no-op active=false marked=\(markedRange) client=\(ObjectIdentifier(client as AnyObject))")
+                (adapter as? BaseClientAdapter)?.finishMarkedText(reason: "commitComposition.no-op")
+                composer.clearLocalBuffer()
+                super.commitComposition(sender)
+                return
+            }
+            DebugLogger.log("PriTypeInputController: commitComposition forceCommit active=\(composer.hasActiveComposition) sender=\(String(describing: type(of: sender))) client=\(ObjectIdentifier(client as AnyObject))")
+            #if DEBUG
+            (adapter as? BaseClientAdapter)?.debugClientSnapshot("commitComposition.before")
+            #endif
+            if composer.hasActiveComposition,
+               let baseAdapter = adapter as? BaseClientAdapter,
+               baseAdapter.client.selectedRange().location == NSNotFound,
+               BaseClientAdapter.hasHostMarkedRange(markedRange) {
+                let bundleId = cachedContext?.bundleId ?? client.bundleIdentifier() ?? ""
+                forceDirectComposition(for: bundleId, reason: "invalid-selection-live-marked-on-commit")
+            }
             composer.forceCommit(delegate: adapter)
+            if composer.hasActiveComposition == false {
+                (adapter as? BaseClientAdapter)?.finishMarkedTextAfterDirectCommit(reason: "commitComposition")
+            }
+            (adapter as? BaseClientAdapter)?.finishMarkedText(reason: "commitComposition")
+            #if DEBUG
+            (adapter as? BaseClientAdapter)?.debugClientSnapshot("commitComposition.after")
+            #endif
+        } else {
+            DebugLogger.log("PriTypeInputController: commitComposition no client active=\(composer.hasActiveComposition) sender=\(String(describing: type(of: sender)))")
         }
         composer.localTextBuffer = "" // Clear buffer when focus changes or user clicks elsewhere
         super.commitComposition(sender)

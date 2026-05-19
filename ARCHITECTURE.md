@@ -34,11 +34,11 @@
 ## 입력 처리 흐름
 
 1. macOS가 키 이벤트를 `PriTypeInputController.handle()`에 전달한다.
-2. `handle()`은 캐싱된 `ClientContext`를 참조해 Secure Input 여부, Finder 바탕화면 여부를 판정한다.
-3. 한글 모드일 경우 `client.firstRect()` / `client.attributes()`로 커서 좌표를 proactive 캐시한다.
-4. 판정을 통과하면 `ClientAdapter`로 감싸서 `HangulComposer.handle()`에 위임한다.
-5. `HangulComposer`는 libhangul-swift의 `ThreadSafeHangulInputContext`를 통해 한글 조합을 수행하고, preedit(밑줄 표시)과 commit(확정 삽입)을 `ClientAdapter` 콜백으로 전달한다.
-6. `ClientAdapter`는 `IMKTextInput` 프로토콜을 통해 최종 텍스트를 앱에 삽입한다.
+2. `handle()`은 캐싱된 `ClientContext`를 참조해 Finder 바탕화면 여부를 판정한다.
+3. 컨텍스트에 따라 `ClientAdapter` 또는 `ImmediateModeAdapter` 중 하나를 선택한다.
+4. 선택한 어댑터로 `HangulComposer.handle()`에 위임한다.
+5. `HangulComposer`는 libhangul-swift의 `ThreadSafeHangulInputContext`를 통해 한글 조합을 수행하고, preedit/commit을 어댑터 콜백으로 전달한다.
+6. 어댑터는 `IMKTextInput` 프로토콜을 통해 marked text 또는 직접 삽입 방식으로 앱에 반영한다.
 
 ## 한/영 전환 흐름
 
@@ -107,21 +107,21 @@ libhangul preedit: ᄆ (U+1106)
 
 | 파일 | 역할 |
 |---|---|
-| **HangulComposer** | 한글 조합 엔진. libhangul 컨텍스트를 감싸고, 키 이벤트 → 초·중·종성 조합 → preedit/commit 변환을 담당한다. 영문 모드 처리, 자동 대문자, 더블스페이스 마침표 기능을 포함한다. |
+| **HangulComposer** | 한글 조합 엔진. libhangul 컨텍스트를 감싸고, 키 이벤트 → 초·중·종성 조합 → preedit/commit 변환을 담당한다. 영문 입력은 macOS ABC 입력 소스가 담당하므로 PriType은 한글 조합과 한자/텍스트 편의 처리에 집중한다. |
 | **HangulComposerTypes** | `HangulComposerDelegate` 프로토콜(insertText, setMarkedText, textBeforeCursor, replaceTextBeforeCursor)과 `InputMode` enum 정의. |
-| **PriTypeInputController** | `IMKInputController` 서브클래스. `activateServer` → `handle()` → `deactivateServer` 수명 주기를 관리한다. 내부에 `ClientAdapter`(밑줄 표시 모드)와 `ImmediateModeAdapter`(Finder 바탕화면용, setMarkedText 생략) 두 가지 어댑터를 포함한다. 한글 모드에서 커서 좌표를 proactive 캐시한다. |
+| **PriTypeInputController** | `IMKInputController` 서브클래스. `activateServer` → `handle()` → `deactivateServer` 수명 주기를 관리한다. 내부에 `ClientAdapter`(표준 marked text)와 `ImmediateModeAdapter`(Finder 바탕화면용, setMarkedText 생략)를 포함한다. 포커스/클라이언트가 바뀌면 기존 조합을 먼저 커밋한다. |
 | **ClientContextDetector** | 입력 클라이언트 분석기. 번들 ID, `validAttributesForMarkedText`, 좌표 휴리스틱을 조합해 `ClientContext` 구조체를 생성한다. Finder 바탕화면은 좌표 기반(`y < 50`)으로 판별한다. |
 | **RightCommandSuppressor** | `CGEventTap` 기반 시스템 레벨 키 인터셉터. `ConfigurationManager`의 `toggleKeyBinding`/`hanjaKeyBinding`을 읽어 사용자 지정 키를 동적으로 처리한다. Key Recorder 모드를 지원하여 설정 창에서 키 캡처가 가능하다. 이벤트 탭 비활성화 시 재활성화를 시도하며, 60초 내 3회 실패 시 IOKit 백업으로 자동 전환한다. |
 | **IOKitManager** | `IOHIDManager` 기반 하드웨어 레벨 키 모니터. CGEventTap 실패 시 백업 핸들러로 동작한다. HID usage 매핑 테이블을 통해 사용자 지정 키를 동적으로 처리한다. |
 | **HanjaCandidateWindow** | SwiftUI 기반 한자 후보 패널. `NSPanel`을 재사용하며, `screenSaver + 1` 윈도우 레벨로 Electron 앱 위에 표시된다. 1~9 숫자키 선택, 방향키/Tab 페이지 이동을 지원한다. |
 | **HanjaManager** | 한자 사전 로더 + 자모 특수문자 검색. `hanja.txt`를 `HanjaTable`에 적재하고, `jamo_symbols.json`에서 자모 특수문자를 로딩한다. LRU 캐시(32개, NSLock 보호)로 재검색 시 사전 접근을 생략한다. 초성 자모(U+1100~) → 호환 자모(U+3131~) 변환을 포함한다. |
-| **ConfigurationManager** | `UserDefaults` 기반 설정 관리. 자판 배열, `KeyBinding`(한/영 전환키·한자 입력키), 자동 대문자, 더블스페이스 마침표, 자동 업데이트 확인 옵션을 저장한다. 기존 `ToggleKey` enum에서 `KeyBinding` struct로의 자동 마이그레이션을 지원한다. `ConfigurationProviding` 프로토콜로 테스트 시 목(mock) 주입이 가능하다. |
-| **SettingsWindowController** | SwiftUI `NSHostingController` 기반 설정 창. Liquid Glass 스타일, Key Recorder(키 녹음) UI, 접근성 권한 확인/요청, ABC 입력소스 제거 안내 기능을 포함한다. |
+| **ConfigurationManager** | `UserDefaults` 기반 설정 관리. 자판 배열, `KeyBinding`(한/영 전환키·한자 입력키), macOS Caps Lock 입력소스 전환 상태, 자동 업데이트 확인 옵션을 저장/조회한다. 기존 `ToggleKey` enum에서 `KeyBinding` struct로의 자동 마이그레이션을 지원한다. |
+| **SettingsWindowController** | SwiftUI `NSHostingController` 기반 설정 창. Liquid Glass 스타일, Key Recorder(키 녹음) UI, macOS Caps Lock 입력소스 전환 안내, 접근성 권한 확인/요청을 포함한다. |
 | **StatusBarManager** | `NSStatusItem` 기반 메뉴 바 표시기. 현재 모드를 "가" / "A"로 표시하며, 전환 시 0.08초 페이드 애니메이션을 적용한다. |
-| **TextConvenienceHandler** | 영문 모드 부가 기능. 문장 시작 자동 대문자, 더블스페이스 → 마침표 변환을 처리한다. IPC 호출 없이 `localTextBuffer`(15자)를 참조한다. |
+| **TextConvenienceHandler** | 텍스트 편의 기능. macOS 더블스페이스 마침표 설정을 따라 공백 입력을 처리한다. IPC 호출 없이 `localTextBuffer`를 참조한다. |
 | **UpdateChecker** | GitHub Releases API를 통해 최신 버전을 확인한다. 24시간 스로틀, 실패 시 다음 실행 시 재시도, 시맨틱 버전 비교(`.numeric`)를 사용한다. |
 | **UpdateNotifier** | `UNUserNotificationCenter`를 사용해 업데이트 알림을 표시한다. 알림 클릭 시 릴리즈 페이지를 연다. |
-| **InputSourceManager** | TIS(Text Input Source) API를 사용해 시스템 입력 소스 목록 조회 및 ABC 활성화 여부를 확인한다. |
+| **InputSourceManager** | TIS(Text Input Source) API를 사용해 현재 입력 소스 조회/전환을 수행한다. macOS가 소유하는 enabled input-source 목록은 앱에서 직접 수정하지 않는다. |
 | **CompositionHelpers** | libhangul의 `[UInt32]`(UCSChar) 배열을 Swift `String`으로 변환하고 NFC 정규화(`precomposedStringWithCanonicalMapping`)를 수행하는 유틸리티. |
 | **DebugLogger** | 조건 컴파일(`#if DEBUG`) 기반 로거. 디버그 빌드에서는 `~/Library/Logs/PriType/pritype_debug.log`에 기록하고, 릴리즈 빌드에서는 `@autoclosure`로 문자열 생성 자체를 생략하는 no-op이 된다. |
 | **KeyCode** | macOS 키 코드 상수와 문자 판별 함수(`isPrintableASCII`, `shouldPassThrough` 등)를 집중 관리한다. |
@@ -142,14 +142,6 @@ C 기반 libhangul을 순수 Swift로 재구현한 한글 조합 엔진. PriType
 - **`KeyInput`**: 키보드 입력을 `.character("r")` / `.keyCode(51)` 형태로 표현하는 타입 안전 열거형.
 
 두벌식(`"2"`), 세벌식 390(`"3"`), 옛한글(`"2y"`, `"3y"`) 자판을 지원한다.
-
-## Secure Input 처리
-
-macOS의 `IsSecureEventInputEnabled()`는 프로세스 단위가 아닌 **시스템 전역 플래그**다. 카카오톡 등 일부 앱이 비밀번호 필드에서 이 플래그를 설정한 뒤 해제하지 않으면, 다른 모든 앱에서 입력기가 영문 모드로 고정되는 문제가 발생한다.
-
-PriType은 2단계 검증으로 이를 처리한다:
-1. **번들 ID 확인**: `SecurityAgent`, `loginwindow`, `screencaptureui`이면 즉시 pass-through.
-2. **필드 속성 확인**: 위 목록에 없으면 `validAttributesForMarkedText()`가 빈 배열인지 검사. 빈 배열이면 비밀번호 필드로 간주하여 pass-through. 그 외에는 오래된(stale) 플래그로 판단하고 정상 입력 처리.
 
 ## 동시성 (Concurrency) 및 스레드 안전성
 
@@ -196,7 +188,7 @@ PriType-Swift/
 │   │   ├── SettingsWindowController.swift# 설정 창 (SwiftUI)
 │   │   ├── ConfigurationManager.swift   # UserDefaults 설정
 │   │   ├── ClientContextDetector.swift  # 클라이언트 분석기
-│   │   ├── TextConvenienceHandler.swift # 자동 대문자, 더블스페이스
+│   │   ├── TextConvenienceHandler.swift # 더블스페이스 마침표
 │   │   ├── StatusBarManager.swift       # 메뉴 바 표시
 │   │   ├── UpdateChecker.swift          # GitHub 업데이트 확인
 │   │   ├── UpdateNotifier.swift         # macOS 알림 전송
@@ -219,7 +211,6 @@ PriType-Swift/
 ├── Tests/
 │   └── PriTypeCoreTests/           # 109개 유닛 테스트
 ├── Packaging/
-│   ├── Payload/                    # .app 번들 조립 경로
 │   └── scripts/
 │       └── postinstall             # 설치 후 스크립트
 ├── Info.plist                      # IMK 설정

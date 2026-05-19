@@ -65,55 +65,6 @@ struct ClientContextTests {
         #expect(!unknownCtx.shouldUseImmediateMode)
     }
 
-    @Test("Secure input policy passes through global secure input")
-    func secureInputPolicyPassesThroughGlobalSecureInput() {
-        #expect(SecureInputPolicy.shouldPassThrough(SecureInputSignals(
-            bundleId: "com.kakao.KakaoTalkMac",
-            hasTextInputCapability: true,
-            hasInvalidSelection: false,
-            hasGlobalSecureInput: true,
-            hasMarkedTextSupport: true
-        )))
-    }
-
-    @Test("Secure input policy handles invalid selection capability cases")
-    func secureInputPolicyHandlesInvalidSelectionCapabilityCases() {
-        #expect(SecureInputPolicy.shouldPassThrough(SecureInputSignals(
-            bundleId: "com.example.PasswordPanel",
-            hasTextInputCapability: false,
-            hasInvalidSelection: true,
-            hasGlobalSecureInput: false,
-            hasMarkedTextSupport: false
-        )))
-
-        #expect(SecureInputPolicy.shouldPassThrough(SecureInputSignals(
-            bundleId: "com.kakao.KakaoTalkMac",
-            hasTextInputCapability: true,
-            hasInvalidSelection: true,
-            hasGlobalSecureInput: false,
-            hasMarkedTextSupport: true
-        )))
-
-        #expect(SecureInputPolicy.shouldPassThrough(SecureInputSignals(
-            bundleId: "com.google.Chrome",
-            hasTextInputCapability: true,
-            hasInvalidSelection: true,
-            hasGlobalSecureInput: false,
-            hasMarkedTextSupport: true
-        )))
-    }
-
-    @Test("Secure input policy always passes through system secure clients")
-    func secureInputPolicyPassesThroughSystemSecureClients() {
-        #expect(SecureInputPolicy.shouldPassThrough(SecureInputSignals(
-            bundleId: "com.apple.SecurityAgent",
-            hasTextInputCapability: true,
-            hasInvalidSelection: false,
-            hasGlobalSecureInput: false,
-            hasMarkedTextSupport: true
-        )))
-    }
-    
     // MARK: - Resolution / Desktop Detection (migrated from ResolutionTests.swift)
     
     @Test("Desktop detection — standard resolution")

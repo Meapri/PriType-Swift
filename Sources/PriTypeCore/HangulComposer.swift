@@ -206,8 +206,10 @@ public class HangulComposer: @unchecked Sendable {
         // Return / Enter
         if keyCode == KeyCode.return || keyCode == KeyCode.numpadEnter {
             let hadComposition = !context.isEmpty()
+            DebugLogger.log("HangulComposer.special Return begin active=\(hadComposition) bufferLen=\(localTextBuffer.count)")
             commitComposition(delegate: delegate)
             if hadComposition {
+                DebugLogger.log("HangulComposer.special Return clearing marked text after commit")
                 delegate.setMarkedText("")
             }
             localTextBuffer = ""
@@ -225,17 +227,19 @@ public class HangulComposer: @unchecked Sendable {
         // Escape - only consume if there's an active composition to cancel
         if keyCode == KeyCode.escape {
             if !context.isEmpty() {
-                DebugLogger.log("Escape -> cancel composition")
+                DebugLogger.log("HangulComposer.special Escape -> cancel composition active=true bufferLen=\(localTextBuffer.count)")
                 cancelComposition(delegate: delegate)
                 localTextBuffer = ""
                 return true
             }
+            DebugLogger.log("HangulComposer.special Escape passThrough active=false")
             localTextBuffer = ""
             return false  // No composition, pass to system (e.g. Finder close dialog)
         }
         
         // Space - handle double-space period
         if keyCode == KeyCode.space {
+            DebugLogger.log("HangulComposer.special Space begin active=\(!context.isEmpty()) bufferLen=\(localTextBuffer.count)")
             commitComposition(delegate: delegate)
             let result = textConvenience.handleDoubleSpacePeriod(buffer: &localTextBuffer, delegate: delegate, checkHangul: true)
             if result == .convertedToPeriod {
@@ -244,6 +248,7 @@ public class HangulComposer: @unchecked Sendable {
             }
             delegate.insertText(" ")
             appendToBuffer(" ")
+            DebugLogger.log("HangulComposer.special Space inserted regular space bufferLen=\(localTextBuffer.count)")
             return true
         }
         
@@ -253,6 +258,7 @@ public class HangulComposer: @unchecked Sendable {
         // Arrow keys
         if keyCode == KeyCode.leftArrow || keyCode == KeyCode.rightArrow ||
            keyCode == KeyCode.upArrow || keyCode == KeyCode.downArrow {
+            DebugLogger.log("HangulComposer.special Arrow keyCode=\(keyCode) active=\(!context.isEmpty())")
             commitComposition(delegate: delegate)
             localTextBuffer = ""
             return false
@@ -260,6 +266,7 @@ public class HangulComposer: @unchecked Sendable {
         
         // Tab
         if keyCode == KeyCode.tab {
+            DebugLogger.log("HangulComposer.special Tab active=\(!context.isEmpty())")
             commitComposition(delegate: delegate)
             localTextBuffer = ""
             return false
@@ -267,18 +274,19 @@ public class HangulComposer: @unchecked Sendable {
         
         // Backspace
         if keyCode == KeyCode.backspace {
-            if !localTextBuffer.isEmpty {
-                localTextBuffer.removeLast()
-            }
+            DebugLogger.log("HangulComposer.special Backspace begin active=\(!context.isEmpty()) bufferLen=\(localTextBuffer.count)")
             if !context.isEmpty() {
                 if context.backspace() {
-                    updateComposition(delegate: delegate)
+                    DebugLogger.log("HangulComposer.special Backspace engine success activeAfter=\(!context.isEmpty()) bufferLen=\(localTextBuffer.count)")
+                    updateComposition(delegate: delegate, includeCommit: false)
                     return true
                 } else {
-                    updateComposition(delegate: delegate)
+                    DebugLogger.log("HangulComposer.special Backspace engine empty activeAfter=\(!context.isEmpty()) bufferLen=\(localTextBuffer.count)")
+                    updateComposition(delegate: delegate, includeCommit: false)
                     return true
                 }
             }
+            DebugLogger.log("HangulComposer.special Backspace passThrough active=false bufferLen=\(localTextBuffer.count)")
             return false
         }
         
@@ -296,7 +304,9 @@ public class HangulComposer: @unchecked Sendable {
         }
         
         // Primary attempt
+        DebugLogger.log("HangulComposer.process begin scalar=\(charCode) activeBefore=\(!context.isEmpty()) bufferLen=\(localTextBuffer.count)")
         if context.process(Character(char)) {
+            DebugLogger.log("HangulComposer.process success scalar=\(charCode) activeAfter=\(!context.isEmpty())")
             updateComposition(delegate: delegate)
             return true
         }
@@ -305,6 +315,7 @@ public class HangulComposer: @unchecked Sendable {
         DebugLogger.log("Process failed")
         
         if !context.isEmpty() {
+            DebugLogger.log("HangulComposer.process committing before retry scalar=\(charCode)")
             commitComposition(delegate: delegate)
         }
         
@@ -320,6 +331,7 @@ public class HangulComposer: @unchecked Sendable {
             DebugLogger.log("Retry failed, inserting printable char")
             delegate.insertText(String(char))
             appendToBuffer(String(char))
+            DebugLogger.log("HangulComposer.process inserted printable scalar=\(charCode) bufferLen=\(localTextBuffer.count)")
             return true
         }
         
@@ -338,6 +350,7 @@ public class HangulComposer: @unchecked Sendable {
     ///   - delegate: The delegate to receive composition callbacks
     /// - Returns: `true` if the event was consumed, `false` if it should be passed to the system
     public func handle(_ event: NSEvent, delegate: HangulComposerDelegate) -> Bool {
+        DebugLogger.log("HangulComposer.handle begin type=\(event.type.rawValue) keyCode=\(event.keyCode) mode=\(inputMode) active=\(!context.isEmpty()) bufferLen=\(localTextBuffer.count) modifiers=\(event.modifierFlags.rawValue)")
         // Track delegate for external toggle calls
         self.lastDelegate = delegate
         
@@ -360,6 +373,7 @@ public class HangulComposer: @unchecked Sendable {
         
         // Only handle key down events for actual typing
         if event.type != .keyDown {
+            DebugLogger.log("HangulComposer.handle passThrough non-keyDown type=\(event.type.rawValue)")
             return false
         }
         
@@ -391,12 +405,15 @@ public class HangulComposer: @unchecked Sendable {
         
         // English mode: delegate to TextConvenienceHandler
         if inputMode == .english {
+            DebugLogger.log("HangulComposer.handle english mode keyCode=\(event.keyCode)")
             guard let chars = event.characters, chars.count == 1, let char = chars.first else {
+                DebugLogger.log("HangulComposer.handle english passThrough invalid characters")
                 return false
             }
             
             // Do not process or append non-printable characters (e.g., arrow keys) in English mode
             if let firstScalar = chars.unicodeScalars.first, KeyCode.shouldPassThrough(UInt32(firstScalar.value)) {
+                DebugLogger.log("HangulComposer.handle english passThrough nonPrintable")
                 return false
             }
             
@@ -410,6 +427,7 @@ public class HangulComposer: @unchecked Sendable {
             if result == .passThrough {
                 appendToBuffer(String(char))
             }
+            DebugLogger.log("HangulComposer.handle english result=\(result) bufferLen=\(localTextBuffer.count)")
             return result == .handled
         }
         
@@ -421,6 +439,7 @@ public class HangulComposer: @unchecked Sendable {
                 hanjaKey = ""
             }
             if consumed {
+                DebugLogger.log("HangulComposer.handle hanja consumed keyCode=\(event.keyCode)")
                 return true
             }
             // If not consumed (regular key dismissed the window),
@@ -437,14 +456,17 @@ public class HangulComposer: @unchecked Sendable {
              // Commit any in-progress composition first. Otherwise marked text stays
              // live and the host app ignores or misapplies the shortcut (e.g. Cmd+←).
              if !context.isEmpty() {
+                 DebugLogger.log("HangulComposer.handle modifier commit before passThrough active=true keyCode=\(event.keyCode)")
                  commitComposition(delegate: delegate)
                  delegate.setMarkedText("")
              }
              localTextBuffer = "" // Any system shortcut (Cmd+V, Cmd+Z, etc.) invalidates local context
+             DebugLogger.log("HangulComposer.handle modifier passThrough keyCode=\(event.keyCode)")
              return false
         }
         
         guard let characters = event.characters, !characters.isEmpty else {
+            DebugLogger.log("HangulComposer.handle passThrough no characters keyCode=\(event.keyCode)")
             return false
         }
         
@@ -452,6 +474,7 @@ public class HangulComposer: @unchecked Sendable {
         
         // Handle special keys (Return, Escape, Space, Arrow, Tab, Backspace)
         if let result = handleSpecialKey(keyCode: keyCode, delegate: delegate) {
+            DebugLogger.log("HangulComposer.handle special result=\(result) keyCode=\(keyCode) activeAfter=\(!context.isEmpty()) bufferLen=\(localTextBuffer.count)")
             return result
         }
         
@@ -463,6 +486,7 @@ public class HangulComposer: @unchecked Sendable {
             if KeyCode.shouldPassThrough(firstCharCode) {
                 DebugLogger.log("Non-printable key detected, passing to system")
                 if !context.isEmpty() {
+                    DebugLogger.log("HangulComposer.handle nonPrintable commit before passThrough active=true")
                     commitComposition(delegate: delegate)
                     delegate.setMarkedText("")
                 }
@@ -480,6 +504,7 @@ public class HangulComposer: @unchecked Sendable {
         }
         
         // If we processed anything, we return true to stop system from handling duplicates.
+        DebugLogger.log("HangulComposer.handle end handled=\(handledAtLeastOnce) activeAfter=\(!context.isEmpty()) bufferLen=\(localTextBuffer.count) keyCode=\(keyCode)")
         return handledAtLeastOnce
     }
     
@@ -491,13 +516,25 @@ public class HangulComposer: @unchecked Sendable {
     /// - Preedit text replaces the current marked text
     ///
     /// - Parameter delegate: The delegate to receive composition updates
-    private func updateComposition(delegate: HangulComposerDelegate) {
+    private func updateComposition(delegate: HangulComposerDelegate, includeCommit: Bool = true) {
         let preedit = context.getPreeditString()
-        let commit = context.getCommitString()
+        let commit: [UCSChar] = includeCommit ? context.getCommitString() : []
+        DebugLogger.log("HangulComposer.updateComposition begin active=\(!context.isEmpty()) preeditLen=\(preedit.count) commitLen=\(commit.count) bufferLen=\(localTextBuffer.count)")
+
+        if let directDelegate = delegate as? DirectCompositionDelegate {
+            let commitStr = commit.isEmpty ? "" : CompositionHelpers.convertAndNormalize(commit)
+            let preeditStr = preedit.isEmpty ? "" : CompositionHelpers.normalizeJamoForDisplay(preedit)
+            directDelegate.updateDirectComposition(commit: commitStr, preedit: preeditStr)
+            if !commitStr.isEmpty {
+                appendToBuffer(commitStr)
+            }
+            return
+        }
         
         // If there is committed text, insert it first
         if !commit.isEmpty {
             let finalStr = CompositionHelpers.convertAndNormalize(commit)
+            DebugLogger.log("HangulComposer.updateComposition insert commit utf16Len=\(finalStr.utf16.count)")
             delegate.insertText(finalStr)
             appendToBuffer(finalStr)
         }
@@ -505,8 +542,10 @@ public class HangulComposer: @unchecked Sendable {
         // Update preedit text
         if !preedit.isEmpty {
             let preeditStr = CompositionHelpers.normalizeJamoForDisplay(preedit)
+            DebugLogger.log("HangulComposer.updateComposition set marked utf16Len=\(preeditStr.utf16.count)")
             delegate.setMarkedText(preeditStr)
         } else {
+             DebugLogger.log("HangulComposer.updateComposition clear marked")
              delegate.setMarkedText("")
         }
     }
@@ -519,14 +558,21 @@ public class HangulComposer: @unchecked Sendable {
     ///
     /// - Parameter delegate: The delegate to receive the committed text
     private func commitComposition(delegate: HangulComposerDelegate) {
+        let activeBefore = !context.isEmpty()
         // Flush context
         let flushed = context.flush()
         let commitStr = CompositionHelpers.convertToString(flushed)
+        DebugLogger.log("HangulComposer.commitComposition activeBefore=\(activeBefore) flushedCount=\(flushed.count) commitLen=\(commitStr.count) activeAfterFlush=\(!context.isEmpty()) bufferLen=\(localTextBuffer.count)")
 
         if !commitStr.isEmpty {
             // insertText replaces the marked text automatically
             let finalStr = CompositionHelpers.convertAndNormalize(flushed)
-            delegate.insertText(finalStr)
+            DebugLogger.log("HangulComposer.commitComposition insert final utf16Len=\(finalStr.utf16.count)")
+            if let directDelegate = delegate as? DirectCompositionDelegate {
+                directDelegate.commitDirectComposition(finalStr)
+            } else {
+                delegate.insertText(finalStr)
+            }
             appendToBuffer(finalStr)
             DebugLogger.logSensitive("commitComposition inserted", sensitiveContent: "'\(commitStr)'")
         }
@@ -539,8 +585,13 @@ public class HangulComposer: @unchecked Sendable {
     ///
     /// - Parameter delegate: The delegate to receive the cleared state
     private func cancelComposition(delegate: HangulComposerDelegate) {
+        DebugLogger.log("HangulComposer.cancelComposition activeBefore=\(!context.isEmpty()) bufferLen=\(localTextBuffer.count)")
         context.reset()
-        delegate.setMarkedText("")
+        if let directDelegate = delegate as? DirectCompositionDelegate {
+            directDelegate.clearDirectComposition()
+        } else {
+            delegate.setMarkedText("")
+        }
         // Do NOT clear localTextBuffer on cancel, as previously committed text is still valid context
     }
     
@@ -551,6 +602,7 @@ public class HangulComposer: @unchecked Sendable {
     ///
     /// - Parameter delegate: The delegate to receive the committed text
     public func forceCommit(delegate: HangulComposerDelegate) {
+        DebugLogger.log("HangulComposer.forceCommit begin active=\(!context.isEmpty()) bufferLen=\(localTextBuffer.count)")
         commitComposition(delegate: delegate)
         // Preserve the last Hangul character for Hanja lookup.
         // Electron apps (Chrome, VS Code) trigger frequent deactivateServer calls
@@ -560,8 +612,9 @@ public class HangulComposer: @unchecked Sendable {
         } else {
             localTextBuffer = ""
         }
+        DebugLogger.log("HangulComposer.forceCommit end active=\(!context.isEmpty()) bufferLen=\(localTextBuffer.count)")
     }
-    
+
     /// Reset the composition state
     ///
     /// Clears any in-progress composition without committing it.
@@ -570,7 +623,11 @@ public class HangulComposer: @unchecked Sendable {
     /// - Parameter delegate: The delegate to receive the cleared marked text
     public func reset(delegate: HangulComposerDelegate) {
         context.reset()
-        delegate.setMarkedText("")
+        if let directDelegate = delegate as? DirectCompositionDelegate {
+            directDelegate.clearDirectComposition()
+        } else {
+            delegate.setMarkedText("")
+        }
         delegate.insertText("") 
         localTextBuffer = ""
     }
@@ -580,17 +637,6 @@ public class HangulComposer: @unchecked Sendable {
         localTextBuffer = ""
     }
 
-    /// Drops in-progress composition without touching the current client.
-    ///
-    /// Secure text fields must receive raw key events from the system. Calling
-    /// `setMarkedText` or `insertText` while focus is inside a password field can
-    /// trigger host-app warning beeps, so this reset intentionally has no delegate.
-    public func discardCompositionForPassThrough() {
-        context.reset()
-        localTextBuffer = ""
-        textConvenience.resetSpaceState()
-    }
-    
     /// Bundle ID of the app where the last keystroke was processed.
     /// Used to prevent cross-app hanja leaking: if the current app differs from
     /// the app that populated localTextBuffer, the buffer is considered stale.
