@@ -37,11 +37,13 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
     nonisolated(unsafe) public static weak var sharedController: PriTypeInputController?
     nonisolated(unsafe) private static var activationSerial: UInt64 = 0
     nonisolated(unsafe) private static var forcedMarkedTextBundleIDs: Set<String> = []
-    nonisolated(unsafe) private static var directCompositionBundleIDs: Set<String> = []
+    nonisolated(unsafe) private static var directCompositionBundleIDs: Set<String> = {
+        let stored = UserDefaults.standard.stringArray(forKey: "DirectCompositionBundleIDs") ?? []
+        return Set(stored)
+    }()
     // Strong reference to prevent client being released during rapid switching
     private var lastClient: IMKTextInput?
     private var lastKnownInputClient: IMKTextInput?
-    private var pendingMarkedReplacementRanges: [ObjectIdentifier: NSRange] = [:]
 
     #if DEBUG
     private var debugHandleLogCount = 0
@@ -51,7 +53,6 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
     private var lastKeyboardOverrideTime: CFAbsoluteTime = 0
     private var lastMarkedKeystrokeBundleId = ""
     private var lastBackspaceCompositionEndTime: CFAbsoluteTime = 0
-    private let backspaceRepeatSuppressionInterval: CFAbsoluteTime = 0.02
     
     // Keep adapter alive for external toggle calls
     public private(set) var currentAdapter: (any HangulComposerDelegate)?
@@ -83,16 +84,12 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
         }
         #endif
         
-        static func insertionReplacementRange(markedRange: NSRange) -> NSRange {
+        static func insertionReplacementRange(selectedRange: NSRange, markedRange: NSRange) -> NSRange {
             if markedRange.location != NSNotFound,
                markedRange.length > 0 {
                 return markedRange
             }
             return NSRange(location: NSNotFound, length: NSNotFound)
-        }
-
-        static func insertionReplacementRange(selectedRange: NSRange, markedRange: NSRange) -> NSRange {
-            insertionReplacementRange(markedRange: markedRange)
         }
 
         static func markedTextClearingReplacementRange(markedRange: NSRange) -> NSRange? {
@@ -128,12 +125,11 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
             return NSRange(location: NSNotFound, length: NSNotFound)
         }
 
-        @discardableResult
-        func clearClientMarkedTextIfNeeded(reason: String) -> Bool {
+        func clearClientMarkedTextIfNeeded(reason: String) {
             let markedRange = client.markedRange()
             guard let replacementRange = Self.markedTextClearingReplacementRange(markedRange: markedRange) else {
                 DebugLogger.log("ClientAdapter.clearMarked skipped reason=\(reason); no non-empty marked range")
-                return false
+                return
             }
 
             DebugLogger.log("ClientAdapter.clearMarked reason=\(reason) loc=\(replacementRange.location) len=\(replacementRange.length)")
@@ -146,7 +142,6 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
             #if DEBUG
             debugClientSnapshot("clearMarked.after reason=\(reason)")
             #endif
-            return true
         }
 
         @discardableResult
@@ -175,7 +170,7 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
 
         func unmarkClientText(reason: String) {
             let object = client as AnyObject
-            let selector = NSSelectorFromString("unmarkText")
+            let selector = Selector(("unmarkText"))
             guard object.responds(to: selector) else {
                 DebugLogger.log("ClientAdapter.unmarkText unavailable reason=\(reason)")
                 return
@@ -190,6 +185,7 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
             debugClientSnapshot("insertText.before len=\(text.utf16.count)")
             #endif
             let replacementRange = Self.insertionReplacementRange(
+                selectedRange: client.selectedRange(),
                 markedRange: client.markedRange()
             )
             if replacementRange.location != NSNotFound {
@@ -228,40 +224,12 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
     
     /// Standard IMK marked-text adapter.
     class ClientAdapter: BaseClientAdapter {
-        private var initialReplacementRange: NSRange?
-
-        init(client: IMKTextInput, initialReplacementRange: NSRange? = nil) {
-            self.initialReplacementRange = initialReplacementRange
-            super.init(client: client)
-        }
-
-        private func takeInitialReplacementRange() -> NSRange {
-            defer { initialReplacementRange = nil }
-            return initialReplacementRange ?? NSRange(location: NSNotFound, length: NSNotFound)
-        }
-
         override func setMarkedText(_ text: String) {
             #if DEBUG
             debugClientSnapshot("setMarkedText.before len=\(text.utf16.count)")
             #endif
             guard !text.isEmpty else {
-                let replacementRange = takeInitialReplacementRange()
-                let attributed = NSAttributedString(string: "", attributes: [:])
-                if replacementRange.location != NSNotFound {
-                    client.setMarkedText(
-                        attributed,
-                        selectionRange: NSRange(location: 0, length: 0),
-                        replacementRange: replacementRange
-                    )
-                    DebugLogger.log("ClientAdapter.setMarkedText cleared initial replacement range loc=\(replacementRange.location) len=\(replacementRange.length)")
-                } else {
-                    client.setMarkedText(
-                        attributed,
-                        selectionRange: NSRange(location: 0, length: 0),
-                        replacementRange: NSRange(location: NSNotFound, length: NSNotFound)
-                    )
-                    DebugLogger.log("ClientAdapter.setMarkedText cleared empty text without range query")
-                }
+                unmarkClientText(reason: "setMarkedText.empty")
                 #if DEBUG
                 debugClientSnapshot("setMarkedText.after len=0")
                 #endif
@@ -271,14 +239,10 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
                 string: text,
                 attributes: [:]
             )
-            let replacementRange = takeInitialReplacementRange()
-            if replacementRange.location != NSNotFound {
-                DebugLogger.log("ClientAdapter.setMarkedText using initial replacement range loc=\(replacementRange.location) len=\(replacementRange.length)")
-            }
             client.setMarkedText(
                 attributed,
                 selectionRange: NSRange(location: text.utf16.count, length: 0),
-                replacementRange: replacementRange
+                replacementRange: NSRange(location: NSNotFound, length: NSNotFound)
             )
             #if DEBUG
             debugClientSnapshot("setMarkedText.after len=\(text.utf16.count)")
@@ -301,34 +265,16 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
     final class DirectCompositionAdapter: BaseClientAdapter, DirectCompositionDelegate {
         private var directCompositionRange = NSRange(location: NSNotFound, length: 0)
         private var shouldPassThroughBackspaceAfterFailedClear = false
-        private var unchangedCursorCount = 0
         private let bundleId: String
-        private let forceMarkedText: (String, NSRange?) -> Void
+        private let forceMarkedText: (String) -> Void
 
-        init(
-            client: IMKTextInput,
-            bundleId: String,
-            forceMarkedText: @escaping (String, NSRange?) -> Void
-        ) {
+        init(client: IMKTextInput, bundleId: String, forceMarkedText: @escaping (String) -> Void) {
             self.bundleId = bundleId
             self.forceMarkedText = forceMarkedText
             super.init(client: client)
         }
 
-        private func setHostMarkedText(_ text: String) {
-            let attributed = NSAttributedString(string: text, attributes: [:])
-            client.setMarkedText(
-                attributed,
-                selectionRange: NSRange(location: text.utf16.count, length: 0),
-                replacementRange: NSRange(location: NSNotFound, length: NSNotFound)
-            )
-        }
-
-        private func validateCursorAfterDirectInsert(
-            startLocation: Int,
-            insertedLength: Int,
-            reason: String
-        ) {
+        private func verifyCursor(startLocation: Int, insertedLength: Int, reason: String) {
             guard startLocation != NSNotFound else { return }
             guard insertedLength > 0 else { return }
             let expectedLocation = startLocation + insertedLength
@@ -337,18 +283,9 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
                 DebugLogger.log("DirectCompositionAdapter: cursor unavailable bundle=\(bundleId) reason=\(reason) expected=\(expectedLocation) selected=\(selectedRange)")
                 return
             }
-            guard selectedRange.location != startLocation || selectedRange.length != 0 else {
-                unchangedCursorCount += 1
-                DebugLogger.log("DirectCompositionAdapter: cursor unchanged after direct insert bundle=\(bundleId) reason=\(reason) start=\(startLocation) expected=\(expectedLocation) count=\(unchangedCursorCount)")
-                if unchangedCursorCount >= 2 {
-                    forceMarkedText(reason, directCompositionRange)
-                }
-                return
-            }
-            unchangedCursorCount = 0
             guard selectedRange.location == expectedLocation, selectedRange.length == 0 else {
                 DebugLogger.log("DirectCompositionAdapter: cursor mismatch bundle=\(bundleId) reason=\(reason) expected=\(expectedLocation) selected=\(selectedRange)")
-                forceMarkedText(reason, directCompositionRange)
+                forceMarkedText(reason)
                 return
             }
         }
@@ -376,17 +313,6 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
                 directCompositionRange = NSRange(location: NSNotFound, length: 0)
                 return
             }
-            guard replacementRange.location != NSNotFound else {
-                forceMarkedText("direct update invalid selection", nil)
-                if !commit.isEmpty {
-                    client.insertText(commit, replacementRange: NSRange(location: NSNotFound, length: NSNotFound))
-                }
-                if !preedit.isEmpty {
-                    setHostMarkedText(preedit)
-                }
-                directCompositionRange = NSRange(location: NSNotFound, length: 0)
-                return
-            }
 
             let startLocation = replacementRange.location
             client.insertText(replacement, replacementRange: replacementRange)
@@ -397,9 +323,7 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
                 shouldPassThroughBackspaceAfterFailedClear = true
                 DebugLogger.log("DirectCompositionAdapter: direct clear did not move cursor; will pass through Backspace bundle=\(bundleId) expected=\(startLocation) selected=\(selectedRange)")
             }
-            if Self.isUsableInsertionSelection(selectedRange),
-               selectedRange.location == startLocation + replacement.utf16.count,
-               !preedit.isEmpty {
+            if Self.isUsableInsertionSelection(selectedRange), !preedit.isEmpty {
                 directCompositionRange = NSRange(
                     location: max(0, selectedRange.location - preedit.utf16.count),
                     length: preedit.utf16.count
@@ -412,7 +336,7 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
             } else {
                 directCompositionRange = NSRange(location: NSNotFound, length: 0)
             }
-            validateCursorAfterDirectInsert(
+            verifyCursor(
                 startLocation: startLocation,
                 insertedLength: replacement.utf16.count,
                 reason: "direct update"
@@ -435,19 +359,9 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
                 selectedRange: client.selectedRange()
             )
             let startLocation = replacementRange.location
-            guard startLocation != NSNotFound else {
-                client.insertText(text, replacementRange: NSRange(location: NSNotFound, length: NSNotFound))
-                directCompositionRange = NSRange(location: NSNotFound, length: 0)
-                forceMarkedText("direct commit invalid selection", nil)
-                return
-            }
             client.insertText(text, replacementRange: replacementRange)
             directCompositionRange = NSRange(location: NSNotFound, length: 0)
-            validateCursorAfterDirectInsert(
-                startLocation: startLocation,
-                insertedLength: text.utf16.count,
-                reason: "direct commit"
-            )
+            verifyCursor(startLocation: startLocation, insertedLength: text.utf16.count, reason: "direct commit")
             #if DEBUG
             debugClientSnapshot("direct.commit.after len=\(text.utf16.count)")
             #endif
@@ -472,19 +386,9 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
                 selectedRange: client.selectedRange()
             )
             let startLocation = replacementRange.location
-            guard startLocation != NSNotFound else {
-                client.insertText(text, replacementRange: NSRange(location: NSNotFound, length: NSNotFound))
-                directCompositionRange = NSRange(location: NSNotFound, length: 0)
-                forceMarkedText("direct insert invalid selection", nil)
-                return
-            }
             client.insertText(text, replacementRange: replacementRange)
             directCompositionRange = NSRange(location: NSNotFound, length: 0)
-            validateCursorAfterDirectInsert(
-                startLocation: startLocation,
-                insertedLength: text.utf16.count,
-                reason: "direct insert"
-            )
+            verifyCursor(startLocation: startLocation, insertedLength: text.utf16.count, reason: "direct insert")
             #if DEBUG
             debugClientSnapshot("direct.insertText.after len=\(text.utf16.count)")
             #endif
@@ -509,11 +413,7 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
                         shouldPassThroughBackspaceAfterFailedClear = true
                         DebugLogger.log("DirectCompositionAdapter: direct clear preedit failed; will pass through Backspace bundle=\(bundleId) expected=\(startLocation) selected=\(selectedRange)")
                     }
-                    validateCursorAfterDirectInsert(
-                        startLocation: startLocation,
-                        insertedLength: 0,
-                        reason: "direct clear"
-                    )
+                    verifyCursor(startLocation: startLocation, insertedLength: 0, reason: "direct clear")
                 }
                 directCompositionRange = NSRange(location: NSNotFound, length: 0)
                 #if DEBUG
@@ -523,26 +423,13 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
             }
 
             let startLocation = replacementRange.location
-            guard startLocation != NSNotFound else {
-                forceMarkedText("direct preedit invalid selection", nil)
-                setHostMarkedText(text)
-                directCompositionRange = NSRange(location: NSNotFound, length: 0)
-                #if DEBUG
-                debugClientSnapshot("direct.setMarkedText.fallback len=\(text.utf16.count)")
-                #endif
-                return
-            }
             client.insertText(text, replacementRange: replacementRange)
             if startLocation != NSNotFound {
                 directCompositionRange = NSRange(location: startLocation, length: text.utf16.count)
             } else {
                 directCompositionRange = NSRange(location: NSNotFound, length: 0)
             }
-            validateCursorAfterDirectInsert(
-                startLocation: startLocation,
-                insertedLength: text.utf16.count,
-                reason: "direct preedit"
-            )
+            verifyCursor(startLocation: startLocation, insertedLength: text.utf16.count, reason: "direct preedit")
             #if DEBUG
             debugClientSnapshot("direct.setMarkedText.after len=\(text.utf16.count)")
             #endif
@@ -559,62 +446,31 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
         if context.shouldUseImmediateMode {
             return ImmediateModeAdapter(client: client)
         }
-        if shouldUseDirectComposition(context: context) {
-            return DirectCompositionAdapter(
-                client: client,
-                bundleId: context.bundleId,
-                forceMarkedText: { [weak self, weak client] reason, replacementRange in
-                    guard let client else { return }
-                    self?.forceMarkedText(
-                        for: context.bundleId,
-                        client: client,
-                        reason: reason,
-                        replacementRange: replacementRange
-                    )
-                }
-            )
+        if shouldUseDirectComposition(client: client, context: context) {
+            return DirectCompositionAdapter(client: client, bundleId: context.bundleId) { [weak self] reason in
+                self?.forceMarkedText(for: context.bundleId, reason: reason)
+            }
         }
-        return ClientAdapter(
-            client: client,
-            initialReplacementRange: takePendingMarkedReplacementRange(for: client)
-        )
+        return ClientAdapter(client: client)
     }
 
-    private func shouldUseDirectComposition(context: ClientContext) -> Bool {
-        return Self.directCompositionBundleIDs.contains(context.bundleId) &&
+    private func shouldUseDirectComposition(client: IMKTextInput, context: ClientContext) -> Bool {
+        Self.directCompositionBundleIDs.contains(context.bundleId) &&
             !Self.forcedMarkedTextBundleIDs.contains(context.bundleId)
     }
 
-    private func takePendingMarkedReplacementRange(for client: IMKTextInput) -> NSRange? {
-        pendingMarkedReplacementRanges.removeValue(forKey: ObjectIdentifier(client as AnyObject))
-    }
-
-    private func rememberPendingMarkedReplacementRange(_ range: NSRange, for client: IMKTextInput) {
-        guard range.location != NSNotFound, range.length > 0 else { return }
-        pendingMarkedReplacementRanges[ObjectIdentifier(client as AnyObject)] = range
-    }
-
-    private func forceMarkedText(
-        for bundleId: String,
-        client: IMKTextInput,
-        reason: String,
-        replacementRange: NSRange?
-    ) {
+    private func forceMarkedText(for bundleId: String, reason: String) {
         guard !bundleId.isEmpty else { return }
         Self.forcedMarkedTextBundleIDs.insert(bundleId)
-        if let replacementRange,
-           replacementRange.location != NSNotFound,
-           replacementRange.length > 0 {
-            rememberPendingMarkedReplacementRange(replacementRange, for: client)
-            DebugLogger.log("PriTypeInputController: forcing marked text for bundle=\(bundleId) reason=\(reason) replacementRange={loc=\(replacementRange.location),len=\(replacementRange.length)}")
-        } else {
-            DebugLogger.log("PriTypeInputController: forcing marked text for bundle=\(bundleId) reason=\(reason)")
-        }
+        DebugLogger.log("PriTypeInputController: forcing marked text for bundle=\(bundleId) reason=\(reason)")
     }
 
     private func forceDirectComposition(for bundleId: String, reason: String) {
         guard !bundleId.isEmpty, !Self.forcedMarkedTextBundleIDs.contains(bundleId) else { return }
         let inserted = Self.directCompositionBundleIDs.insert(bundleId).inserted
+        if inserted {
+            UserDefaults.standard.set(Array(Self.directCompositionBundleIDs).sorted(), forKey: "DirectCompositionBundleIDs")
+        }
         DebugLogger.log("PriTypeInputController: forcing direct composition for bundle=\(bundleId) reason=\(reason) inserted=\(inserted)")
     }
 
@@ -627,10 +483,10 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
         if context.shouldUseImmediateMode {
             return adapter is ImmediateModeAdapter
         }
-        guard adapter is BaseClientAdapter else {
+        guard let client = (adapter as? BaseClientAdapter)?.client else {
             return false
         }
-        if shouldUseDirectComposition(context: context) {
+        if shouldUseDirectComposition(client: client, context: context) {
             return adapter is DirectCompositionAdapter
         }
         return adapter is ClientAdapter
@@ -787,7 +643,7 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
                     DebugLogger.log("PriTypeInputController: ignored stale keyboard override token=\(activationToken) current=\(Self.activationSerial)")
                     return
                 }
-                self.syncRomanKeyboardLayout(for: currentClient, context: self.cachedContext)
+                self.syncRomanKeyboardLayout(for: currentClient, context: self.cachedContext, force: true)
             }
         } else {
             // Fallback if sender is not IMKTextInput (rare)
@@ -803,7 +659,6 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
         composer.updateKeyboardLayout(id: currentLayoutId)
         
         // Observe layout changes
-        NotificationCenter.default.removeObserver(self, name: .keyboardLayoutChanged, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(handleLayoutChange), name: .keyboardLayoutChanged, object: nil)
     }
     
@@ -826,7 +681,6 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
                 baseAdapter?.finishMarkedText(reason: "deactivateServer.no-op")
                 super.deactivateServer(sender)
                 if let deactivatingClientID {
-                    pendingMarkedReplacementRanges.removeValue(forKey: deactivatingClientID)
                     let currentClientID = lastClient.map { ObjectIdentifier($0 as AnyObject) }
                     if currentClientID == deactivatingClientID {
                         lastClient = nil
@@ -902,7 +756,6 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
         // CGEventTap triggerHanjaLookup() is dispatched async and needs a valid adapter.
         // The next activateServer() will replace it with the new client's adapter.
         if let deactivatingClientID {
-            pendingMarkedReplacementRanges.removeValue(forKey: deactivatingClientID)
             let currentClientID = lastClient.map { ObjectIdentifier($0 as AnyObject) }
             if currentClientID == deactivatingClientID {
                 lastClient = nil
@@ -1040,7 +893,7 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
             if event.keyCode == KeyCode.backspace,
                event.isARepeat,
                !activeBefore,
-               CFAbsoluteTimeGetCurrent() - lastBackspaceCompositionEndTime < backspaceRepeatSuppressionInterval {
+               CFAbsoluteTimeGetCurrent() - lastBackspaceCompositionEndTime < 0.30 {
                 DebugLogger.log("PriTypeInputController: swallowed immediate Backspace repeat immediately after composition clear")
                 return true
             }
@@ -1049,8 +902,6 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
             if handled && activeBefore && !activeAfter {
                 if event.keyCode == KeyCode.backspace {
                     lastBackspaceCompositionEndTime = CFAbsoluteTimeGetCurrent()
-                    DebugLogger.log("PriTypeInputController: skipped finalize after Backspace cleared immediate composition")
-                    return handled
                 }
                 finalizeEndedCompositionIfNeeded(
                     client: client,
@@ -1086,7 +937,7 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
         if event.keyCode == KeyCode.backspace,
            event.isARepeat,
            !activeBefore,
-           CFAbsoluteTimeGetCurrent() - lastBackspaceCompositionEndTime < backspaceRepeatSuppressionInterval {
+           CFAbsoluteTimeGetCurrent() - lastBackspaceCompositionEndTime < 0.30 {
             DebugLogger.log("PriTypeInputController: swallowed Backspace repeat immediately after composition clear")
             return true
         }
@@ -1103,8 +954,6 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
         if handled && activeBefore && !activeAfter {
             if event.keyCode == KeyCode.backspace {
                 lastBackspaceCompositionEndTime = CFAbsoluteTimeGetCurrent()
-                DebugLogger.log("PriTypeInputController: skipped finalize after Backspace cleared standard composition")
-                return handled
             }
             finalizeEndedCompositionIfNeeded(
                 client: client,
@@ -1128,7 +977,6 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
         assert(Thread.isMainThread, "IMK commitComposition must run on main thread")
         #endif
         if let client = sender as? IMKTextInput ?? lastClient {
-            pendingMarkedReplacementRanges.removeValue(forKey: ObjectIdentifier(client as AnyObject))
             let adapter = currentAdapter ?? ClientAdapter(client: client)
             let markedRange = (adapter as? BaseClientAdapter)?.client.markedRange() ?? client.markedRange()
             if !composer.hasActiveComposition,

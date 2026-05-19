@@ -9,7 +9,17 @@ let kConnectionName = "PriType_InputString_v2"
 
 class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
     private func toggleLanguageInputSource() {
-        LanguageSwitcher.toggleLanguageInputSource()
+        if ConfigurationManager.shared.capsLockInputSourceSwitchEnabled {
+            DebugLogger.log("PriType toggle ignored because macOS Caps Lock input-source switching is enabled")
+            return
+        }
+
+        if let nextMode = InputSourceManager.shared.toggledInputMode(
+            fallbackMode: PriTypeInputController.sharedComposer.inputMode
+        ) {
+            PriTypeInputController.sharedController?.selectInputModeForCurrentClient(nextMode)
+            PriTypeInputController.sharedComposer.setInputMode(nextMode)
+        }
     }
     
     func applicationDidFinishLaunching(_ notification: Notification) {

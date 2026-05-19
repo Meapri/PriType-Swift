@@ -12,8 +12,9 @@ TEAM_ID="M4U438VG59" # Extracted from cert
 # KEYCHAIN_PROFILE="PriTypeNotary" 
 
 echo "==== 1. Clean & Build ===="
+./install.sh # This builds and copies to ./Resources/PriTypeV2.app locally first? No, install.sh installs to ~/Library...
+# Let's extract build logic or just use swift build
 swift build -c release -Xswiftc -DNDEBUG
-rm -rf build_dist "$APP_BUNDLE" "$ZIP_NAME" PriType_Notarized.zip
 mkdir -p build_dist/Contents/MacOS
 mkdir -p build_dist/Contents/Resources
 cp .build/release/PriType build_dist/Contents/MacOS/PriTypeV2

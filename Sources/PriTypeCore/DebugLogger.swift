@@ -115,7 +115,7 @@ public final class DebugLogger: @unchecked Sendable {
             try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         }
 
-        try rotateLogIfNeeded(at: url, incomingByteCount: data.count)
+        try rotateLogIfNeeded(at: url)
         
         // Create file if it doesn't exist
         if !FileManager.default.fileExists(atPath: PriTypeConfig.logPath) {
@@ -136,24 +136,14 @@ public final class DebugLogger: @unchecked Sendable {
         try handle.write(contentsOf: data)
     }
 
-    private static func rotateLogIfNeeded(at url: URL, incomingByteCount: Int) throws {
-        if let handle = cachedHandle {
-            let currentOffset = try handle.offset()
-            guard currentOffset + UInt64(incomingByteCount) > UInt64(maxLogFileSize) else {
-                return
-            }
-            try? handle.close()
-            cachedHandle = nil
-        }
+    private static func rotateLogIfNeeded(at url: URL) throws {
+        guard cachedHandle == nil else { return }
 
         let fileManager = FileManager.default
         guard fileManager.fileExists(atPath: url.path),
               let attributes = try? fileManager.attributesOfItem(atPath: url.path),
-              let size = attributes[.size] as? NSNumber else {
-            return
-        }
-
-        guard size.intValue + incomingByteCount > maxLogFileSize else {
+              let size = attributes[.size] as? NSNumber,
+              size.intValue > maxLogFileSize else {
             return
         }
 

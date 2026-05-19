@@ -285,7 +285,8 @@ public final class ConfigurationManager: ConfigurationProviding, @unchecked Send
     private let defaults = UserDefaults.standard
     
     private init() {
-        cleanupLegacyInputOptions()
+        defaults.removeObject(forKey: "com.pritype.autoCapitalize")
+        defaults.removeObject(forKey: "com.pritype.doubleSpacePeriod")
     }
     
     // MARK: - Keys
@@ -297,24 +298,6 @@ public final class ConfigurationManager: ConfigurationProviding, @unchecked Send
         static let hanjaKeyBinding = "com.pritype.hanjaKeyBinding"
         static let lastUpdateCheck = "com.pritype.lastUpdateCheck"
         static let autoUpdateCheck = "com.pritype.autoUpdateCheck"
-    }
-
-    private func cleanupLegacyInputOptions() {
-        [
-            "DirectCompositionBundleIDs",
-            "CommitOnlyCompositionBundleIDs",
-            "PriTypeDirectInputRejectedBundleIDs",
-            "com.pritype.autoCapitalize",
-            "com.pritype.defaultCompositionStrategy",
-            "com.pritype.doubleSpacePeriod",
-            "com.pritype.gameInputStrategy",
-            "com.pritype.hideCompositionUnderlineGlobally",
-            "com.pritype.inputCompositionMode",
-            "com.pritype.moachigiEnabled",
-            "com.pritype.shiftJamoShortcuts",
-            "com.pritype.useCapsLockToggle",
-            "com.pritype.useSystemHanja"
-        ].forEach { defaults.removeObject(forKey: $0) }
     }
     
     // MARK: - Keyboard Layout
@@ -368,10 +351,6 @@ public final class ConfigurationManager: ConfigurationProviding, @unchecked Send
     private var _cachedToggleBinding: KeyBinding?
     private var _cachedHanjaBinding: KeyBinding?
     private let keyBindingLock = NSLock()
-    private let systemSettingsLock = NSLock()
-    private var cachedCapsLockInputSourceSwitchEnabled: Bool?
-    private var cachedCapsLockInputSourceSwitchReadTime: CFAbsoluteTime = 0
-    private let systemSettingsCacheInterval: CFAbsoluteTime = 0.25
     
     /// The user-configured toggle key binding
     ///
@@ -462,35 +441,6 @@ public final class ConfigurationManager: ConfigurationProviding, @unchecked Send
     /// When this is enabled, PriType should not also run its own language
     /// toggle key. The system input-source switch becomes the single owner.
     public var capsLockInputSourceSwitchEnabled: Bool {
-        let now = CFAbsoluteTimeGetCurrent()
-
-        systemSettingsLock.lock()
-        if let cached = cachedCapsLockInputSourceSwitchEnabled,
-           now - cachedCapsLockInputSourceSwitchReadTime < systemSettingsCacheInterval {
-            systemSettingsLock.unlock()
-            return cached
-        }
-        systemSettingsLock.unlock()
-
-        let value = readCapsLockInputSourceSwitchEnabled()
-
-        systemSettingsLock.lock()
-        cachedCapsLockInputSourceSwitchEnabled = value
-        cachedCapsLockInputSourceSwitchReadTime = now
-        systemSettingsLock.unlock()
-
-        return value
-    }
-
-    public func refreshSystemSettingsCache() {
-        let value = readCapsLockInputSourceSwitchEnabled()
-        systemSettingsLock.lock()
-        cachedCapsLockInputSourceSwitchEnabled = value
-        cachedCapsLockInputSourceSwitchReadTime = CFAbsoluteTimeGetCurrent()
-        systemSettingsLock.unlock()
-    }
-
-    private func readCapsLockInputSourceSwitchEnabled() -> Bool {
         if let value = CFPreferencesCopyValue(
             "TISRomanSwitchState" as CFString,
             kCFPreferencesAnyApplication,

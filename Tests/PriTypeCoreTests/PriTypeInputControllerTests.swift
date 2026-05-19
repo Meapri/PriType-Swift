@@ -82,19 +82,16 @@ struct PriTypeInputControllerTests {
         ))
     }
 
-    @Test("host marked session treats zero length as still owned by host")
-    func hostMarkedSessionIncludesZeroLengthResidue() {
+    @Test("host marked range treats zero length as still owned by host")
+    func hostMarkedRangeIncludesZeroLengthResidue() {
         #expect(!PriTypeInputController.BaseClientAdapter.hasHostMarkedRange(
             NSRange(location: NSNotFound, length: NSNotFound)
         ))
-        #expect(!PriTypeInputController.BaseClientAdapter.hasHostMarkedRange(
+        #expect(PriTypeInputController.BaseClientAdapter.hasHostMarkedRange(
             NSRange(location: 12, length: 0)
         ))
         #expect(PriTypeInputController.BaseClientAdapter.hasHostMarkedRange(
             NSRange(location: 12, length: 1)
-        ))
-        #expect(PriTypeInputController.BaseClientAdapter.hasHostMarkedSession(
-            NSRange(location: 12, length: 0)
         ))
     }
 

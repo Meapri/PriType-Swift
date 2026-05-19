@@ -91,6 +91,7 @@ extension SettingsWindowController: NSWindowDelegate {
 
 struct SettingsView: View {
     @State private var selectedKeyboard = ConfigurationManager.shared.keyboardId
+    @State private var selectedToggleKey = ConfigurationManager.shared.toggleKey
     @State private var toggleKeyBinding = ConfigurationManager.shared.toggleKeyBinding
     @State private var hanjaKeyBinding = ConfigurationManager.shared.hanjaKeyBinding
     @State private var autoUpdateCheckEnabled = ConfigurationManager.shared.autoUpdateCheckEnabled
@@ -137,6 +138,7 @@ struct SettingsView: View {
         .frame(width: PriTypeConfig.settingsWindowWidth, height: PriTypeConfig.settingsWindowHeight)
         .onAppear {
             selectedKeyboard = ConfigurationManager.shared.keyboardId
+            selectedToggleKey = ConfigurationManager.shared.toggleKey
             toggleKeyBinding = ConfigurationManager.shared.toggleKeyBinding
             hanjaKeyBinding = ConfigurationManager.shared.hanjaKeyBinding
             autoUpdateCheckEnabled = ConfigurationManager.shared.autoUpdateCheckEnabled
@@ -177,7 +179,12 @@ struct SettingsView: View {
                 ConfigurationManager.shared.keyboardId = newValue
             }
 
-            CapsLockStatusCard(
+            SettingsNoticeRow(
+                icon: "capslock",
+                text: L10n.keyBinding.capsLockSummary
+            )
+
+            CapsLockStatusRow(
                 isEnabled: capsLockSwitchEnabled,
                 openSettings: openInputSourceSettings
             )
@@ -194,8 +201,6 @@ struct SettingsView: View {
                         conflictBinding: hanjaKeyBinding,
                         hasConflict: $hasKeyConflict,
                         isDisabled: capsLockSwitchEnabled,
-                        disabledReason: L10n.keyBinding.disabledByCapsLock,
-                        valueOverride: capsLockSwitchEnabled ? L10n.keyBinding.managedByMacOS : nil,
                         onCapsLockBlocked: { showCapsLockBlockedAlert = true }
                     )
 
@@ -210,8 +215,6 @@ struct SettingsView: View {
                         conflictBinding: toggleKeyBinding,
                         hasConflict: $hasKeyConflict,
                         isDisabled: false,
-                        disabledReason: nil,
-                        valueOverride: nil,
                         onCapsLockBlocked: { showCapsLockBlockedAlert = true }
                     )
 
@@ -310,29 +313,19 @@ struct SettingsView: View {
                 icon: "gearshape.2"
             ) {
                 VStack(spacing: 0) {
-                    HStack(alignment: .top, spacing: 10) {
+                    HStack(spacing: 10) {
                         SettingsRowIcon(systemName: "hand.raised")
 
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text(L10n.system.accessibility)
-                                .font(.system(size: 14, weight: .regular))
-                                .foregroundStyle(.primary)
-
-                            Text(L10n.system.accessibilitySubtitle)
-                                .font(.system(size: 11, weight: .regular))
-                                .foregroundStyle(.secondary)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                        .layoutPriority(1)
+                        Text(L10n.system.accessibility)
+                            .font(.system(size: 14, weight: .regular))
+                            .foregroundStyle(.primary)
 
                         Spacer()
 
                         if isAccessibilityGranted {
-                            StatusPill(
-                                title: L10n.system.accessibilityGranted,
-                                systemImage: "checkmark.circle.fill",
-                                color: .green
-                            )
+                            Text(L10n.system.accessibilityGranted)
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(.green)
                         } else {
                             Button(action: { requestAccessibility() }) {
                                 Text(L10n.system.accessibilityRequest)
@@ -481,7 +474,6 @@ struct SettingsView: View {
     }
 
     private func refreshCapsLockSwitchState() {
-        ConfigurationManager.shared.refreshSystemSettingsCache()
         capsLockSwitchEnabled = ConfigurationManager.shared.capsLockInputSourceSwitchEnabled
     }
 
@@ -528,7 +520,12 @@ struct SettingsView: View {
                     // Auto-start key monitoring that was skipped at launch
                     if !RightCommandSuppressor.shared.isRunning {
                         RightCommandSuppressor.shared.onToggle = {
-                            LanguageSwitcher.toggleLanguageInputSource()
+                            if let nextMode = InputSourceManager.shared.toggledInputMode(
+                                fallbackMode: PriTypeInputController.sharedComposer.inputMode
+                            ) {
+                                PriTypeInputController.sharedController?.selectInputModeForCurrentClient(nextMode)
+                                PriTypeInputController.sharedComposer.setInputMode(nextMode)
+                            }
                         }
                         RightCommandSuppressor.shared.onHanjaLookup = {
                             PriTypeInputController.sharedComposer.triggerHanjaLookup()
@@ -595,53 +592,26 @@ private extension View {
 
 // MARK: - Settings Components (Minimal Glass)
 
-struct CapsLockStatusCard: View {
-    let isEnabled: Bool
-    let openSettings: () -> Void
+struct SettingsNoticeRow: View {
+    let icon: String
+    let text: String
 
     var body: some View {
-        HStack(alignment: .top, spacing: 10) {
-            SettingsRowIcon(systemName: "capslock")
+        HStack(spacing: 8) {
+            Image(systemName: icon)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(.secondary)
+                .frame(width: 18)
 
-            VStack(alignment: .leading, spacing: 8) {
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text(L10n.keyBinding.capsLockStatusTitle)
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(.primary)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .layoutPriority(1)
+            Text(text)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
 
-                    Spacer(minLength: 8)
-
-                    StatusPill(
-                        title: isEnabled ? L10n.keyBinding.capsLockStatusOn : L10n.keyBinding.capsLockStatusOff,
-                        systemImage: isEnabled ? "checkmark.circle.fill" : "minus.circle.fill",
-                        color: isEnabled ? .green : .secondary
-                    )
-                }
-
-                Text(isEnabled ? L10n.keyBinding.capsLockOnDescription : L10n.keyBinding.capsLockOffDescription)
-                    .font(.system(size: 12, weight: .regular))
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                HStack {
-                    Button(action: openSettings) {
-                        Text(L10n.keyBinding.capsLockOpenSettings)
-                            .font(.system(size: 12, weight: .medium))
-                    }
-                    .buttonStyle(.bordered)
-                    .buttonBorderShape(.roundedRectangle(radius: 7))
-                    .controlSize(.small)
-                    .fixedSize()
-
-                    Spacer(minLength: 0)
-                }
-            }
-            .layoutPriority(1)
+            Spacer(minLength: 0)
         }
-        .padding(.vertical, 12)
-        .padding(.horizontal, 14)
+        .padding(.vertical, 9)
+        .padding(.horizontal, 12)
         .pritypeGlassSurface(cornerRadius: 12)
         .overlay(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
@@ -650,26 +620,47 @@ struct CapsLockStatusCard: View {
     }
 }
 
-struct StatusPill: View {
-    let title: String
-    let systemImage: String
-    let color: Color
+struct CapsLockStatusRow: View {
+    let isEnabled: Bool
+    let openSettings: () -> Void
 
     var body: some View {
-        HStack(spacing: 4) {
-            Image(systemName: systemImage)
-                .font(.system(size: 10, weight: .semibold))
-            Text(title)
-                .font(.system(size: 12, weight: .semibold))
+        HStack(alignment: .top, spacing: 10) {
+            SettingsRowIcon(systemName: "capslock")
+
+            VStack(alignment: .leading, spacing: 7) {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(L10n.keyBinding.capsLockStatusTitle)
+                        .font(.system(size: 14, weight: .regular))
+                        .foregroundStyle(.primary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .layoutPriority(1)
+
+                    Spacer(minLength: 8)
+
+                    Text(isEnabled ? L10n.keyBinding.capsLockStatusOn : L10n.keyBinding.capsLockStatusOff)
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(isEnabled ? .green : .secondary)
+                        .fixedSize()
+                }
+
+                Button(action: openSettings) {
+                    Text(L10n.keyBinding.capsLockOpenSettings)
+                        .font(.system(size: 12, weight: .medium))
+                }
+                .buttonStyle(.bordered)
+                .buttonBorderShape(.roundedRectangle(radius: 7))
+                .controlSize(.small)
+                .fixedSize()
+            }
         }
-        .foregroundStyle(color)
-        .padding(.vertical, 3)
-        .padding(.horizontal, 7)
-        .background(
-            Capsule(style: .continuous)
-                .fill(color.opacity(0.12))
+        .padding(.vertical, 10)
+        .padding(.horizontal, 12)
+        .pritypeGlassSurface(cornerRadius: 12)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(.primary.opacity(0.07), lineWidth: 1)
         )
-        .fixedSize()
     }
 }
 
@@ -823,8 +814,6 @@ struct KeyRecorderRow: View {
     let conflictBinding: KeyBinding
     @Binding var hasConflict: Bool
     let isDisabled: Bool
-    let disabledReason: String?
-    let valueOverride: String?
     let onCapsLockBlocked: () -> Void
 
     @State private var isRecording = false
@@ -833,22 +822,12 @@ struct KeyRecorderRow: View {
     @State private var pulseAnimation = false
 
     var body: some View {
-        HStack(alignment: .top, spacing: 10) {
+        HStack(spacing: 10) {
             SettingsRowIcon(systemName: icon)
 
-            VStack(alignment: .leading, spacing: 3) {
-                Text(label)
-                    .font(.system(size: 14, weight: .regular))
-                    .foregroundStyle(.primary)
-
-                if isDisabled, let disabledReason {
-                    Text(disabledReason)
-                        .font(.system(size: 11, weight: .regular))
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            }
-            .layoutPriority(1)
+            Text(label)
+                .font(.system(size: 14, weight: .regular))
+                .foregroundStyle(.primary)
 
             Spacer()
 
@@ -873,10 +852,9 @@ struct KeyRecorderRow: View {
                             .font(.system(size: 12, weight: .medium))
                             .foregroundStyle(.blue)
                     } else {
-                        Text(valueOverride ?? binding.displayName)
+                        Text(binding.displayName)
                             .font(.system(size: 12, weight: .semibold))
                             .foregroundStyle(.primary)
-                            .lineLimit(1)
                     }
                 }
             }
@@ -889,7 +867,7 @@ struct KeyRecorderRow: View {
                 isHovering = hover
             }
         }
-        .opacity(isDisabled ? 0.62 : 1)
+        .opacity(isDisabled ? 0.45 : 1)
         .padding(.vertical, 10)
         .padding(.horizontal, 12)
         .onChange(of: isDisabled) { _, disabled in
