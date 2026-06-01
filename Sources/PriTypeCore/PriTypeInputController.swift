@@ -47,7 +47,7 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
     private var lastKeyboardOverrideClientID: ObjectIdentifier?
     private var lastKeyboardOverrideTime: CFAbsoluteTime = 0
     private var applicationDeactivateObserver: Any?
-    
+
     // Keep adapter alive for external toggle calls
     public private(set) var currentAdapter: (any HangulComposerDelegate)?
     
@@ -55,16 +55,34 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
     
     /// Base adapter class with common IMKTextInput operations
     /// Subclasses override setMarkedText for different behaviors
-    private class BaseClientAdapter: NSObject, HangulComposerDelegate {
+    class BaseClientAdapter: NSObject, HangulComposerDelegate {
         let client: IMKTextInput
         
         init(client: IMKTextInput) {
             self.client = client
         }
+
+        static func insertionReplacementRange(markedRange: NSRange) -> NSRange {
+            if markedRange.location != NSNotFound, markedRange.length > 0 {
+                return markedRange
+            }
+            return NSRange(location: NSNotFound, length: NSNotFound)
+        }
+
+        static func markedTextClearingReplacementRange(markedRange: NSRange) -> NSRange? {
+            guard markedRange.location != NSNotFound, markedRange.length > 0 else {
+                return nil
+            }
+            return markedRange
+        }
         
         func insertText(_ text: String) {
             guard !text.isEmpty else { return }
-            client.insertText(text, replacementRange: NSRange(location: NSNotFound, length: NSNotFound))
+            let replacementRange = Self.insertionReplacementRange(markedRange: client.markedRange())
+            if replacementRange.location != NSNotFound {
+                DebugLogger.log("ClientAdapter.insertText replacing marked range loc=\(replacementRange.location) len=\(replacementRange.length)")
+            }
+            client.insertText(text, replacementRange: replacementRange)
         }
         
         func setMarkedText(_ text: String) {
@@ -95,6 +113,13 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
     /// Standard adapter with underlined marked text for composition display
     private class ClientAdapter: BaseClientAdapter {
         override func setMarkedText(_ text: String) {
+            guard !text.isEmpty else {
+                if let replacementRange = Self.markedTextClearingReplacementRange(markedRange: client.markedRange()) {
+                    client.insertText("", replacementRange: replacementRange)
+                    DebugLogger.log("ClientAdapter.setMarkedText cleared marked range loc=\(replacementRange.location) len=\(replacementRange.length)")
+                }
+                return
+            }
             let attributes: [NSAttributedString.Key: Any] = [
                 .underlineStyle: NSUnderlineStyle.single.rawValue,
                 .underlineColor: NSColor.textColor
@@ -259,7 +284,7 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
             adapter.setMarkedText("")
         }
     }
-    
+
     deinit {
         // The selector-based `.keyboardLayoutChanged` observer is auto-removed on
         // modern macOS, but the block-based NSWorkspace deactivate observer is not,
@@ -334,6 +359,7 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
         lastClient = nil
         // Keep cachedContext alive — activateServer() will replace it with the new client's context.
         // Clearing it here causes unnecessary slow path if handle() arrives before activateServer().
+        removeApplicationDeactivateObserver()
         NotificationCenter.default.removeObserver(self, name: .keyboardLayoutChanged, object: nil)
     }
     
@@ -404,6 +430,7 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
             DebugLogger.log("cachedContext miss: client changed or nil, analyzing (Slow Path)")
             context = ClientContextDetector.analyze(client: client)
             self.cachedContext = context
+            updateApplicationDeactivateObserver(for: context)
             // Do not update self.lastClient here. It must be updated alongside currentAdapter
             // below to ensure the adapter is correctly recreated when the client changes.
         }
