@@ -30,7 +30,9 @@ public class SettingsWindowController: NSObject {
 
         // Create window with Liquid Glass style
         let newWindow = NSWindow(contentViewController: hostingController)
-        newWindow.title = "PriType 설정"
+        // Visually hidden (titleVisibility = .hidden) but still used by the Window
+        // menu, Mission Control, and VoiceOver — so keep it localized.
+        newWindow.title = "PriType \(L10n.settings.title)"
         newWindow.styleMask = [.titled, .closable, .miniaturizable, .fullSizeContentView]
         newWindow.titlebarAppearsTransparent = true
         newWindow.titleVisibility = .hidden
@@ -104,6 +106,10 @@ struct SettingsView: View {
     // Update check state
     @State private var updateStatus: UpdateStatus = .idle
 
+    // Polls for the accessibility grant while the window is open. Stored so it can
+    // be replaced on repeated taps and invalidated when the view disappears.
+    @State private var accessibilityPollTimer: Timer?
+
     private enum UpdateStatus: Equatable {
         case idle
         case checking
@@ -154,6 +160,10 @@ struct SettingsView: View {
             Button("OK", role: .cancel) {}
         } message: {
             Text(L10n.keyBinding.capsLockBlockedMessage)
+        }
+        .onDisappear {
+            accessibilityPollTimer?.invalidate()
+            accessibilityPollTimer = nil
         }
     }
 
@@ -517,26 +527,31 @@ struct SettingsView: View {
         let options = ["AXTrustedCheckOptionPrompt": true] as CFDictionary
         let _ = AXIsProcessTrustedWithOptions(options)
 
-        // Start a timer to poll for changes if user grants it while window is open
-        Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { timer in
+        // Poll for the grant while the window is open. Replace any in-flight poll
+        // so repeated taps don't stack timers, and stop after a bounded window so
+        // a never-granted permission can't leave a timer running forever.
+        accessibilityPollTimer?.invalidate()
+        let pollDeadline = Date().addingTimeInterval(120)
+        accessibilityPollTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { timer in
             let granted = AXIsProcessTrusted()
-            if granted {
-                DispatchQueue.main.async {
-                    self.isAccessibilityGranted = true
-
-                    // Auto-start key monitoring that was skipped at launch
-                    if !RightCommandSuppressor.shared.isRunning {
-                        RightCommandSuppressor.shared.onToggle = {
-                            InputModeCoordinator.shared.requestToggle(source: .customKey)
-                        }
-                        RightCommandSuppressor.shared.onHanjaLookup = {
-                            PriTypeInputController.sharedComposer.triggerHanjaLookup()
-                        }
-                        let started = RightCommandSuppressor.shared.start()
-                        DebugLogger.log("Accessibility granted: CGEventTap start = \(started)")
-                    }
-                }
+            if granted || Date() >= pollDeadline {
                 timer.invalidate()
+            }
+            guard granted else { return }
+            DispatchQueue.main.async {
+                self.isAccessibilityGranted = true
+
+                // Auto-start key monitoring that was skipped at launch
+                if !RightCommandSuppressor.shared.isRunning {
+                    RightCommandSuppressor.shared.onToggle = {
+                        InputModeCoordinator.shared.requestToggle(source: .customKey)
+                    }
+                    RightCommandSuppressor.shared.onHanjaLookup = {
+                        PriTypeInputController.sharedComposer.triggerHanjaLookup()
+                    }
+                    let started = RightCommandSuppressor.shared.start()
+                    DebugLogger.log("Accessibility granted: CGEventTap start = \(started)")
+                }
             }
         }
     }

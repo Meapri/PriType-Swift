@@ -260,6 +260,14 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
         }
     }
     
+    deinit {
+        // The selector-based `.keyboardLayoutChanged` observer is auto-removed on
+        // modern macOS, but the block-based NSWorkspace deactivate observer is not,
+        // so clean both up explicitly to avoid a dangling registration.
+        NotificationCenter.default.removeObserver(self, name: .keyboardLayoutChanged, object: nil)
+        removeApplicationDeactivateObserver()
+    }
+
     // 입력기가 활성화될 때 호출 - 새 세션 시작
     override public func activateServer(_ sender: Any!) {
         #if DEBUG
@@ -295,7 +303,12 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
         let currentLayoutId = ConfigurationManager.shared.keyboardId
         composer.updateKeyboardLayout(id: currentLayoutId)
         
-        // Observe layout changes
+        // Observe layout changes. IMK can call activateServer again without an
+        // intervening deactivateServer (common in Electron/Chromium hosts), and
+        // NotificationCenter allows duplicate (observer, selector, name)
+        // registrations that would each fire handleLayoutChange. Remove any prior
+        // registration first so this stays idempotent.
+        NotificationCenter.default.removeObserver(self, name: .keyboardLayoutChanged, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(handleLayoutChange), name: .keyboardLayoutChanged, object: nil)
     }
     
