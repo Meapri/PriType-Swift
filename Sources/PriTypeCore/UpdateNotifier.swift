@@ -5,7 +5,7 @@ import Cocoa
 /// Manages update notifications using macOS UserNotification framework
 ///
 /// `UpdateNotifier` handles:
-/// - Requesting notification permission
+/// - Deferring notification permission until an update notification is needed
 /// - Sending local notifications when an update is available
 /// - Handling notification click actions (opening the release page)
 ///
@@ -40,7 +40,10 @@ public final class UpdateNotifier: NSObject, @unchecked Sendable, UNUserNotifica
     
     // MARK: - Setup
     
-    /// Configure the notification center and register action categories
+    /// Configure the notification center and register action categories.
+    ///
+    /// This intentionally does not request notification permission at startup.
+    /// Permission is requested only when an update notification is about to be sent.
     ///
     /// Call this once during app startup (in `applicationDidFinishLaunching`)
     public func setup() {
@@ -62,15 +65,6 @@ public final class UpdateNotifier: NSObject, @unchecked Sendable, UNUserNotifica
         )
         
         center.setNotificationCategories([category])
-        
-        // Request permission (non-blocking)
-        center.requestAuthorization(options: [.alert, .sound]) { granted, error in
-            if let error = error {
-                DebugLogger.log("UpdateNotifier: Permission error - \(error.localizedDescription)")
-            } else {
-                DebugLogger.log("UpdateNotifier: Permission \(granted ? "granted" : "denied")")
-            }
-        }
     }
     
     // MARK: - Send Notification
@@ -80,6 +74,35 @@ public final class UpdateNotifier: NSObject, @unchecked Sendable, UNUserNotifica
     /// - Parameter update: The update information to display
     public func notifyUpdateAvailable(_ update: UpdateChecker.UpdateInfo) {
         // Store the URL for when the user interacts with the notification
+        self.pendingReleaseURL = update.releasePageURL
+
+        let center = UNUserNotificationCenter.current()
+        center.getNotificationSettings { [weak self] settings in
+            guard let self else { return }
+
+            switch settings.authorizationStatus {
+            case .authorized, .provisional:
+                self.enqueueUpdateNotification(update)
+            case .notDetermined:
+                UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { granted, error in
+                    if let error = error {
+                        DebugLogger.log("UpdateNotifier: Permission error - \(error.localizedDescription)")
+                    } else {
+                        DebugLogger.log("UpdateNotifier: Permission \(granted ? "granted" : "denied")")
+                    }
+
+                    guard granted else { return }
+                    self.enqueueUpdateNotification(update)
+                }
+            case .denied:
+                DebugLogger.log("UpdateNotifier: Permission denied, skipping notification")
+            @unknown default:
+                DebugLogger.log("UpdateNotifier: Unknown permission state, skipping notification")
+            }
+        }
+    }
+
+    private func enqueueUpdateNotification(_ update: UpdateChecker.UpdateInfo) {
         self.pendingReleaseURL = update.releasePageURL
         
         let content = UNMutableNotificationContent()

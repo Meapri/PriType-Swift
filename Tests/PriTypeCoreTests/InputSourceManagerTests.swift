@@ -1,37 +1,71 @@
 import Testing
 @testable import PriTypeCore
 
-// MARK: - AboutInfo & App Metadata Tests
+@Suite("InputSourceManager")
+struct InputSourceManagerTests {
+    @Test("Keeps PriType parent and unified mode in enabled sources")
+    func keepsPriTypeParentAndUnifiedModeInEnabledSources() {
+        let sources: [[String: Any]] = [
+            [
+                "Bundle ID": "com.pritype.inputmethod.v2",
+                "InputSourceKind": "Keyboard Input Method"
+            ],
+            [
+                "Bundle ID": "com.pritype.inputmethod.v2",
+                "InputSourceKind": "Input Mode",
+                "Input Mode": "com.pritype.inputmethod.v2"
+            ],
+            [
+                "Bundle ID": "com.pritype.inputmethod.v2",
+                "InputSourceKind": "Input Mode",
+                "Input Mode": "com.pritype.inputmethod.v2.english"
+            ]
+        ]
 
-@Suite("AboutInfo")
-struct AboutInfoTests {
-    
-    @Test("Version string is non-empty")
-    func versionIsNonEmpty() {
-        #expect(!AboutInfo.version.isEmpty, "App version should not be empty")
+        let sanitized = InputSourceManager.sanitizedInputSources(
+            sources,
+            removeAppleKoreanInputModes: false,
+            allowsPriTypeParentEntry: true
+        )
+
+        #expect(sanitized.count == 2)
+        #expect(sanitized.contains { $0["Input Mode"] == nil })
+        #expect(sanitized.contains { ($0["Input Mode"] as? String) == "com.pritype.inputmethod.v2" })
     }
-    
-    @Test("Version string looks like semantic version")
-    func versionFormat() {
-        let parts = AboutInfo.version.split(separator: ".")
-        #expect(parts.count >= 2, "Version should have at least major.minor")
-        for part in parts {
-            #expect(Int(part) != nil, "Version part should be numeric")
-        }
-    }
-    
-    @Test("App name is non-empty")
-    func appNameIsNonEmpty() {
-        #expect(!AboutInfo.appName.isEmpty, "App name should not be empty")
-    }
-    
-    @Test("Copyright is non-empty")
-    func copyrightIsNonEmpty() {
-        #expect(!AboutInfo.copyright.isEmpty, "Copyright should not be empty")
-    }
-    
-    @Test("Description is non-empty")
-    func descriptionIsNonEmpty() {
-        #expect(!AboutInfo.description.isEmpty, "Description should not be empty")
+
+    @Test("Keeps PriType parent and removes stale child modes from selected and history sources")
+    func keepsPriTypeParentAndRemovesStaleChildModesFromSelectedAndHistorySources() {
+        let sources: [[String: Any]] = [
+            [
+                "Bundle ID": "com.pritype.inputmethod.v2",
+                "InputSourceKind": "Keyboard Input Method"
+            ],
+            [
+                "Bundle ID": "com.pritype.inputmethod.v2",
+                "InputSourceKind": "Input Mode",
+                "Input Mode": "com.pritype.inputmethod.v2"
+            ],
+            [
+                "Bundle ID": "com.pritype.inputmethod.v2",
+                "InputSourceKind": "Input Mode",
+                "Input Mode": "com.pritype.inputmethod.v2.korean"
+            ],
+            [
+                "Bundle ID": "com.apple.PressAndHold",
+                "InputSourceKind": "Non Keyboard Input Method"
+            ]
+        ]
+
+        let sanitized = InputSourceManager.sanitizedInputSources(
+            sources,
+            removeAppleKoreanInputModes: false,
+            allowsPriTypeParentEntry: true
+        )
+
+        #expect(sanitized.count == 3)
+        #expect(sanitized.contains { ($0["Bundle ID"] as? String) == "com.pritype.inputmethod.v2" && $0["Input Mode"] == nil })
+        #expect(sanitized.contains { ($0["Input Mode"] as? String) == "com.pritype.inputmethod.v2" })
+        #expect(!sanitized.contains { ($0["Input Mode"] as? String) == "com.pritype.inputmethod.v2.korean" })
+        #expect(sanitized.contains { ($0["Bundle ID"] as? String) == "com.apple.PressAndHold" })
     }
 }

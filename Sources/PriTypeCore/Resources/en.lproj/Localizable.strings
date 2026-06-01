@@ -30,6 +30,10 @@
 "keyBinding.capsLockStatusTitle" = "Caps Lock input-source switch";
 "keyBinding.capsLockStatusOn" = "On";
 "keyBinding.capsLockStatusOff" = "Off";
+"keyBinding.capsLockOnDescription" = "Caps Lock switches Korean/English through macOS Input Source settings. PriType's toggle key is disabled to avoid duplicate switching.";
+"keyBinding.capsLockOffDescription" = "PriType's toggle key switches Korean/English. Enable Caps Lock in macOS Input Source settings if you prefer that key.";
+"keyBinding.disabledByCapsLock" = "Disabled while Caps Lock input-source switching is on";
+"keyBinding.managedByMacOS" = "macOS Caps Lock";
 "keyBinding.capsLockBlockedTitle" = "Set Caps Lock in macOS";
 "keyBinding.capsLockBlockedMessage" = "Caps Lock is not a PriType custom key. Enable Caps Lock switching in macOS Input Source settings.";
 "keyBinding.capsLockOpenSettings" = "Open Input Source Settings";
@@ -60,3 +64,4 @@
 "system.accessibility" = "Accessibility Permission";
 "system.accessibilityGranted" = "Granted";
 "system.accessibilityRequest" = "Request Permission";
+"system.accessibilitySubtitle" = "Required for detecting shortcut keys such as Right Command and Right Option.";

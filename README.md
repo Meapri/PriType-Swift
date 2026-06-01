@@ -2,7 +2,7 @@
 
 <p align="center">
   <strong>macOS 기본 입력 흐름에 맞춘 빠른 한글 입력기</strong><br>
-  한글은 PriType, 영어는 macOS ABC. 입력 소스 전환은 더 자연스럽게, 한글 조합은 더 가볍게.
+  한글은 PriType 조합, 영어는 ABC 레이아웃 pass-through. 전환은 빠르게, 조합은 가볍게.
 </p>
 
 <p align="center">
@@ -16,8 +16,11 @@ PriType은 Swift와 InputMethodKit으로 만든 macOS용 한글 입력기입니�
 
 ## 특징
 
-- **macOS다운 한/영 전환**
-  PriType은 한글 입력을 담당하고, 영어는 macOS 기본 `ABC` 입력 소스를 사용합니다. Caps Lock 전환, 메뉴 막대 입력 소스 표시, 시스템 입력 소스 UI가 macOS 방식과 자연스럽게 맞물립니다.
+- **빠르고 안정적인 한/영 전환**
+  PriType은 한 입력기 안에서 한글 모드와 영어 모드를 함께 관리합니다. 사용자 지정 전환키는 실제 `ABC` 입력 소스를 선택하지 않고 PriType 내부 모드만 전환해, 전환 직후 첫 글자 씹힘과 한/영 상태 불일치를 줄입니다.
+
+- **ABC 레이아웃 pass-through**
+  영어 모드에서는 PriType이 문자를 직접 삽입하지 않고, macOS `ABC`/`US` 키보드 레이아웃을 요청한 뒤 host 앱의 기본 입력 흐름으로 통과시킵니다.
 
 - **빠른 한글 조합**
   두벌식 표준, 세벌식 390, 두벌식 옛한글, 세벌식 옛한글을 지원합니다.
@@ -38,8 +41,8 @@ PriType은 Swift와 InputMethodKit으로 만든 macOS용 한글 입력기입니�
 
 1. [최신 릴리즈](https://github.com/Meapri/PriType-Swift/releases/latest)에서 `PriTypeV2_Release.pkg`를 다운로드합니다.
 2. PKG를 실행해 설치합니다.
-3. `시스템 설정 > 키보드 > 텍스트 입력 > 입력 소스`에서 `한글` PriType 입력 소스를 추가합니다.
-4. 영어 입력은 macOS 기본 `ABC` 입력 소스를 함께 사용합니다.
+3. `시스템 설정 > 키보드 > 텍스트 입력 > 입력 소스`에서 PriType `한글` 입력 소스를 추가합니다.
+4. PriType 내부의 한/영 모드는 사용자 지정 전환키로 즉시 전환됩니다.
 
 PriType 앱 번들은 기본적으로 `/Library/Input Methods/PriTypeV2.app`에 설치됩니다.
 
@@ -47,7 +50,7 @@ PriType 앱 번들은 기본적으로 `/Library/Input Methods/PriTypeV2.app`에 
 
 ### Caps Lock으로 전환
 
-macOS 설정에서 `Caps Lock 키로 ABC 입력 소스 전환`을 켜면, Caps Lock으로 `ABC`와 PriType 한글 입력 소스를 전환할 수 있습니다.
+macOS 설정에서 `Caps Lock 키로 ABC 입력 소스 전환`을 켜면, Caps Lock 전환은 macOS가 직접 관리합니다.
 
 이 모드에서는 PriType 설정의 별도 한/영 전환키가 비활성화됩니다. 전환 경로가 둘로 갈라지지 않도록 macOS 입력 소스 전환을 단일 기준으로 사용합니다.
 
@@ -62,8 +65,8 @@ Caps Lock 입력 소스 전환을 쓰지 않는다면 PriType 설정에서 한/�
 | 영역 | 내용 |
 | --- | --- |
 | 자판 배열 | 두벌식 표준, 세벌식 390, 두벌식 옛한글, 세벌식 옛한글 |
-| 입력 소스 | PriType 한글 + macOS 기본 ABC |
-| 전환 | macOS Caps Lock 입력 소스 전환 또는 PriType 사용자 지정 전환키 |
+| 입력 소스 | PriType 단일 입력 소스, 영어는 내부 모드 + ABC/US 레이아웃 pass-through |
+| 전환 | macOS Caps Lock 입력 소스 전환 또는 PriType 내부 사용자 지정 전환키 |
 | 한자 | 한자 후보창, 자모 특수문자 입력 |
 | 텍스트 편의 기능 | macOS 더블스페이스 마침표 설정 연동 |
 | 업데이트 | GitHub Releases 기반 자동 업데이트 확인 |
@@ -97,6 +100,7 @@ swift build
 ## 문서
 
 - [ARCHITECTURE.md](ARCHITECTURE.md): 내부 구조, 입력 처리 흐름, 주요 모듈
+- [Docs/InputArchitectureHybridRollbackPlan.md](Docs/InputArchitectureHybridRollbackPlan.md): 2.6.5 기반 통합 입력 방식과 2.7.2 입력 소스 구조의 하이브리드 재설계 계획
 - [BENCHMARK.md](BENCHMARK.md): 성능 측정 결과
 - [CHANGELOG.md](CHANGELOG.md): 버전별 변경 사항
 

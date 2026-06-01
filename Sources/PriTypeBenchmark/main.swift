@@ -274,11 +274,11 @@ measure("HangulComposer 생성") {
 
 let composer = HangulComposer(statusBar: NoopStatusBar())
 measure("입력모드 전환 (10,000회)", iterations: 10000) {
-    composer.toggleInputMode()
+    composer.setInputMode(composer.inputMode.toggled)
 }
 // Reset to known state
 if composer.inputMode != .korean {
-    composer.toggleInputMode()
+    composer.setInputMode(.korean)
 }
 
 // =============================================

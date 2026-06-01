@@ -50,10 +50,11 @@ func handle(_ event: NSEvent) -> Bool {
 
 ## Mode Switching
 
-한영 전환은 ``HangulComposer/toggleInputMode()`` 메서드로 수행합니다:
+제품의 한영 전환은 ``InputModeCoordinator``와 ``PriTypeInputController``가 조율합니다. ``HangulComposer``는 선택된 mode를 적용하고 조합 상태를 관리하는 역할만 맡습니다.
 
 ```swift
-composer.toggleInputMode()  // 가 ↔ A
+composer.setInputMode(.english)
+composer.setInputMode(.korean)
 ```
 
 ## See Also

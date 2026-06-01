@@ -13,7 +13,7 @@ import InputMethodKit
 /// - Converting keystrokes to Hangul syllables
 /// - Managing preedit (composition in progress) state
 /// - Committing finalized text
-/// - Switching between Korean and English modes
+/// - Applying Korean or English mode selected by the IMK controller
 ///
 /// ## Overview
 /// The composer uses `libhangul`'s `HangulInputContext` internally to perform
@@ -101,7 +101,7 @@ public class HangulComposer: @unchecked Sendable {
     
     /// Text convenience handler (double-space period)
     /// Owns all state for text convenience features
-    private let textConvenience = TextConvenienceHandler()
+    private let textConvenience: TextConvenienceHandler
     
     // MARK: - Initialization
     
@@ -115,6 +115,9 @@ public class HangulComposer: @unchecked Sendable {
     ) {
         self.statusBar = statusBar
         self.configuration = configuration
+        self.textConvenience = TextConvenienceHandler(isDoubleSpacePeriodEnabled: {
+            configuration.doubleSpacePeriodEnabled
+        })
         DebugLogger.log("HangulComposer init")
     }
 
@@ -147,31 +150,18 @@ public class HangulComposer: @unchecked Sendable {
         localTextBuffer = ""
     }
     
-    /// Toggle between Korean and English input modes
+    /// Set Korean or English mode from the PriType controller.
     ///
-    /// This method:
-    /// 1. Commits any in-progress composition
-    /// 2. Switches the mode
-    /// 3. Updates the status bar indicator
-    ///
-    /// Called externally by `RightCommandSuppressor` or `IOKitManager`.
-    public func toggleInputMode() {
-        DebugLogger.log("toggleInputMode called externally")
-        
-        // Commit any composition before switching
-        if let delegate = lastDelegate, !context.isEmpty() {
-            commitComposition(delegate: delegate)
-            DebugLogger.log("Composition committed before mode switch")
-        }
-        
-        switchMode()
-    }
-
-    /// Set Korean or English mode from Text Input Services.
-    ///
-    /// Caps Lock language switching arrives through IMK as an input-mode value
-    /// change. Applying it directly avoids synthesizing Caps Lock events, which
-    /// can also toggle the hardware Caps Lock latch.
+    /// Custom toggle keys are coordinated by `InputModeCoordinator` and
+    /// `PriTypeInputController` before reaching this method. Caps Lock language
+    /// switching also arrives through the controller as an IMK input-mode value
+    /// change.
+    /// - Important: `inputMode` is the single source of truth for the Korean/
+    ///   English state. The only sanctioned writers are
+    ///   `PriTypeInputController.performPriTypeModeTransition` (custom toggle) and
+    ///   `PriTypeInputController.setValue(_:forTag:)` (macOS re-selecting the
+    ///   PriType source, which always lands back in `.korean`). No other path —
+    ///   including `activateServer` focus changes — may mutate the mode.
     public func setInputMode(_ mode: InputMode) {
         guard inputMode != mode else {
             return
@@ -186,19 +176,12 @@ public class HangulComposer: @unchecked Sendable {
 
         inputMode = mode
         localTextBuffer = ""
+        textConvenience.resetSpaceState()
         statusBar.setMode(inputMode)
         DebugLogger.log("Mode set to: \(inputMode)")
     }
-    
+
     // MARK: - Private Helpers
-    
-    /// Switch between Korean and English modes
-    /// Centralizes mode switching logic to avoid duplication
-    private func switchMode() {
-        inputMode = inputMode.toggled
-        statusBar.setMode(inputMode)
-        DebugLogger.log("Mode switched to: \(inputMode)")
-    }
     
     /// Handle special keys (Return, Escape, Space, Arrow, Tab, Backspace)
     /// - Returns: `nil` if not a special key, otherwise the result to return from handle()
@@ -373,44 +356,22 @@ public class HangulComposer: @unchecked Sendable {
             localTextBuffer = ""
         }
         
-        // Control+Space: Language toggle (only if enabled in settings)
-        if event.keyCode == KeyCode.space && event.modifierFlags.contains(.control) 
-            && configuration.controlSpaceAsToggle
-            && !configuration.capsLockInputSourceSwitchEnabled {
-            DebugLogger.log("Control+Space -> Toggle mode")
-            
-            // Commit any composition before switching (preserve text)
+        // English mode stays inside the PriType input source but performs no
+        // composition: every key passes through to the host app unchanged.
+        // - Roman characters come from the keyboard layout that the controller
+        //   installs via `overrideKeyboardWithKeyboardNamed(ABC/US)`.
+        // - English text conveniences (double-space period, smart quotes, …) are
+        //   owned by macOS, mirroring the 2.7 decision. PriType does not
+        //   re-implement them.
+        // Keeping this path free of any local buffer eliminates the classic
+        // buffer-vs-cursor desync that a PriType-side English buffer invites.
+        if inputMode == .english {
             if !context.isEmpty() {
                 commitComposition(delegate: delegate)
-                DebugLogger.log("Composition committed before mode switch")
+                delegate.setMarkedText("")
             }
-            
-            switchMode()
-            return true  // Consume the event
-        }
-        
-        // English mode: delegate to TextConvenienceHandler
-        if inputMode == .english {
-            guard let chars = event.characters, chars.count == 1, let char = chars.first else {
-                return false
-            }
-            
-            // Do not process or append non-printable characters (e.g., arrow keys) in English mode
-            if let firstScalar = chars.unicodeScalars.first, KeyCode.shouldPassThrough(UInt32(firstScalar.value)) {
-                return false
-            }
-            
-            let result = textConvenience.handleEnglishModeInput(
-                char: char,
-                buffer: &localTextBuffer,
-                delegate: delegate
-            )
-            
-            // If passThrough, we still need to track it in our buffer
-            if result == .passThrough {
-                appendToBuffer(String(char))
-            }
-            return result == .handled
+            localTextBuffer = ""
+            return false
         }
         
         // If Hanja candidate window is visible, forward keys to it

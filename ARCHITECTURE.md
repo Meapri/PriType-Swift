@@ -44,6 +44,36 @@
 
 `RightCommandSuppressor`가 `CGEventTap`으로 시스템 레벨 키 이벤트를 가로채서 사용자가 설정한 전환키(기본: 우측 Command)와 한자키(기본: 우측 Option)를 처리한다. Key Recorder 방식으로 아무 키나 등록할 수 있다. CGEventTap이 시스템에 의해 반복 비활성화되면 `IOKitManager`(IOHIDManager 기반)로 자동 전환된다.
 
+현재 한/영 전환 구조의 정식 명세는 [UnifiedInputArchitecture.md](Docs/UnifiedInputArchitecture.md)다(선택지 비교 원본은 [InputArchitectureHybridRollbackPlan.md](Docs/InputArchitectureHybridRollbackPlan.md), superseded). 핵심은 custom 전환키 경로에서 실제 ABC 입력 소스를 선택하지 않고, PriType 내부 mode 전환을 단일 트랜잭션으로 처리하는 것이다. PriType 단일 입력 소스가 IMK 세션을 영구 소유하고, 영어는 조합 없이 raw key를 그대로 pass-through한다.
+
+```mermaid
+flowchart TD
+    A["RightCommandSuppressor / IOKitManager"] --> B["InputModeCoordinator"]
+    B --> C{"Caps Lock 입력 소스 전환 켜짐?"}
+    C -->|"yes"| D["custom 전환 무시"]
+    C -->|"no"| E["PriTypeInputController"]
+    E --> F["active composition commit"]
+    F --> G["ABC/US keyboard override"]
+    G --> H["HangulComposer.setInputMode"]
+    H --> I{"mode"}
+    I -->|"korean"| J["libhangul 조합"]
+    I -->|"english"| K["순수 pass-through (return false), macOS가 영문 처리"]
+```
+
+이 구조에서 `InputSourceManager`는 입력 소스 전환의 주체가 아니다. TIS 목록 조회, stale entry 정리, 설치/마이그레이션 보조만 담당한다. 전환 hot path에 `TISSelectInputSource(com.apple.keylayout.ABC)`가 들어오면 2.7대에서 관찰된 한/영 씹힘과 모드 불일치가 재발할 수 있다.
+
+### 전환 상태 소유권
+
+| 상태 | 소유자 | 원칙 |
+|---|---|---|
+| 전환 요청 정책 | `InputModeCoordinator` | Caps Lock 정책과 active controller fallback을 한 곳에서 판단한다. |
+| 실제 조합 모드 | `HangulComposer.inputMode` | 2.6.5처럼 PriType 내부 mode의 source of truth다. |
+| host input mode 표시 | macOS TIS | custom 전환키에서는 입력 소스를 바꾸지 않으므로 메뉴바 source는 PriType 단일 항목으로 유지한다. |
+| macOS 실제 입력 소스 | macOS TIS | custom 전환키에서는 건드리지 않는다. Caps Lock 경로에서만 시스템이 소유한다. |
+| 영어 레이아웃 | IMK session | `overrideKeyboardWithKeyboardNamed`로 ABC/US 계열 layout을 요청한다. |
+
+PriType의 `ComponentInputModeDict`는 단일 mode `com.pritype.inputmethod.v2`만 등록한다. 내부 한/영 상태는 `HangulComposer.inputMode`가 들고, custom 전환키는 실제 Apple `ABC` source나 별도 English input mode를 선택하지 않는다.
+
 ## 한자 후보창 좌표 결정
 
 한자 후보창을 커서 근처에 표시하기 위해 앱으로부터 커서의 화면 좌표를 얻어야 한다. 네이티브 앱(TextEdit, Xcode 등)에서는 `IMKTextInput.firstRect(forCharacterRange:)` 하나로 충분하지만, Chromium 계열 앱(Chrome, Edge, VS Code 등)은 한자키 이벤트 처리 중에 좌표 API를 차단한다.
@@ -107,7 +137,7 @@ libhangul preedit: ᄆ (U+1106)
 
 | 파일 | 역할 |
 |---|---|
-| **HangulComposer** | 한글 조합 엔진. libhangul 컨텍스트를 감싸고, 키 이벤트 → 초·중·종성 조합 → preedit/commit 변환을 담당한다. 영문 모드 처리, 자동 대문자, 더블스페이스 마침표 기능을 포함한다. |
+| **HangulComposer** | 한글 조합 엔진. libhangul 컨텍스트를 감싸고, 키 이벤트 → 초·중·종성 조합 → preedit/commit 변환을 담당한다. `inputMode`가 한/영 단일 source of truth다. 영어 내부 모드에서는 조합 없이 모든 키를 `return false`로 순수 pass-through하며(로컬 버퍼 미사용), 영문 텍스트 편의(더블스페이스 마침표 등)는 macOS가 소유한다. |
 | **HangulComposerTypes** | `HangulComposerDelegate` 프로토콜(insertText, setMarkedText, textBeforeCursor, replaceTextBeforeCursor)과 `InputMode` enum 정의. |
 | **PriTypeInputController** | `IMKInputController` 서브클래스. `activateServer` → `handle()` → `deactivateServer` 수명 주기를 관리한다. 내부에 `ClientAdapter`(밑줄 표시 모드)와 `ImmediateModeAdapter`(Finder 바탕화면용, setMarkedText 생략) 두 가지 어댑터를 포함한다. 한글 모드에서 커서 좌표를 proactive 캐시한다. |
 | **ClientContextDetector** | 입력 클라이언트 분석기. 번들 ID, `validAttributesForMarkedText`, 좌표 휴리스틱을 조합해 `ClientContext` 구조체를 생성한다. Finder 바탕화면은 좌표 기반(`y < 50`)으로 판별한다. |
@@ -116,12 +146,13 @@ libhangul preedit: ᄆ (U+1106)
 | **HanjaCandidateWindow** | SwiftUI 기반 한자 후보 패널. `NSPanel`을 재사용하며, `screenSaver + 1` 윈도우 레벨로 Electron 앱 위에 표시된다. 1~9 숫자키 선택, 방향키/Tab 페이지 이동을 지원한다. |
 | **HanjaManager** | 한자 사전 로더 + 자모 특수문자 검색. `hanja.txt`를 `HanjaTable`에 적재하고, `jamo_symbols.json`에서 자모 특수문자를 로딩한다. LRU 캐시(32개, NSLock 보호)로 재검색 시 사전 접근을 생략한다. 초성 자모(U+1100~) → 호환 자모(U+3131~) 변환을 포함한다. |
 | **ConfigurationManager** | `UserDefaults` 기반 설정 관리. 자판 배열, `KeyBinding`(한/영 전환키·한자 입력키), 자동 대문자, 더블스페이스 마침표, 자동 업데이트 확인 옵션을 저장한다. 기존 `ToggleKey` enum에서 `KeyBinding` struct로의 자동 마이그레이션을 지원한다. `ConfigurationProviding` 프로토콜로 테스트 시 목(mock) 주입이 가능하다. |
-| **SettingsWindowController** | SwiftUI `NSHostingController` 기반 설정 창. Liquid Glass 스타일, Key Recorder(키 녹음) UI, 접근성 권한 확인/요청, ABC 입력소스 제거 안내 기능을 포함한다. |
+| **SettingsWindowController** | SwiftUI `NSHostingController` 기반 설정 창. Liquid Glass 스타일, Key Recorder(키 녹음) UI, 접근성 권한 확인/요청, Caps Lock 입력 소스 전환 안내를 포함한다. |
 | **StatusBarManager** | `NSStatusItem` 기반 메뉴 바 표시기. 현재 모드를 "가" / "A"로 표시하며, 전환 시 0.08초 페이드 애니메이션을 적용한다. |
-| **TextConvenienceHandler** | 영문 모드 부가 기능. 문장 시작 자동 대문자, 더블스페이스 → 마침표 변환을 처리한다. IPC 호출 없이 `localTextBuffer`(15자)를 참조한다. |
+| **TextConvenienceHandler** | macOS 더블스페이스 마침표 설정을 한글 조합 경로에서 반영한다. 영어 모드는 순수 pass-through라 이 핸들러를 거치지 않는다(영문 편의는 macOS 소유). |
 | **UpdateChecker** | GitHub Releases API를 통해 최신 버전을 확인한다. 24시간 스로틀, 실패 시 다음 실행 시 재시도, 시맨틱 버전 비교(`.numeric`)를 사용한다. |
 | **UpdateNotifier** | `UNUserNotificationCenter`를 사용해 업데이트 알림을 표시한다. 알림 클릭 시 릴리즈 페이지를 연다. |
-| **InputSourceManager** | TIS(Text Input Source) API를 사용해 시스템 입력 소스 목록 조회 및 ABC 활성화 여부를 확인한다. |
+| **InputModeCoordinator** | 한/영 전환 조율 계층. custom 전환키 요청을 받아 Caps Lock 정책과 active controller 존재 여부를 판단하고, controller의 단일 전환 트랜잭션으로 넘긴다. |
+| **InputSourceManager** | TIS(Text Input Source) API를 사용해 시스템 입력 소스 목록 조회와 stale entry 정리를 담당한다. custom 한/영 전환 hot path에는 참여하지 않는다. |
 | **CompositionHelpers** | libhangul의 `[UInt32]`(UCSChar) 배열을 Swift `String`으로 변환하고 NFC 정규화(`precomposedStringWithCanonicalMapping`)를 수행하는 유틸리티. |
 | **DebugLogger** | 조건 컴파일(`#if DEBUG`) 기반 로거. 디버그 빌드에서는 `~/Library/Logs/PriType/pritype_debug.log`에 기록하고, 릴리즈 빌드에서는 `@autoclosure`로 문자열 생성 자체를 생략하는 no-op이 된다. |
 | **KeyCode** | macOS 키 코드 상수와 문자 판별 함수(`isPrintableASCII`, `shouldPassThrough` 등)를 집중 관리한다. |
@@ -172,7 +203,7 @@ PriType은 메인 스레드(IMKServer)와 백그라운드 스레드(CGEventTap, 
 
 ## 테스트
 
-Swift Testing 기반 109개 유닛 테스트, 13개 Suite 구성. 실행 방법과 상세 결과는 [BENCHMARK.md](BENCHMARK.md#유닛-테스트)를 참고한다.
+Swift Testing 기반 112개 유닛 테스트, 13개 Suite 구성. 실행 방법과 상세 결과는 [BENCHMARK.md](BENCHMARK.md#유닛-테스트)를 참고한다.
 
 ```bash
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift test
@@ -217,7 +248,7 @@ PriType-Swift/
 │   ├── PriTypeBenchmark/           # 성능 벤치마크 타깃
 │   └── PriTypeVerify/              # 빌드 검증 타깃
 ├── Tests/
-│   └── PriTypeCoreTests/           # 109개 유닛 테스트
+│   └── PriTypeCoreTests/           # 112개 유닛 테스트
 ├── Packaging/
 │   ├── Payload/                    # .app 번들 조립 경로
 │   └── scripts/

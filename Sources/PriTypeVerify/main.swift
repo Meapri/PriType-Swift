@@ -440,26 +440,31 @@ func verify() {
         print("INFO: insertedText = '\(delegate.insertedText)' (may have been committed)")
     }
     
-    // Test 15: Edge Case - Arrow Keys Clear localTextBuffer
-    print("\nTest 15: Arrow Keys clear localTextBuffer")
+    // Test 15: English mode is a pure pass-through; Arrow keys clear localTextBuffer
+    print("\nTest 15: English mode pass-through + Arrow Keys clear localTextBuffer")
     commit(delegate: delegate, composer: composer)
-    
+
     // Switch to English mode
     if composer.inputMode == .korean {
-        composer.toggleInputMode()
+        composer.setInputMode(.english)
     }
-    
-    // Type some english to fill buffer
-    _ = composer.handle(NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [], timestamp: 0, windowNumber: 0, context: nil, characters: "A", charactersIgnoringModifiers: "A", isARepeat: false, keyCode: 0)!, delegate: delegate)
-    _ = composer.handle(NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [], timestamp: 0, windowNumber: 0, context: nil, characters: "B", charactersIgnoringModifiers: "B", isARepeat: false, keyCode: 11)!, delegate: delegate)
-    
-    if composer.localTextBuffer == "AB" {
-        print("Setup PASS: localTextBuffer has 'AB'")
+
+    // English mode performs no composition and tracks no buffer: every key is
+    // passed through (handle returns false) and macOS owns text conveniences.
+    delegate.insertedText = ""
+    let handledA = composer.handle(NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [], timestamp: 0, windowNumber: 0, context: nil, characters: "A", charactersIgnoringModifiers: "A", isARepeat: false, keyCode: 0)!, delegate: delegate)
+    let handledB = composer.handle(NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [], timestamp: 0, windowNumber: 0, context: nil, characters: "B", charactersIgnoringModifiers: "B", isARepeat: false, keyCode: 11)!, delegate: delegate)
+
+    if !handledA && !handledB && composer.localTextBuffer == "" && delegate.insertedText == "" {
+        print("Setup PASS: English mode is a pure pass-through (no buffer, no insert)")
     } else {
-        print("FAIL: localTextBuffer is '\(composer.localTextBuffer)', expected 'AB'")
+        print("FAIL: English mode should pass through without buffer/insert (handledA=\(handledA), handledB=\(handledB), buffer='\(composer.localTextBuffer)', inserted='\(delegate.insertedText)')")
         exit(1)
     }
-    
+
+    // Arrow keys clear the Korean-context localTextBuffer regardless of mode.
+    composer.localTextBuffer = "AB"
+
     // Press Left Arrow
     let leftArrowEvent2 = NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [], timestamp: 0, windowNumber: 0, context: nil, characters: "\u{F702}", charactersIgnoringModifiers: "\u{F702}", isARepeat: false, keyCode: 123)!
     _ = composer.handle(leftArrowEvent2, delegate: delegate)
@@ -473,7 +478,7 @@ func verify() {
     
     // Test 16: Edge Case - forceCommit Clears localTextBuffer
     print("\nTest 16: forceCommit clears localTextBuffer")
-    _ = composer.handle(NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [], timestamp: 0, windowNumber: 0, context: nil, characters: "C", charactersIgnoringModifiers: "C", isARepeat: false, keyCode: 8)!, delegate: delegate)
+    composer.localTextBuffer = "C"
     
     if composer.localTextBuffer == "C" {
          print("Setup PASS: localTextBuffer has 'C'")
@@ -484,7 +489,7 @@ func verify() {
     
     // Switch back to Korean mode for cleanup
     if composer.inputMode == .english {
-        composer.toggleInputMode()
+        composer.setInputMode(.korean)
     }
     
     composer.forceCommit(delegate: delegate)
@@ -498,7 +503,7 @@ func verify() {
 
     // Test 17: Edge Case - System Shortcuts Clear localTextBuffer
     print("\nTest 17: System Shortcuts (Cmd+V) clear localTextBuffer")
-    _ = composer.handle(NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [], timestamp: 0, windowNumber: 0, context: nil, characters: "D", charactersIgnoringModifiers: "D", isARepeat: false, keyCode: 2)!, delegate: delegate)
+    composer.localTextBuffer = "D"
     
     if composer.localTextBuffer == "D" {
          print("Setup PASS: localTextBuffer has 'D'")

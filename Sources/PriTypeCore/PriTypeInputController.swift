@@ -6,10 +6,11 @@ import Carbon.HIToolbox
 @objc(PriTypeInputController)
 public class PriTypeInputController: IMKInputController, @unchecked Sendable {
     private static let priTypeInputSourceID = "com.pritype.inputmethod.v2"
-    private static let priTypeKoreanInputModeID = "com.pritype.inputmethod.v2.korean"
-    private static let priTypeEnglishInputModeID = "com.pritype.inputmethod.v2.english"
-    private static let romanKeyboardLayoutID = "com.apple.keylayout.US"
-    nonisolated(unsafe) public static var lastInputModePropertyUpdateTime: CFAbsoluteTime = 0
+    private static let romanKeyboardLayoutID = resolveRomanKeyboardLayoutID()
+    private static let romanKeyboardLayoutCandidates = [
+        "com.apple.keylayout.ABC",
+        "com.apple.keylayout.US"
+    ]
     
     // MARK: - Shared State
     //
@@ -40,9 +41,12 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
     private var lastClient: IMKTextInput?
     private var lastKnownInputClient: IMKTextInput?
 
+    #if DEBUG
     private var debugHandleLogCount = 0
+    #endif
     private var lastKeyboardOverrideClientID: ObjectIdentifier?
     private var lastKeyboardOverrideTime: CFAbsoluteTime = 0
+    private var applicationDeactivateObserver: Any?
     
     // Keep adapter alive for external toggle calls
     public private(set) var currentAdapter: (any HangulComposerDelegate)?
@@ -146,32 +150,113 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
         DebugLogger.log("PriTypeInputController: override keyboard layout -> \(Self.romanKeyboardLayoutID)")
     }
 
-    public func selectInputModeForCurrentClient(_ mode: InputMode) {
-        let inputModeID: String
-        switch mode {
-        case .korean:
-            inputModeID = Self.priTypeKoreanInputModeID
-        case .english:
-            inputModeID = "com.apple.keylayout.ABC"
+    private static func resolveRomanKeyboardLayoutID() -> String {
+        let filter: [String: Any] = [
+            kTISPropertyInputSourceCategory as String: kTISCategoryKeyboardInputSource as String
+        ]
+
+        guard let sourceList = TISCreateInputSourceList(filter as CFDictionary, true)?.takeRetainedValue() as? [TISInputSource] else {
+            return romanKeyboardLayoutCandidates[0]
         }
 
+        let availableIDs = Set(sourceList.compactMap { source -> String? in
+            guard let idPointer = TISGetInputSourceProperty(source, kTISPropertyInputSourceID) else {
+                return nil
+            }
+            return Unmanaged<CFString>.fromOpaque(idPointer).takeUnretainedValue() as String
+        })
+
+        return romanKeyboardLayoutCandidates.first { availableIDs.contains($0) } ?? romanKeyboardLayoutCandidates[0]
+    }
+
+    private func updateApplicationDeactivateObserver(for context: ClientContext) {
+        removeApplicationDeactivateObserver()
+
+        // Host-agnostic safety net: commit any in-progress composition when the
+        // focused app loses focus. Well-behaved hosts get this for free via the
+        // IMK `deactivateServer` callback, but some apps never call it on focus
+        // loss and leave marked text stranded (historically KakaoTalk). Rather
+        // than hardcoding those bundle IDs, observe app deactivation for every
+        // session. This is safe because `forceCommitForApplicationDeactivate`
+        // is idempotent — it bails when there is no active composition, so for
+        // hosts that already committed via `deactivateServer` it does nothing.
+        guard !context.bundleId.isEmpty else {
+            return
+        }
+
+        applicationDeactivateObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didDeactivateApplicationNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            guard let self,
+                  let app = notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication,
+                  app.bundleIdentifier == context.bundleId else {
+                return
+            }
+
+            self.forceCommitForApplicationDeactivate(bundleId: context.bundleId)
+        }
+
+        DebugLogger.log("PriTypeInputController: observing app deactivation for \(context.bundleId)")
+    }
+
+    private func removeApplicationDeactivateObserver() {
+        if let observer = applicationDeactivateObserver {
+            NSWorkspace.shared.notificationCenter.removeObserver(observer)
+            applicationDeactivateObserver = nil
+        }
+    }
+
+    private func forceCommitForApplicationDeactivate(bundleId: String) {
+        guard cachedContext?.bundleId == bundleId else {
+            removeApplicationDeactivateObserver()
+            return
+        }
+        guard composer.hasActiveComposition else {
+            removeApplicationDeactivateObserver()
+            return
+        }
         guard let client = lastClient ?? lastKnownInputClient else {
-            DebugLogger.log("PriTypeInputController: no current client for selectInputMode(\(inputModeID))")
+            DebugLogger.log("PriTypeInputController: no client for app deactivate commit (\(bundleId))")
+            removeApplicationDeactivateObserver()
             return
         }
 
-        let selector = NSSelectorFromString("selectInputMode:")
-        let object = client as AnyObject
-        guard object.responds(to: selector) else {
-            DebugLogger.log("PriTypeInputController: client does not support selectInputMode:")
+        let adapter = currentAdapter ?? ClientAdapter(client: client)
+        composer.forceCommit(delegate: adapter)
+        composer.localTextBuffer = ""
+        removeApplicationDeactivateObserver()
+        DebugLogger.log("PriTypeInputController: force committed composition on app deactivate (\(bundleId))")
+    }
+
+    public func performPriTypeModeTransition(source: InputModeCoordinator.ToggleSource) {
+        guard let client = lastClient ?? lastKnownInputClient else {
+            DebugLogger.log("PriTypeInputController: no current client for mode transition (\(source))")
             return
         }
 
-        _ = object.perform(selector, with: inputModeID)
-        DebugLogger.log("PriTypeInputController: client selectInputMode -> \(inputModeID)")
+        let nextMode = composer.inputMode.toggled
+        DebugLogger.log("PriTypeInputController: mode transition \(composer.inputMode) -> \(nextMode) source=\(source)")
 
-        if mode == .korean {
-            syncRomanKeyboardLayout(for: client, force: true)
+        commitActiveCompositionBeforeModeTransition()
+        syncRomanKeyboardLayout(for: client, force: true)
+        composer.setInputMode(nextMode)
+    }
+
+    private func commitActiveCompositionBeforeModeTransition() {
+        guard composer.hasActiveComposition else {
+            composer.clearLocalBuffer()
+            return
+        }
+
+        if let adapter = currentAdapter {
+            composer.forceCommit(delegate: adapter)
+            adapter.setMarkedText("")
+        } else if let client = lastClient ?? lastKnownInputClient {
+            let adapter = ClientAdapter(client: client)
+            composer.forceCommit(delegate: adapter)
+            adapter.setMarkedText("")
         }
     }
     
@@ -181,6 +266,9 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
         assert(Thread.isMainThread, "IMK activateServer must run on main thread")
         #endif
         super.activateServer(sender)
+        // NOTE: Focus changes never reset `composer.inputMode`. The Korean/English
+        // state is owned solely by the toggle path and the `setValue` ingress, so
+        // switching apps preserves whatever mode the user last chose.
         // 클라이언트 저장
         if let client = sender as? IMKTextInput {
             lastClient = client
@@ -192,10 +280,12 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
             let context = ClientContextDetector.analyzeForActivation(client: client)
             self.cachedContext = context
             currentAdapter = makeAdapter(for: client, context: context)
+            updateApplicationDeactivateObserver(for: context)
             DebugLogger.log("Activated for client: \(self.cachedContext?.bundleId ?? "unknown") (Lightweight Context)")
         } else {
             // Fallback if sender is not IMKTextInput (rare)
             self.cachedContext = nil
+            removeApplicationDeactivateObserver()
         }
         
         // Set as active controller for toggle access
@@ -254,38 +344,25 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
                 return
             }
 
-            let isPriTypeMode = Self.isPriTypeInputMode(inputModeID)
+            let isPriTypeMode = inputModeID == Self.priTypeInputSourceID
             DebugLogger.log("PriTypeInputController: setValue inputMode='\(inputModeID)' priType=\(isPriTypeMode) current=\(composer.inputMode)")
             guard isPriTypeMode else {
                 super.setValue(value, forTag: tag, client: sender)
                 return
             }
 
-            Self.lastInputModePropertyUpdateTime = CFAbsoluteTimeGetCurrent()
-            let mode = Self.inputMode(forPriTypeInputModeID: inputModeID)
-            if mode == .korean, let client = sender as? IMKTextInput {
+            if let client = sender as? IMKTextInput {
                 syncRomanKeyboardLayout(for: client, force: true)
             }
 
-            if composer.inputMode != mode {
-                DebugLogger.log("PriTypeInputController: TIS input mode '\(inputModeID)' -> \(mode)")
-                composer.setInputMode(mode)
+            if composer.inputMode != .korean {
+                DebugLogger.log("PriTypeInputController: TIS selected PriType source -> korean")
+                composer.setInputMode(.korean)
             }
             return
         }
 
         super.setValue(value, forTag: tag, client: sender)
-    }
-
-    private static func isPriTypeInputMode(_ inputModeID: String) -> Bool {
-        inputModeID == priTypeInputSourceID || inputModeID.hasPrefix("\(priTypeInputSourceID).")
-    }
-
-    private static func inputMode(forPriTypeInputModeID inputModeID: String) -> InputMode {
-        if inputModeID == priTypeEnglishInputModeID {
-            return .english
-        }
-        return .korean
     }
     
     override public func handle(_ event: NSEvent!, client sender: Any!) -> Bool {
@@ -318,10 +395,12 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
             // below to ensure the adapter is correctly recreated when the client changes.
         }
 
+        #if DEBUG
         if debugHandleLogCount < 200 {
             debugHandleLogCount += 1
             DebugLogger.log("PriTypeInputController: handle keyCode=\(event.keyCode) mode=\(composer.inputMode) chars='\(event.characters ?? "")' modifiers=\(event.modifierFlags.rawValue) bundle=\(context.bundleId) lightweight=\(context.isLightweight) immediate=\(context.shouldUseImmediateMode) clientChanged=\(lastClient !== client)")
         }
+        #endif
         
         // 2. Mark keystroke with current app's bundleId for cross-app hanja validation
         composer.markKeystroke(bundleId: context.bundleId)

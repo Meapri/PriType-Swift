@@ -68,7 +68,7 @@ struct ClientContextTests {
     @Test("Secure input policy passes through global secure input")
     func secureInputPolicyPassesThroughGlobalSecureInput() {
         #expect(SecureInputPolicy.shouldPassThrough(SecureInputSignals(
-            bundleId: "com.kakao.KakaoTalkMac",
+            bundleId: "com.example.messenger",
             hasTextInputCapability: true,
             hasInvalidSelection: false,
             hasGlobalSecureInput: true,
@@ -87,7 +87,7 @@ struct ClientContextTests {
         )))
 
         #expect(SecureInputPolicy.shouldPassThrough(SecureInputSignals(
-            bundleId: "com.kakao.KakaoTalkMac",
+            bundleId: "com.example.messenger",
             hasTextInputCapability: true,
             hasInvalidSelection: true,
             hasGlobalSecureInput: false,
@@ -112,6 +112,16 @@ struct ClientContextTests {
             hasGlobalSecureInput: false,
             hasMarkedTextSupport: true
         )))
+    }
+
+    // Commit-on-app-deactivate is now a host-agnostic behaviour in
+    // PriTypeInputController (no per-app policy), so there is no longer a
+    // bundle-ID predicate to unit-test here.
+
+    @Test("Client compatibility policy flags GoodNotes for direct-newline Return")
+    func goodNotesNeedsDirectNewlineAfterReturnCommit() {
+        #expect(ClientCompatibilityPolicy.needsDirectNewlineAfterReturnCommit(bundleId: "com.goodnotesapp.x"))
+        #expect(!ClientCompatibilityPolicy.needsDirectNewlineAfterReturnCommit(bundleId: "com.openai.codex"))
     }
     
     // MARK: - Resolution / Desktop Detection (migrated from ResolutionTests.swift)

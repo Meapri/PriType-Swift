@@ -96,30 +96,140 @@ struct HangulComposerTests {
     
     // MARK: - Mode Toggle Tests
     
-    @Test("Toggle input mode")
-    func toggleInputMode() {
+    @Test("Set input mode")
+    func setInputMode() {
         let (composer, _, mockStatusBar) = makeComposer()
         #expect(composer.inputMode == .korean)
         
-        composer.toggleInputMode()
+        composer.setInputMode(.english)
         #expect(composer.inputMode == .english)
         #expect(mockStatusBar.currentMode == .english)
         
-        composer.toggleInputMode()
+        composer.setInputMode(.korean)
         #expect(composer.inputMode == .korean)
     }
     
     @Test("English mode passes through keys")
     func englishModePassthrough() {
         let (composer, delegate, _) = makeComposer()
-        composer.toggleInputMode()
+        composer.setInputMode(.english)
         #expect(composer.inputMode == .english)
         
         let event = TestEventFactory.keyEvent(char: "a", keyCode: 0)!
-        let _ = composer.handle(event, delegate: delegate)
-        // English mode uses TextConvenienceHandler which may handle or pass through
+        let handled = composer.handle(event, delegate: delegate)
+
+        #expect(!handled, "English fake mode should pass printable keys through")
+        #expect(delegate.insertedTexts.isEmpty)
+        #expect(delegate.markedText.isEmpty)
     }
-    
+
+    @Test("English mode is a pure pass-through (macOS owns double-space period)")
+    func englishModePurePassthrough() {
+        let (composer, delegate, _) = makeComposer()
+        composer.setInputMode(.english)
+
+        let h = TestEventFactory.keyEvent(char: "h", keyCode: 4)!
+        let firstSpace = TestEventFactory.keyEvent(char: " ", keyCode: KeyCode.space)!
+        let secondSpace = TestEventFactory.keyEvent(char: " ", keyCode: KeyCode.space)!
+
+        // PriType consumes nothing in English mode: every key flows to the host,
+        // which is responsible for any text substitution. PriType must not insert
+        // text or set marked text itself.
+        #expect(!composer.handle(h, delegate: delegate))
+        #expect(!composer.handle(firstSpace, delegate: delegate))
+        #expect(!composer.handle(secondSpace, delegate: delegate))
+
+        #expect(delegate.insertedTexts.isEmpty)
+        #expect(delegate.markedText.isEmpty)
+    }
+
+    @Test("English mode passes every printable key through without inserting")
+    func englishModePassesAllPrintableThrough() {
+        let (composer, delegate, _) = makeComposer()
+        composer.setInputMode(.english)
+
+        // Letters (upper/lower), digits, punctuation, symbols, and space must all
+        // flow to the host untouched: handle() returns false and nothing is
+        // inserted or marked by PriType.
+        let cases: [(String, UInt16)] = [
+            ("a", 0), ("Z", 6), ("r", 15), ("k", 40),   // including 2-bulsik jamo keys
+            ("1", 18), ("0", 29), ("!", 18), ("@", 19),
+            (".", 47), (",", 43), (";", 41), ("/", 44),
+            (" ", KeyCode.space)
+        ]
+
+        for (char, keyCode) in cases {
+            let event = TestEventFactory.keyEvent(char: char, keyCode: keyCode)!
+            #expect(!composer.handle(event, delegate: delegate), "‘\(char)’ should pass through in English mode")
+        }
+
+        #expect(delegate.insertedTexts.isEmpty, "English mode must not insert text")
+        #expect(delegate.markedText.isEmpty, "English mode must not set marked text")
+    }
+
+    @Test("English mode passes through modifier combos without inserting")
+    func englishModeModifierComboPassthrough() {
+        let (composer, delegate, _) = makeComposer()
+        composer.setInputMode(.english)
+
+        let cmdC = TestEventFactory.keyEvent(char: "c", keyCode: 8, modifiers: [.command])!
+        let ctrlA = TestEventFactory.keyEvent(char: "a", keyCode: 0, modifiers: [.control])!
+
+        #expect(!composer.handle(cmdC, delegate: delegate))
+        #expect(!composer.handle(ctrlA, delegate: delegate))
+        #expect(delegate.insertedTexts.isEmpty)
+        #expect(delegate.markedText.isEmpty)
+    }
+
+    // MARK: - Mode Transition Tests
+
+    @Test("Switching to English commits the active Korean composition once")
+    func switchToEnglishCommitsActiveComposition() {
+        let (composer, delegate, _) = makeComposer()
+
+        // Compose "가" (still in marked/preedit state, not yet committed).
+        _ = composer.handle(TestEventFactory.keyEvent(char: "r", keyCode: 15)!, delegate: delegate)
+        _ = composer.handle(TestEventFactory.keyEvent(char: "k", keyCode: 40)!, delegate: delegate)
+        #expect(delegate.markedText == "가")
+        #expect(delegate.insertedTexts.isEmpty)
+
+        composer.setInputMode(.english)
+
+        #expect(composer.inputMode == .english)
+        #expect(delegate.insertedTexts == ["가"], "Pending composition must commit exactly once on switch")
+        #expect(delegate.markedText.isEmpty, "Marked text must be cleared after commit")
+    }
+
+    @Test("setInputMode clears the local text buffer")
+    func setInputModeClearsLocalBuffer() {
+        let (composer, _, _) = makeComposer()
+        composer.localTextBuffer = "stale"
+        composer.setInputMode(.english)
+        #expect(composer.localTextBuffer == "")
+    }
+
+    @Test("Korean → English → Korean round-trips cleanly")
+    func koreanEnglishKoreanRoundTrip() {
+        let (composer, delegate, _) = makeComposer()
+
+        // Korean: compose and commit "가".
+        _ = composer.handle(TestEventFactory.keyEvent(char: "r", keyCode: 15)!, delegate: delegate)
+        _ = composer.handle(TestEventFactory.keyEvent(char: "k", keyCode: 40)!, delegate: delegate)
+        composer.setInputMode(.english)
+        #expect(delegate.insertedTexts == ["가"])
+
+        // English: a printable key passes through, inserting nothing more.
+        #expect(!composer.handle(TestEventFactory.keyEvent(char: "a", keyCode: 0)!, delegate: delegate))
+        #expect(delegate.insertedTexts == ["가"], "English mode must not insert")
+
+        // Back to Korean: composition works again from a clean state.
+        composer.setInputMode(.korean)
+        _ = composer.handle(TestEventFactory.keyEvent(char: "d", keyCode: 2)!, delegate: delegate)
+        _ = composer.handle(TestEventFactory.keyEvent(char: "k", keyCode: 40)!, delegate: delegate)
+        _ = composer.handle(TestEventFactory.keyEvent(char: "s", keyCode: 1)!, delegate: delegate)
+        #expect(delegate.markedText == "안")
+    }
+
     // MARK: - Modifier Key Tests
     
     @Test("Command+key passes through")
@@ -265,7 +375,7 @@ struct HangulComposerTests {
     
     private func makeComposer() -> (HangulComposer, MockComposerDelegate, MockStatusBar) {
         let statusBar = MockStatusBar()
-        let composer = HangulComposer(statusBar: statusBar)
+        let composer = HangulComposer(statusBar: statusBar, configuration: MockConfiguration())
         let delegate = MockComposerDelegate()
         return (composer, delegate, statusBar)
     }

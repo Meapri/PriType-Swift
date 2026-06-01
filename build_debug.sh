@@ -1,5 +1,6 @@
 #!/bin/bash
 set -e
+export COPYFILE_DISABLE=1
 
 # Define variables
 APP_NAME="PriTypeV2"
@@ -54,6 +55,8 @@ cp "palette-ko.tiff" "$RESOURCES_DIR/" 2>/dev/null || true
 if [ -d "$BUILD_DIR/PriType_PriTypeCore.bundle" ]; then
     cp -R "$BUILD_DIR/PriType_PriTypeCore.bundle" "$RESOURCES_DIR/"
 fi
+find "$PAYLOAD_DIR" -name '._*' -delete
+xattr -cr "$PAYLOAD_DIR/$APP_BUNDLE" 2>/dev/null || true
 
 echo "[3/6] Code Signing the .app bundle..."
 codesign --force --options runtime --timestamp \

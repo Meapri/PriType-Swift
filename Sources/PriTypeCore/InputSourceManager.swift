@@ -3,11 +3,11 @@ import Carbon
 
 // MARK: - InputSourceManager
 
-/// Manages macOS input sources using the Text Input Source (TIS) API
+/// Manages macOS input-source queries and stale preference cleanup.
 ///
-/// This implementation uses only Apple's official TIS API for querying
-/// input source status. Note: TIS API cannot disable system input sources
-/// like ABC - users must manage these through System Settings.
+/// Custom PriType language toggles must not call `TISSelectInputSource`.
+/// Runtime mode switching is coordinated by `InputModeCoordinator` and
+/// `PriTypeInputController`; this type stays off the typing hot path.
 ///
 /// ## Usage
 /// ```swift
@@ -29,11 +29,10 @@ public final class InputSourceManager: @unchecked Sendable {
     public static let abcKeyboardLayoutID = 252
 
     private static let priTypeBundleID = "com.pritype.inputmethod.v2"
-    private static let priTypeKoreanInputSourceID = "com.pritype.inputmethod.v2.korean"
-    private static let legacyPriTypeKoreanInputMode = "com.pritype.inputmethod.v2.korean"
-    private static let priTypeEnglishInputMode = "com.pritype.inputmethod.v2.english"
-    private static let appleABCInputSourceID = "com.apple.keylayout.ABC"
-    private static let abcKeyboardLayoutName = "ABC"
+    private static let priTypeUnifiedInputMode = "com.pritype.inputmethod.v2"
+    private static let currentPriTypeInputModes: Set<String> = [
+        priTypeUnifiedInputMode
+    ]
     
     // MARK: - TIS API Methods
     
@@ -74,82 +73,12 @@ public final class InputSourceManager: @unchecked Sendable {
         return sources.contains { $0.id.contains("US") || $0.name == "U.S." }
     }
 
-    public func toggledInputMode(fallbackMode: InputMode) -> InputMode? {
-        let currentMode = selectedLanguageInputMode() ?? fallbackMode
-        let nextMode = currentMode.toggled
-        DebugLogger.log("InputSourceManager: toggling input source \(currentMode) -> \(nextMode)")
-        guard selectInputMode(nextMode) else {
-            return nil
-        }
-        return nextMode
-    }
-
-    @discardableResult
-    public func selectPriTypeInputMode(_ mode: InputMode) -> Bool {
-        selectInputMode(mode)
-    }
-
-    @discardableResult
-    public func selectInputMode(_ mode: InputMode) -> Bool {
-        let inputModeID: String
-        switch mode {
-        case .korean:
-            inputModeID = Self.priTypeKoreanInputSourceID
-        case .english:
-            inputModeID = Self.appleABCInputSourceID
-        }
-
-        guard let source = inputSource(id: inputModeID) else {
-            DebugLogger.log("InputSourceManager: input source not found: \(inputModeID)")
-            return false
-        }
-
-        let status = TISSelectInputSource(source)
-        guard status == noErr else {
-            DebugLogger.log("InputSourceManager: failed to select \(inputModeID), status=\(status)")
-            return false
-        }
-
-        DebugLogger.log("InputSourceManager: selected input source \(inputModeID)")
-        return true
-    }
-
-    public func selectedPriTypeInputMode() -> InputMode? {
-        selectedLanguageInputMode()
-    }
-
-    public func selectedLanguageInputMode() -> InputMode? {
-        let filter = [kTISPropertyInputSourceIsSelected as String: true] as CFDictionary
-        guard let list = TISCreateInputSourceList(filter, true)?.takeRetainedValue() as? [TISInputSource] else {
-            return nil
-        }
-
-        for source in list {
-            guard let id = Self.stringProperty(kTISPropertyInputSourceID, from: source) else {
-                continue
-            }
-
-            switch id {
-            case Self.priTypeBundleID, Self.priTypeKoreanInputSourceID:
-                return .korean
-            case Self.appleABCInputSourceID, Self.priTypeEnglishInputMode:
-                return .english
-            default:
-                continue
-            }
-        }
-
-        return nil
-    }
-
-    /// Keep PriType as the Korean input source and Apple's ABC as the English
-    /// input source. Older experimental builds registered PriType as component
-    /// input modes; remove those legacy entries so the menu has one Korean row.
-    public func ensurePriTypeInputModesEnabled() {
-        ensureDefaultEnglishInputSourceEnabled()
-    }
-
-    public func ensureDefaultEnglishInputSourceEnabled() {
+    /// Remove stale legacy entries without enabling or selecting input sources.
+    ///
+    /// This intentionally does not enable PriType itself. Calling
+    /// `TISEnableInputSource` for the running input method can make macOS show
+    /// an "add input source" confirmation again on startup.
+    public func cleanupStaleInputSources() {
         guard let defaults = UserDefaults(suiteName: "com.apple.HIToolbox") else {
             DebugLogger.log("InputSourceManager: failed to open HIToolbox defaults")
             return
@@ -158,29 +87,11 @@ public final class InputSourceManager: @unchecked Sendable {
         var enabledSources = defaults.array(forKey: "AppleEnabledInputSources") as? [[String: Any]] ?? []
         let originalEnabledSources = enabledSources
 
-        enabledSources = Self.sanitizedInputSources(enabledSources, removeAppleKoreanInputModes: true)
-
-        let hasABC = enabledSources.contains { source in
-            (source["InputSourceKind"] as? String) == "Keyboard Layout" &&
-            ((source["KeyboardLayout Name"] as? String) == Self.abcKeyboardLayoutName ||
-             (source["KeyboardLayout ID"] as? Int) == Self.abcKeyboardLayoutID)
-        }
-        if !hasABC {
-            enabledSources.append([
-                "InputSourceKind": "Keyboard Layout",
-                "KeyboardLayout ID": Self.abcKeyboardLayoutID,
-                "KeyboardLayout Name": Self.abcKeyboardLayoutName
-            ])
-        }
-
-        if let priTypeSource = inputSource(id: Self.priTypeKoreanInputSourceID) {
-            let status = TISEnableInputSource(priTypeSource)
-            if status != noErr {
-                DebugLogger.log("InputSourceManager: failed to enable PriType source, status=\(status)")
-            }
-        } else {
-            DebugLogger.log("InputSourceManager: PriType input source not found while enabling")
-        }
+        enabledSources = Self.sanitizedInputSources(
+            enabledSources,
+            removeAppleKoreanInputModes: false,
+            allowsPriTypeParentEntry: true
+        )
 
         var didChange = !Self.inputSourcesEqual(enabledSources, originalEnabledSources)
         if didChange {
@@ -191,7 +102,11 @@ public final class InputSourceManager: @unchecked Sendable {
             guard let originalSources = defaults.array(forKey: key) as? [[String: Any]] else {
                 continue
             }
-            let sanitizedSources = Self.sanitizedInputSources(originalSources, removeAppleKoreanInputModes: true)
+            let sanitizedSources = Self.sanitizedInputSources(
+                originalSources,
+                removeAppleKoreanInputModes: false,
+                allowsPriTypeParentEntry: true
+            )
             if !Self.inputSourcesEqual(sanitizedSources, originalSources) {
                 defaults.set(sanitizedSources, forKey: key)
                 didChange = true
@@ -199,48 +114,32 @@ public final class InputSourceManager: @unchecked Sendable {
         }
 
         guard didChange else {
-            DebugLogger.log("InputSourceManager: PriType + Apple ABC input sources already enabled")
+            DebugLogger.log("InputSourceManager: Apple ABC and legacy input-source cleanup already current")
             return
         }
 
         defaults.synchronize()
         CFPreferencesAppSynchronize("com.apple.HIToolbox" as CFString)
-        DebugLogger.log("InputSourceManager: enabled PriType + Apple ABC; removed stale PriType/Apple Korean duplicates if present")
-    }
-
-    private func inputSource(id: String) -> TISInputSource? {
-        let filter = [kTISPropertyInputSourceID as String: id] as CFDictionary
-        if let list = TISCreateInputSourceList(filter, true)?.takeRetainedValue() as? [TISInputSource],
-           let source = list.first {
-            return source
-        }
-
-        guard id == Self.appleABCInputSourceID,
-              let list = TISCreateInputSourceList(nil, true)?.takeRetainedValue() as? [TISInputSource] else {
-            return nil
-        }
-
-        return list.first { source in
-            Self.stringProperty(kTISPropertyLocalizedName, from: source) == Self.abcKeyboardLayoutName
-        }
-    }
-
-    private static func stringProperty(_ key: CFString, from source: TISInputSource) -> String? {
-        guard let pointer = TISGetInputSourceProperty(source, key) else {
-            return nil
-        }
-        return Unmanaged<CFString>.fromOpaque(pointer).takeUnretainedValue() as String
+        DebugLogger.log("InputSourceManager: cleaned stale PriType input-source entries")
     }
 
     private static func inputSourcesEqual(_ lhs: [[String: Any]], _ rhs: [[String: Any]]) -> Bool {
         (lhs as NSArray).isEqual(to: rhs)
     }
 
-    private static func sanitizedInputSources(_ sources: [[String: Any]], removeAppleKoreanInputModes: Bool) -> [[String: Any]] {
+    internal static func sanitizedInputSources(
+        _ sources: [[String: Any]],
+        removeAppleKoreanInputModes: Bool,
+        allowsPriTypeParentEntry: Bool
+    ) -> [[String: Any]] {
         var seen = Set<String>()
 
         return sources.compactMap { source in
-            if shouldRemoveInputSource(source, removeAppleKoreanInputModes: removeAppleKoreanInputModes) {
+            if shouldRemoveInputSource(
+                source,
+                removeAppleKoreanInputModes: removeAppleKoreanInputModes,
+                allowsPriTypeParentEntry: allowsPriTypeParentEntry
+            ) {
                 return nil
             }
 
@@ -253,10 +152,20 @@ public final class InputSourceManager: @unchecked Sendable {
         }
     }
 
-    private static func shouldRemoveInputSource(_ source: [String: Any], removeAppleKoreanInputModes: Bool) -> Bool {
+    private static func shouldRemoveInputSource(
+        _ source: [String: Any],
+        removeAppleKoreanInputModes: Bool,
+        allowsPriTypeParentEntry: Bool
+    ) -> Bool {
         if (source["Bundle ID"] as? String) == priTypeBundleID {
             let inputMode = source["Input Mode"] as? String
-            return inputMode == legacyPriTypeKoreanInputMode || inputMode == priTypeEnglishInputMode
+            guard let inputMode else {
+                return !allowsPriTypeParentEntry
+            }
+            if !currentPriTypeInputModes.contains(inputMode) {
+                return true
+            }
+            return false
         }
 
         if removeAppleKoreanInputModes,

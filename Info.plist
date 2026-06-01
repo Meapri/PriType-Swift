@@ -21,9 +21,49 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>2.7.2</string>
+	<string>2.7.4</string>
 	<key>CFBundleVersion</key>
-	<string>37</string>
+	<string>39</string>
+	<key>ComponentInputModeDict</key>
+	<dict>
+		<key>TISUnifiedUIForInputMethodEnabling</key>
+		<true/>
+		<key>tsInputModeListKey</key>
+		<dict>
+			<key>com.pritype.inputmethod.v2</key>
+			<dict>
+				<key>TISIconIsTemplate</key>
+				<true/>
+				<key>TISIconLabels</key>
+				<dict>
+					<key>Primary</key>
+					<string>한</string>
+				</dict>
+				<key>TISInputSourceID</key>
+				<string>com.pritype.inputmethod.v2</string>
+				<key>TISIntendedLanguage</key>
+				<string>ko</string>
+				<key>tsInputModeAlternateMenuIconFileKey</key>
+				<string>icon.tiff</string>
+				<key>tsInputModeDefaultStateKey</key>
+				<true/>
+				<key>tsInputModeIsVisibleKey</key>
+				<true/>
+				<key>tsInputModeMenuIconFileKey</key>
+				<string>icon.tiff</string>
+				<key>tsInputModePaletteIconFileKey</key>
+				<string>palette-ko.tiff</string>
+				<key>tsInputModePrimaryInScriptKey</key>
+				<true/>
+				<key>tsInputModeScriptKey</key>
+				<string>smKorean</string>
+			</dict>
+		</dict>
+		<key>tsVisibleInputModeOrderedArrayKey</key>
+		<array>
+			<string>com.pritype.inputmethod.v2</string>
+		</array>
+	</dict>
 	<key>InputMethodConnectionName</key>
 	<string>PriType_InputString_v2</string>
 	<key>InputMethodServerControllerClass</key>
@@ -48,7 +88,7 @@
 		<string>한</string>
 	</dict>
 	<key>TISInputSourceID</key>
-	<string>com.pritype.inputmethod.v2.korean</string>
+	<string>com.pritype.inputmethod.v2</string>
 	<key>TISIntendedLanguage</key>
 	<string>ko</string>
 	<key>tsInputMethodCharacterRepertoireKey</key>

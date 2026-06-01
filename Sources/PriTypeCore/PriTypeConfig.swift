@@ -22,10 +22,10 @@ public struct PriTypeConfig: Sendable {
     // MARK: - UI Constants
     
     /// 설정 창 너비
-    public static let settingsWindowWidth: CGFloat = 420
+    public static let settingsWindowWidth: CGFloat = 460
     
     /// 설정 창 높이
-    public static let settingsWindowHeight: CGFloat = 680
+    public static let settingsWindowHeight: CGFloat = 700
     
     // MARK: - Text Convenience
     

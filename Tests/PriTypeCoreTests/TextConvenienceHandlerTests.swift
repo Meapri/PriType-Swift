@@ -10,7 +10,7 @@ struct TextConvenienceHandlerTests {
     
     @Test("Double space converts to period")
     func doubleSpacePeriodConversion() {
-        let handler = TextConvenienceHandler()
+        let handler = TextConvenienceHandler(isDoubleSpacePeriodEnabled: { true })
         let delegate = MockComposerDelegate()
         delegate.fullText = "Hello "
         var buffer = "Hello "
@@ -74,24 +74,7 @@ struct TextConvenienceHandlerTests {
         #expect(!handler.isHangul("!"))
     }
     
-    // MARK: - English Mode Input Tests
-    
-    @Test("English mode space passes through")
-    func englishModeSpacePassthrough() {
-        let handler = TextConvenienceHandler()
-        let delegate = MockComposerDelegate()
-        delegate.fullText = "Hello"
-        var buffer = "Hello"
-        let result = handler.handleEnglishModeInput(char: " ", buffer: &buffer, delegate: delegate)
-        #expect(result == .passThrough)
-    }
-    
-    @Test("English mode non-letter passes through")
-    func englishModeNonLetterPassthrough() {
-        let handler = TextConvenienceHandler()
-        let delegate = MockComposerDelegate()
-        var buffer = ""
-        let result = handler.handleEnglishModeInput(char: "1", buffer: &buffer, delegate: delegate)
-        #expect(result == .passThrough)
-    }
+    // English mode performs no composition and is a pure pass-through, so it no
+    // longer routes through TextConvenienceHandler. The behaviour is covered by
+    // `HangulComposerTests.englishModePurePassthrough`.
 }

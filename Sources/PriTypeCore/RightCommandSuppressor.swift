@@ -324,6 +324,12 @@ public final class RightCommandSuppressor: @unchecked Sendable {
 
     private func triggerToggle() {
         let callback = onToggle
+        // Hop to the main run loop and let the toggle settle there. This matches
+        // the proven v2.6.5 baseline: first-key stability comes from the single
+        // internal state machine (`HangulComposer.inputMode` with no async TIS
+        // source selection), NOT from running the toggle synchronously inside the
+        // CGEventTap callback. Keeping IMK commit / keyboard-override work off the
+        // tap callback also protects against `kCGEventTapDisabledByTimeout`.
         DispatchQueue.main.async {
             callback?()
         }

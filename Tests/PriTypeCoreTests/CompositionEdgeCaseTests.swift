@@ -206,7 +206,7 @@ struct CompositionEdgeCaseTests {
     
     private func makeComposer() -> (HangulComposer, MockComposerDelegate, MockStatusBar) {
         let statusBar = MockStatusBar()
-        let composer = HangulComposer(statusBar: statusBar)
+        let composer = HangulComposer(statusBar: statusBar, configuration: MockConfiguration())
         let delegate = MockComposerDelegate()
         return (composer, delegate, statusBar)
     }

@@ -30,6 +30,10 @@
 "keyBinding.capsLockStatusTitle" = "Caps Lock 입력 소스 전환";
 "keyBinding.capsLockStatusOn" = "켜짐";
 "keyBinding.capsLockStatusOff" = "꺼짐";
+"keyBinding.capsLockOnDescription" = "macOS 입력 소스 설정을 따라 Caps Lock으로 한/영을 전환합니다. PriType 전환키는 중복 동작을 막기 위해 비활성화됩니다.";
+"keyBinding.capsLockOffDescription" = "PriType 전환키로 한/영을 전환합니다. Caps Lock을 쓰려면 macOS 입력 소스 설정에서 켜 주세요.";
+"keyBinding.disabledByCapsLock" = "Caps Lock 입력 소스 전환이 켜져 있어 비활성화됨";
+"keyBinding.managedByMacOS" = "macOS Caps Lock";
 "keyBinding.capsLockBlockedTitle" = "Caps Lock은 macOS에서 설정합니다";
 "keyBinding.capsLockBlockedMessage" = "PriType 전환키로는 사용할 수 없습니다. macOS 입력 소스 설정에서 Caps Lock 전환을 켜 주세요.";
 "keyBinding.capsLockOpenSettings" = "입력 소스 설정 열기";
@@ -60,3 +64,4 @@
 "system.accessibility" = "손쉬운 사용 권한";
 "system.accessibilityGranted" = "허용됨";
 "system.accessibilityRequest" = "권한 요청";
+"system.accessibilitySubtitle" = "우측 Command·Option 같은 전환키와 한자키 감지에 필요합니다.";

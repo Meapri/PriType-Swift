@@ -6,8 +6,11 @@ import Foundation
 /// following the Single Responsibility Principle.
 ///
 /// ## Features
-/// - Double-space to period conversion (both Korean and English modes)
-/// - English mode input handling with pass-through
+/// - Double-space to period conversion for Korean composition (gated on the
+///   macOS `NSAutomaticPeriodSubstitutionEnabled`-backed preference)
+///
+/// English mode performs no composition and passes every key through to the
+/// host, so English text conveniences are owned by macOS, not this handler.
 ///
 /// ## Usage
 /// ```swift
@@ -15,6 +18,7 @@ import Foundation
 /// let result = handler.handleDoubleSpacePeriod(delegate: myDelegate)
 /// ```
 public final class TextConvenienceHandler: @unchecked Sendable {
+    private let isDoubleSpacePeriodEnabled: @Sendable () -> Bool
     
     // MARK: - State
     
@@ -24,7 +28,11 @@ public final class TextConvenienceHandler: @unchecked Sendable {
     /// Timestamp of the last space key press (for double-space timing check)
     private var lastSpaceTime: CFAbsoluteTime = 0
     
-    public init() {}
+    public init(isDoubleSpacePeriodEnabled: @escaping @Sendable () -> Bool = {
+        ConfigurationManager.shared.doubleSpacePeriodEnabled
+    }) {
+        self.isDoubleSpacePeriodEnabled = isDoubleSpacePeriodEnabled
+    }
     
     // MARK: - Double-Space Period
     
@@ -49,7 +57,7 @@ public final class TextConvenienceHandler: @unchecked Sendable {
         lastSpaceTime = now
         
         // Double-space period: Only if enabled, just typed space, AND fast enough
-        if ConfigurationManager.shared.doubleSpacePeriodEnabled && lastWasSpace && isDoubleTap {
+        if isDoubleSpacePeriodEnabled() && lastWasSpace && isDoubleTap {
             // Check context to confirm valid double-space condition
             if buffer.hasSuffix(" ") {
                 let preSpaceChar = buffer.dropLast().last
@@ -76,40 +84,6 @@ public final class TextConvenienceHandler: @unchecked Sendable {
     /// Reset the space state (call when non-space character is typed)
     public func resetSpaceState() {
         lastWasSpace = false
-    }
-    
-    // MARK: - English Mode Input
-    
-    /// Result of English mode input handling
-    public enum EnglishInputResult {
-        /// Input was handled (consumed) - double-space period
-        case handled
-        /// Input should pass through to system
-        case passThrough
-    }
-    
-    /// Handle English mode input
-    ///
-    /// - Parameters:
-    ///   - char: The character being typed
-    ///   - buffer: The local text buffer to query
-    ///   - delegate: The delegate for text operations
-    /// - Returns: Result indicating whether input was handled
-    public func handleEnglishModeInput(
-        char: Character,
-        buffer: inout String,
-        delegate: HangulComposerDelegate
-    ) -> EnglishInputResult {
-        // Handle space key
-        if char == " " {
-            let result = handleDoubleSpacePeriod(buffer: &buffer, delegate: delegate, checkHangul: false)
-            return result == .convertedToPeriod ? .handled : .passThrough
-        }
-        
-        // Non-space character
-        resetSpaceState()
-        
-        return .passThrough
     }
     
     // MARK: - Helpers
