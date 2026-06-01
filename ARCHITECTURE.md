@@ -203,7 +203,7 @@ PriType은 메인 스레드(IMKServer)와 백그라운드 스레드(CGEventTap, 
 
 ## 테스트
 
-Swift Testing 기반 112개 유닛 테스트, 13개 Suite 구성. 실행 방법과 상세 결과는 [BENCHMARK.md](BENCHMARK.md#유닛-테스트)를 참고한다.
+Swift Testing 기반 121개 유닛 테스트, 15개 Suite 구성. 실행 방법과 상세 결과는 [BENCHMARK.md](BENCHMARK.md#유닛-테스트)를 참고한다.
 
 ```bash
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift test
@@ -248,7 +248,7 @@ PriType-Swift/
 │   ├── PriTypeBenchmark/           # 성능 벤치마크 타깃
 │   └── PriTypeVerify/              # 빌드 검증 타깃
 ├── Tests/
-│   └── PriTypeCoreTests/           # 112개 유닛 테스트
+│   └── PriTypeCoreTests/           # 121개 유닛 테스트
 ├── Packaging/
 │   ├── Payload/                    # .app 번들 조립 경로
 │   └── scripts/

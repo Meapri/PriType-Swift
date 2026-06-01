@@ -891,7 +891,13 @@ public class HangulComposer: @unchecked Sendable {
         let queryRange: AnyObject
         if cfRange.length == 0 && cfRange.location > 0 {
             var charRange = CFRange(location: cfRange.location - 1, length: 1)
-            queryRange = AXValueCreate(.cfRange, &charRange)! as AnyObject
+            // AXValueCreate is effectively non-nil for a valid CFRange, but fall
+            // back to the original range instead of force-unwrapping if it isn't.
+            if let charRangeValue = AXValueCreate(.cfRange, &charRange) {
+                queryRange = charRangeValue
+            } else {
+                queryRange = rangeVal
+            }
         } else {
             queryRange = rangeVal
         }

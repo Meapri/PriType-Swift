@@ -25,9 +25,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### UX
 - 설정 창 제목을 로컬라이즈했습니다(`PriType 설정`/`PriType Settings`). 시각적으로는 숨겨져 있지만 Window 메뉴·Mission Control·VoiceOver가 사용하는 값이라 언어에 맞게 읽히도록 정리했습니다.
 
+### 테스트
+- 그동안 커버리지가 없던 순수 함수에 회귀 테스트를 추가했습니다(9개): 한자 후보창 좌표 유효성 검증(`isValidCursorRect` — Chromium 쓰레기 좌표 거부)과 초성↔호환 자모 변환(`isChoseongJamo`/`choseongToCompatibility`/`isJamoConsonant`).
+- AX 좌표 경로의 유일한 강제 언랩(`AXValueCreate(...)!`)을 graceful fallback으로 바꿔 잠재 크래시 경로를 제거했습니다.
+
 ### 검증
 - `swift build -c debug --product PriType`
-- `swift test` (112개 통과)
+- `swift test` (121개 통과)
 - `swift run -c debug PriTypeVerify`
 - `swift build -c release --product PriType`
 

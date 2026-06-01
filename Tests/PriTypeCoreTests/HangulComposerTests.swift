@@ -380,3 +380,48 @@ struct HangulComposerTests {
         return (composer, delegate, statusBar)
     }
 }
+
+// MARK: - Cursor Rect Validation Tests
+
+/// `isValidCursorRect` guards the Hanja candidate window against the garbage
+/// coordinates Chromium/Electron hosts return. These are the documented reject
+/// cases (see ARCHITECTURE.md "좌표 유효성 검증").
+@Suite("Cursor Rect Validation")
+struct CursorRectValidationTests {
+
+    @Test("Rejects zero origin (uninitialized coordinate query)")
+    func rejectsZeroOrigin() {
+        #expect(!HangulComposer.isValidCursorRect(NSRect(x: 0, y: 0, width: 0, height: 0)))
+        #expect(!HangulComposer.isValidCursorRect(NSRect(x: 0, y: 0, width: 100, height: 20)))
+    }
+
+    @Test("Rejects non-positive height")
+    func rejectsNonPositiveHeight() {
+        #expect(!HangulComposer.isValidCursorRect(NSRect(x: 100, y: 100, width: 10, height: 0)))
+        #expect(!HangulComposer.isValidCursorRect(NSRect(x: 100, y: 100, width: 10, height: -1)))
+    }
+
+    @Test("Rejects floating-point / sub-pixel garbage coordinates")
+    func rejectsFloatGarbage() {
+        // Representative Chromium garbage: subnormal x/width with negative height.
+        #expect(!HangulComposer.isValidCursorRect(NSRect(x: 1.6e-314, y: 95886, width: 1.6e-314, height: -1)))
+        // Origin at or below 1pt is treated as uninitialized garbage.
+        #expect(!HangulComposer.isValidCursorRect(NSRect(x: 0.5, y: 0.5, width: 10, height: 10)))
+        #expect(!HangulComposer.isValidCursorRect(NSRect(x: 1, y: 1, width: 10, height: 10)))
+    }
+
+    @Test("Accepts a well-formed on-screen rect")
+    func acceptsValidOnScreenRect() {
+        // Needs a real display; skip cleanly in a headless environment.
+        guard let screen = NSScreen.main else { return }
+        let frame = screen.frame
+        let rect = NSRect(x: frame.midX, y: frame.midY, width: 8, height: 18)
+        #expect(HangulComposer.isValidCursorRect(rect))
+    }
+
+    @Test("Rejects an off-screen rect")
+    func rejectsOffScreenRect() {
+        // Far outside any plausible display bounds.
+        #expect(!HangulComposer.isValidCursorRect(NSRect(x: 5_000_000, y: 5_000_000, width: 8, height: 18)))
+    }
+}

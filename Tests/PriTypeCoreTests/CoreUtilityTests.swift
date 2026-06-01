@@ -110,3 +110,45 @@ struct PriTypeErrorTests {
         #expect(error.errorDescription!.contains("42"))
     }
 }
+
+// MARK: - Jamo Conversion Tests
+
+@Suite("Jamo Conversion")
+struct JamoConversionTests {
+
+    @Test("Choseong jamo detection covers U+1100...U+1112 only")
+    func choseongDetection() {
+        #expect(Character("\u{1100}").isChoseongJamo)   // ᄀ first choseong
+        #expect(Character("\u{1112}").isChoseongJamo)   // ᄒ last choseong
+        #expect(!Character("\u{10FF}").isChoseongJamo)  // just below range
+        #expect(!Character("\u{1113}").isChoseongJamo)  // just above range
+        #expect(!Character("\u{3131}").isChoseongJamo)  // ㄱ compatibility jamo, not choseong
+        #expect(!Character("가").isChoseongJamo)         // precomposed syllable
+        #expect(!Character("A").isChoseongJamo)
+    }
+
+    @Test("Choseong jamo maps to the matching compatibility jamo")
+    func choseongToCompatibilityMapping() {
+        // libhangul emits choseong jamo; jamo_symbols.json is keyed by compatibility jamo.
+        #expect(Character("\u{1100}").choseongToCompatibility == "\u{3131}")  // ᄀ → ㄱ
+        #expect(Character("\u{1102}").choseongToCompatibility == "\u{3134}")  // ᄂ → ㄴ
+        #expect(Character("\u{1106}").choseongToCompatibility == "\u{3141}")  // ᄆ → ㅁ
+        #expect(Character("\u{110B}").choseongToCompatibility == "\u{3147}")  // ᄋ → ㅇ
+        #expect(Character("\u{1112}").choseongToCompatibility == "\u{314E}")  // ᄒ → ㅎ
+    }
+
+    @Test("Non-choseong characters are returned unchanged")
+    func nonChoseongUnchanged() {
+        #expect(Character("가").choseongToCompatibility == "가")
+        #expect(Character("A").choseongToCompatibility == "A")
+        #expect(Character("\u{3131}").choseongToCompatibility == "\u{3131}")  // already compatibility
+    }
+
+    @Test("Compatibility jamo consonant detection covers U+3131...U+314E")
+    func jamoConsonantDetection() {
+        #expect(Character("\u{3131}").isJamoConsonant)  // ㄱ
+        #expect(Character("\u{314E}").isJamoConsonant)  // ㅎ
+        #expect(!Character("\u{314F}").isJamoConsonant) // ㅏ (vowel, just above range)
+        #expect(!Character("가").isJamoConsonant)
+    }
+}
