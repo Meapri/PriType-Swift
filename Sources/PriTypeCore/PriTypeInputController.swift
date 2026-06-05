@@ -198,7 +198,12 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
         let committed = composer.flushCommitString()
         DebugLogger.log("PriTypeInputController: finalizeComposition[\(reason)] client=\(client.bundleIdentifier() ?? "?") marked=(\(markedRange.location),\(markedRange.length)) len=\(committed.count)")
         if !committed.isEmpty {
-            client.insertText(committed, replacementRange: markedRange)
+            // Canonical finalize: NSNotFound asks the host to convert its OWN marked text to
+            // committed (composition-end), rather than an explicit marked-range edit. The
+            // explicit edit makes hosts re-run text detection — e.g. KakaoTalk re-fires its
+            // emoticon-recommendation popup (a visible flicker). The composition-end path
+            // avoids that. (Done at app-deactivate-observer timing, the host still accepts it.)
+            client.insertText(committed, replacementRange: NSRange(location: NSNotFound, length: NSNotFound))
         } else if markedRange.location != NSNotFound, markedRange.length > 0 {
             client.insertText("", replacementRange: markedRange)
         }
