@@ -288,12 +288,16 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
         assert(Thread.isMainThread, "IMK deactivateServer must run on main thread")
         #endif
         DebugLogger.log("PriTypeInputController: deactivateServer (hadComposition=\(composer.hasActiveComposition))")
-        // 반드시 조합 중인 내용을 커밋
-        // Use the existing currentAdapter if available (not a stale temp adapter)
-        if let adapter = currentAdapter {
-            composer.forceCommit(delegate: adapter)
-        } else if let client = sender as? IMKTextInput ?? lastClient {
+        // Commit the in-progress composition to the DEACTIVATING client (`sender`).
+        // IMPORTANT: when focus moves, the new app's activateServer can fire BEFORE this
+        // deactivateServer, replacing `currentAdapter` with the NEW app's adapter. Using
+        // currentAdapter here would deliver the commit to the wrong app and leave the old
+        // app's marked text stranded/underlined (the KakaoTalk focus-loss bug). Always
+        // commit to `sender` — the session that is actually deactivating.
+        if let client = (sender as? IMKTextInput) ?? lastClient {
             let adapter = ClientAdapter(client: client)
+            composer.forceCommit(delegate: adapter)
+        } else if let adapter = currentAdapter {
             composer.forceCommit(delegate: adapter)
         }
         // NOTE: Do NOT clear localTextBuffer here.
