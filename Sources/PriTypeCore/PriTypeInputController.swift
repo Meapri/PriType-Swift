@@ -130,8 +130,16 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
                 }
                 return
             }
-            // No underline on composing (preedit) Hangul — show plain marked text.
-            let attributed = NSAttributedString(string: text)
+            // No underline on composing (preedit) Hangul. Explicitly set underline
+            // style 0 (NSUnderlineStyle none) rather than omitting it, so hosts that
+            // would otherwise apply a default composition underline get a clear
+            // "no underline" signal. NOTE: native AppKit text views honor this, but
+            // Chromium/Electron apps (KakaoTalk, ChatGPT, Chrome, VS Code, …) render
+            // their own composition underline and largely ignore IME styling.
+            let attributed = NSAttributedString(
+                string: text,
+                attributes: [.underlineStyle: 0]
+            )
             client.setMarkedText(attributed, selectionRange: NSRange(location: text.utf16.count, length: 0), replacementRange: NSRange(location: NSNotFound, length: NSNotFound))
         }
     }
