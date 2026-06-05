@@ -65,34 +65,21 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
     
     /// Base adapter class with common IMKTextInput operations
     /// Subclasses override setMarkedText for different behaviors
-    class BaseClientAdapter: NSObject, HangulComposerDelegate {
+    private class BaseClientAdapter: NSObject, HangulComposerDelegate {
         let client: IMKTextInput
         
         init(client: IMKTextInput) {
             self.client = client
         }
 
-        static func insertionReplacementRange(markedRange: NSRange) -> NSRange {
-            if markedRange.location != NSNotFound, markedRange.length > 0 {
-                return markedRange
-            }
-            return NSRange(location: NSNotFound, length: NSNotFound)
-        }
-
-        static func markedTextClearingReplacementRange(markedRange: NSRange) -> NSRange? {
-            guard markedRange.location != NSNotFound, markedRange.length > 0 else {
-                return nil
-            }
-            return markedRange
-        }
-        
         func insertText(_ text: String) {
             guard !text.isEmpty else { return }
-            let replacementRange = Self.insertionReplacementRange(markedRange: client.markedRange())
-            if replacementRange.location != NSNotFound {
-                DebugLogger.log("ClientAdapter.insertText replacing marked range loc=\(replacementRange.location) len=\(replacementRange.length)")
-            }
-            client.insertText(text, replacementRange: replacementRange)
+            // Canonical IMK commit: pass NSNotFound so the host replaces the current
+            // marked text automatically. This matches Apple's own input methods and is
+            // what native hosts (e.g. KakaoTalk) expect. Passing an explicit marked
+            // range here desynced KakaoTalk's composition (stranded marked text +
+            // missing commit on focus loss).
+            client.insertText(text, replacementRange: NSRange(location: NSNotFound, length: NSNotFound))
         }
         
         func setMarkedText(_ text: String) {
@@ -123,24 +110,19 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
     /// Standard adapter with plain (no underline) marked text for composition display
     private class ClientAdapter: BaseClientAdapter {
         override func setMarkedText(_ text: String) {
-            guard !text.isEmpty else {
-                if let replacementRange = Self.markedTextClearingReplacementRange(markedRange: client.markedRange()) {
-                    client.insertText("", replacementRange: replacementRange)
-                    DebugLogger.log("ClientAdapter.setMarkedText cleared marked range loc=\(replacementRange.location) len=\(replacementRange.length)")
-                }
-                return
-            }
-            // No underline on composing (preedit) Hangul. Explicitly set underline
-            // style 0 (NSUnderlineStyle none) rather than omitting it, so hosts that
-            // would otherwise apply a default composition underline get a clear
-            // "no underline" signal. NOTE: native AppKit text views honor this, but
-            // Chromium/Electron apps (KakaoTalk, ChatGPT, Chrome, VS Code, …) render
-            // their own composition underline and largely ignore IME styling.
-            let attributed = NSAttributedString(
-                string: text,
-                attributes: [.underlineStyle: 0]
+            // Canonical marked-text protocol, matching Apple's own input methods:
+            // set the marked text directly with replacementRange = NSNotFound (an
+            // empty string clears the composition). No underline on composing Hangul
+            // (underline style 0). The previous non-canonical path (clearing via
+            // insertText("") over an explicit marked range) left native hosts like
+            // KakaoTalk in an inconsistent composition state — a stranded/underlined
+            // preedit that never committed on focus loss.
+            let attributed = NSAttributedString(string: text, attributes: [.underlineStyle: 0])
+            client.setMarkedText(
+                attributed,
+                selectionRange: NSRange(location: text.utf16.count, length: 0),
+                replacementRange: NSRange(location: NSNotFound, length: NSNotFound)
             )
-            client.setMarkedText(attributed, selectionRange: NSRange(location: text.utf16.count, length: 0), replacementRange: NSRange(location: NSNotFound, length: NSNotFound))
         }
     }
 
