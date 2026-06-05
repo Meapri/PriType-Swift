@@ -23,9 +23,7 @@
 	<key>CFBundleShortVersionString</key>
 	<string>2.7.4</string>
 	<key>CFBundleVersion</key>
-	<string>42</string>
-	<key>PriTypeReleaseChannel</key>
-	<string>stable</string>
+	<string>43</string>
 	<key>ComponentInputModeDict</key>
 	<dict>
 		<key>tsInputModeListKey</key>
@@ -51,13 +49,15 @@
 			<string>com.pritype.inputmethod.v2.english</string>
 		</array>
 	</dict>
-	<key>TICapsLockLanguageSwitchCapable</key>
-	<true/>
 	<key>InputMethodConnectionName</key>
 	<string>PriType_InputString_v2</string>
 	<key>InputMethodServerControllerClass</key>
 	<string>PriTypeInputController</string>
 	<key>LSUIElement</key>
+	<true/>
+	<key>PriTypeReleaseChannel</key>
+	<string>stable</string>
+	<key>TICapsLockLanguageSwitchCapable</key>
 	<true/>
 	<key>tsInputMethodCharacterRepertoireKey</key>
 	<array>
