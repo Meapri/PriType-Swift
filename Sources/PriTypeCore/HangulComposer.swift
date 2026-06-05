@@ -522,6 +522,25 @@ public class HangulComposer: @unchecked Sendable {
             localTextBuffer = ""
         }
     }
+
+    /// Flush any in-progress composition and return its committed NFC string ("" if none).
+    ///
+    /// Unlike `forceCommit`, this does NOT insert via a delegate — the caller inserts the
+    /// returned text itself. `deactivateServer` uses this to commit straight to the
+    /// deactivating client with an explicit `replacementRange` over the marked text, which
+    /// reliably clears a stranded preedit during a focus transition (some hosts, e.g.
+    /// KakaoTalk, do not honor insertText's automatic marked-text replacement at that moment).
+    public func flushCommitString() -> String {
+        guard !context.isEmpty() else { return "" }
+        let flushed = context.flush()
+        let committed = CompositionHelpers.convertAndNormalize(flushed)
+        if let lastChar = committed.last, lastChar.isHangulChar {
+            localTextBuffer = String(lastChar)
+        } else {
+            localTextBuffer = ""
+        }
+        return committed
+    }
     
     /// Reset the composition state
     ///

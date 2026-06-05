@@ -287,18 +287,27 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
         #if DEBUG
         assert(Thread.isMainThread, "IMK deactivateServer must run on main thread")
         #endif
-        DebugLogger.log("PriTypeInputController: deactivateServer (hadComposition=\(composer.hasActiveComposition))")
-        // Commit the in-progress composition to the DEACTIVATING client (`sender`).
-        // IMPORTANT: when focus moves, the new app's activateServer can fire BEFORE this
-        // deactivateServer, replacing `currentAdapter` with the NEW app's adapter. Using
-        // currentAdapter here would deliver the commit to the wrong app and leave the old
-        // app's marked text stranded/underlined (the KakaoTalk focus-loss bug). Always
-        // commit to `sender` — the session that is actually deactivating.
-        if let client = (sender as? IMKTextInput) ?? lastClient {
-            let adapter = ClientAdapter(client: client)
-            composer.forceCommit(delegate: adapter)
-        } else if let adapter = currentAdapter {
-            composer.forceCommit(delegate: adapter)
+        // Commit the in-progress composition to the DEACTIVATING client (`sender`) by
+        // explicitly REPLACING its marked-text range with the committed string. Two
+        // reasons this is needed instead of forceCommit's insertText(NSNotFound):
+        //  1. When focus moves, the new app's activateServer can fire BEFORE this, so
+        //     currentAdapter already points to the new app — commit to `sender` instead.
+        //  2. During the focus transition some native hosts (KakaoTalk) do NOT honor
+        //     insertText's automatic marked-text replacement, leaving a stranded,
+        //     underlined preedit that never commits. Replacing the explicit markedRange
+        //     reliably clears it. This mirrors how Apple's own IME finalizes on deactivate.
+        if let client = (sender as? IMKTextInput) ?? lastClient, composer.hasActiveComposition {
+            let markedRange = client.markedRange()
+            let committed = composer.flushCommitString()
+            DebugLogger.log("PriTypeInputController: deactivateServer commit client=\(client.bundleIdentifier() ?? "?") marked=(\(markedRange.location),\(markedRange.length)) committedLen=\(committed.count)")
+            if !committed.isEmpty {
+                client.insertText(committed, replacementRange: markedRange)
+            } else if markedRange.location != NSNotFound, markedRange.length > 0 {
+                // Composition flushed to nothing but a marked range lingers — clear it.
+                client.insertText("", replacementRange: markedRange)
+            }
+        } else {
+            DebugLogger.log("PriTypeInputController: deactivateServer (no active composition)")
         }
         // NOTE: Do NOT clear localTextBuffer here.
         // Cross-app hanja leaking is prevented by bundleId matching in handleHanjaLookup(),
