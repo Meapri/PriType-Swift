@@ -51,6 +51,8 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
     private var lastKeyboardOverrideClientID: ObjectIdentifier?
     private var lastKeyboardOverrideTime: CFAbsoluteTime = 0
 
+    // Commits the composition early on app-focus-loss (see updateApplicationDeactivateObserver).
+    private var applicationDeactivateObserver: Any?
 
     // Keep adapter alive for external toggle calls
     public private(set) var currentAdapter: (any HangulComposerDelegate)?
@@ -186,6 +188,50 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
     }
 
 
+    /// Finalize the in-progress composition into `client` in a SINGLE operation:
+    /// replace the marked-text range with the committed string. One op (not commit +
+    /// separate clear) avoids the focus-loss flicker. Idempotent — no-op when there is
+    /// no active composition, so the observer and deactivateServer can both call it.
+    private func finalizeComposition(to client: IMKTextInput?, reason: String) {
+        guard composer.hasActiveComposition, let client else { return }
+        let markedRange = client.markedRange()
+        let committed = composer.flushCommitString()
+        DebugLogger.log("PriTypeInputController: finalizeComposition[\(reason)] client=\(client.bundleIdentifier() ?? "?") marked=(\(markedRange.location),\(markedRange.length)) len=\(committed.count)")
+        if !committed.isEmpty {
+            client.insertText(committed, replacementRange: markedRange)
+        } else if markedRange.location != NSNotFound, markedRange.length > 0 {
+            client.insertText("", replacementRange: markedRange)
+        }
+    }
+
+    /// Observe the focused app's deactivation and finalize the composition THEN — early
+    /// enough that the host (e.g. KakaoTalk) still accepts the insertText. By the time
+    /// IMK's deactivateServer runs, native hosts have already resigned and drop it,
+    /// leaving a stranded/underlined preedit. Host-agnostic; no bundle-ID hardcoding.
+    private func updateApplicationDeactivateObserver(for context: ClientContext) {
+        removeApplicationDeactivateObserver()
+        guard !context.bundleId.isEmpty else { return }
+        applicationDeactivateObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didDeactivateApplicationNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            guard let self,
+                  let app = notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication,
+                  app.bundleIdentifier == context.bundleId else {
+                return
+            }
+            self.finalizeComposition(to: self.lastClient ?? self.lastKnownInputClient, reason: "appDeactivate")
+        }
+    }
+
+    private func removeApplicationDeactivateObserver() {
+        if let observer = applicationDeactivateObserver {
+            NSWorkspace.shared.notificationCenter.removeObserver(observer)
+            applicationDeactivateObserver = nil
+        }
+    }
+
     public func performPriTypeModeTransition(source: InputModeCoordinator.ToggleSource) {
         guard let client = lastClient ?? lastKnownInputClient else {
             DebugLogger.log("PriTypeInputController: no current client for mode transition (\(source))")
@@ -237,7 +283,9 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
 
     deinit {
         // The selector-based `.keyboardLayoutChanged` observer is auto-removed on
-        // modern macOS, but remove it explicitly to be safe.
+        // modern macOS, but remove it explicitly to be safe. The block-based
+        // NSWorkspace deactivate observer is NOT auto-removed, so clean it up too.
+        removeApplicationDeactivateObserver()
         NotificationCenter.default.removeObserver(self, name: .keyboardLayoutChanged, object: nil)
     }
 
@@ -261,10 +309,12 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
             let context = ClientContextDetector.analyzeForActivation(client: client)
             self.cachedContext = context
             currentAdapter = makeAdapter(for: client, context: context)
+            updateApplicationDeactivateObserver(for: context)
             DebugLogger.log("Activated for client: \(self.cachedContext?.bundleId ?? "unknown") (Lightweight Context)")
         } else {
             // Fallback if sender is not IMKTextInput (rare)
             self.cachedContext = nil
+            removeApplicationDeactivateObserver()
         }
         
         // Set as active controller for toggle access
@@ -287,28 +337,11 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
         #if DEBUG
         assert(Thread.isMainThread, "IMK deactivateServer must run on main thread")
         #endif
-        // Commit the in-progress composition to the DEACTIVATING client (`sender`) by
-        // explicitly REPLACING its marked-text range with the committed string. Two
-        // reasons this is needed instead of forceCommit's insertText(NSNotFound):
-        //  1. When focus moves, the new app's activateServer can fire BEFORE this, so
-        //     currentAdapter already points to the new app — commit to `sender` instead.
-        //  2. During the focus transition some native hosts (KakaoTalk) do NOT honor
-        //     insertText's automatic marked-text replacement, leaving a stranded,
-        //     underlined preedit that never commits. Replacing the explicit markedRange
-        //     reliably clears it. This mirrors how Apple's own IME finalizes on deactivate.
-        if let client = (sender as? IMKTextInput) ?? lastClient, composer.hasActiveComposition {
-            let markedRange = client.markedRange()
-            let committed = composer.flushCommitString()
-            DebugLogger.log("PriTypeInputController: deactivateServer commit client=\(client.bundleIdentifier() ?? "?") marked=(\(markedRange.location),\(markedRange.length)) committedLen=\(committed.count)")
-            if !committed.isEmpty {
-                client.insertText(committed, replacementRange: markedRange)
-            } else if markedRange.location != NSNotFound, markedRange.length > 0 {
-                // Composition flushed to nothing but a marked range lingers — clear it.
-                client.insertText("", replacementRange: markedRange)
-            }
-        } else {
-            DebugLogger.log("PriTypeInputController: deactivateServer (no active composition)")
-        }
+        // Fallback finalize. The primary path is the app-deactivate observer (it fires
+        // earlier, while the host still accepts input); by the time deactivateServer
+        // runs, native hosts like KakaoTalk have already resigned and ignore insertText.
+        // If the observer already committed, this is a no-op.
+        finalizeComposition(to: (sender as? IMKTextInput) ?? lastClient, reason: "deactivateServer")
         // NOTE: Do NOT clear localTextBuffer here.
         // Cross-app hanja leaking is prevented by bundleId matching in handleHanjaLookup(),
         // not by clearing the buffer. Clearing would make same-app hanja lookup impossible.
@@ -319,6 +352,7 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
         lastClient = nil
         // Keep cachedContext alive — activateServer() will replace it with the new client's context.
         // Clearing it here causes unnecessary slow path if handle() arrives before activateServer().
+        removeApplicationDeactivateObserver()
         NotificationCenter.default.removeObserver(self, name: .keyboardLayoutChanged, object: nil)
     }
     
@@ -398,6 +432,7 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
             DebugLogger.log("cachedContext miss: client changed or nil, analyzing (Slow Path)")
             context = ClientContextDetector.analyze(client: client)
             self.cachedContext = context
+            updateApplicationDeactivateObserver(for: context)
             // Do not update self.lastClient here. It must be updated alongside currentAdapter
             // below to ensure the adapter is correctly recreated when the client changes.
         }
