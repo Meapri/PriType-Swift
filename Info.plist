@@ -24,35 +24,14 @@
 	<string>2.7.4</string>
 	<key>CFBundleVersion</key>
 	<string>39</string>
+	<key>PriTypeReleaseChannel</key>
+	<string>stable</string>
 	<key>ComponentInputModeDict</key>
 	<dict>
-		<key>TISUnifiedUIForInputMethodEnabling</key>
-		<true/>
 		<key>tsInputModeListKey</key>
 		<dict>
 			<key>com.pritype.inputmethod.v2</key>
 			<dict>
-				<key>TISIconIsTemplate</key>
-				<true/>
-				<key>TISIconLabels</key>
-				<dict>
-					<key>Primary</key>
-					<string>한</string>
-				</dict>
-				<key>TISInputSourceID</key>
-				<string>com.pritype.inputmethod.v2</string>
-				<key>TISIntendedLanguage</key>
-				<string>ko</string>
-				<key>tsInputModeAlternateMenuIconFileKey</key>
-				<string>icon.tiff</string>
-				<key>tsInputModeDefaultStateKey</key>
-				<true/>
-				<key>tsInputModeIsVisibleKey</key>
-				<true/>
-				<key>tsInputModeMenuIconFileKey</key>
-				<string>icon.tiff</string>
-				<key>tsInputModePaletteIconFileKey</key>
-				<string>palette-ko.tiff</string>
 				<key>tsInputModePrimaryInScriptKey</key>
 				<true/>
 				<key>tsInputModeScriptKey</key>
@@ -68,36 +47,13 @@
 	<string>PriType_InputString_v2</string>
 	<key>InputMethodServerControllerClass</key>
 	<string>PriTypeInputController</string>
-	<key>InputMethodServerDataSourceClass</key>
-	<string>PriTypeInputController</string>
-	<key>InputMethodServerDelegateClass</key>
-	<string>PriTypeInputController</string>
-	<key>LSMinimumSystemVersion</key>
-	<string>14.0</string>
 	<key>LSUIElement</key>
 	<true/>
-	<key>PriTypeReleaseChannel</key>
-	<string>stable</string>
-	<key>TICapsLockLanguageSwitchCapable</key>
-	<true/>
-	<key>TISIconIsTemplate</key>
-	<true/>
-	<key>TISIconLabels</key>
-	<dict>
-		<key>Primary</key>
-		<string>한</string>
-	</dict>
-	<key>TISInputSourceID</key>
-	<string>com.pritype.inputmethod.v2</string>
-	<key>TISIntendedLanguage</key>
-	<string>ko</string>
 	<key>tsInputMethodCharacterRepertoireKey</key>
 	<array>
 		<string>Hang</string>
 	</array>
 	<key>tsInputMethodIconFileKey</key>
 	<string>icon.tiff</string>
-	<key>tsInputMethodPaletteIconFileKey</key>
-	<string>palette-ko.tiff</string>
 </dict>
 </plist>

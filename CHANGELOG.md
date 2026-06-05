@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 수정
+- 한글 입력이 전혀 되지 않던 회귀를 고쳤습니다. 통합 아키텍처 작업 중 `Info.plist`의 입력기 등록에 최상위 `TISInputSourceID`(자식 입력 모드와 동일 ID)와 모드별 `TISInputSourceID`/`tsInputModeDefaultStateKey` 등 불필요한 키가 추가되면서 TIS 등록이 깨져, 입력 소스를 선택해도 조합이 동작하지 않았습니다. 등록을 검증된 2.6.5의 최소 `ComponentInputModeDict` 구조로 복원했습니다(단일 모드 `com.pritype.inputmethod.v2`, `smKorean`). 조합 엔진 자체는 정상이었고(유닛 테스트 통과) 원인은 등록부였습니다.
+
 ### 구조
 - 한/영 입력 구조를 `v2.6.5`의 단일 상태기계와 `v2.7.2`의 macOS 통합 장점을 결합한 **단일 소스 하이브리드**로 정식화했습니다. PriType 단일 입력 소스가 IMK 세션을 영구 소유하고, 한/영은 `HangulComposer.inputMode` 하나로 내부 전환합니다. 정식 명세를 [Docs/UnifiedInputArchitecture.md](Docs/UnifiedInputArchitecture.md)로 추가하고, 기존 RollbackPlan(가짜 모드 2개 등록 안)은 superseded 처리했습니다.
 
