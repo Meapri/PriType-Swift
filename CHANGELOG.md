@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 변경
+- 한글 조합 중 표시되던 밑줄(preedit underline)을 제거하고 평문 marked text로 표시하도록 했습니다.
+- 앱 포커스 상실 시 조합을 강제 커밋하던 호환성 로직(과거 KakaoTalk 대응에서 일반화한 NSWorkspace 비활성 옵저버)을 완전히 제거했습니다. 정상 포커스 전환 commit은 IMK `deactivateServer`가 담당합니다.
+- libhangul-swift 최신(main)에 맞춰 통합을 점검했습니다. 새 기본값(`outputMode .syllable`, `combinationOnDoubleStroke` OFF, `fineGrainedBackspace` ON, NFC 정규화)이 표준 2벌식 동작과 일치하여 코드 변경은 없으며, 기본값이 바뀌어도 조합이 깨지지 않도록 회귀 테스트(ㄱㄱ↛ㄲ, 와→오 단계 백스페이스)를 추가했습니다.
+
 ### 수정
 - 한글 입력이 전혀 되지 않던 회귀를 고쳤습니다. 통합 아키텍처 작업 중 `Info.plist`의 입력기 등록에 최상위 `TISInputSourceID`(자식 입력 모드와 동일 ID)와 모드별 `TISInputSourceID`/`tsInputModeDefaultStateKey` 등 불필요한 키가 추가되면서 TIS 등록이 깨져, 입력 소스를 선택해도 조합이 동작하지 않았습니다. 등록을 검증된 2.6.5의 최소 `ComponentInputModeDict` 구조로 복원했습니다(단일 모드 `com.pritype.inputmethod.v2`, `smKorean`). 조합 엔진 자체는 정상이었고(유닛 테스트 통과) 원인은 등록부였습니다.
 

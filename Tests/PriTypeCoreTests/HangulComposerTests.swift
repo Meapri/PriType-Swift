@@ -367,10 +367,58 @@ struct HangulComposerTests {
         composer.updateKeyboardLayout(id: "3")
         
         #expect(delegate.markedText.isEmpty || delegate.insertedTexts.count > 0)
-        
+
         composer.updateKeyboardLayout(id: "2")
     }
-    
+
+    // MARK: - libhangul default-behavior regression guards
+    //
+    // The libhangul-swift defaults (combinationOnDoubleStroke OFF, fineGrainedBackspace ON,
+    // outputMode .syllable) are what standard 2-bulsik PriType relies on. These tests lock
+    // that contract so a future library default change can't silently break Korean input.
+
+    @Test("Double-stroke does NOT combine: ㄱ+ㄱ → ㄱㄱ, not ㄲ (combinationOnDoubleStroke OFF)")
+    func doubleStrokeDoesNotCombine() {
+        let (composer, delegate, _) = makeComposer()
+        // 'r' = ㄱ in 2-bulsik. Pressing it twice must commit the first ㄱ and start a new ㄱ,
+        // NOT auto-combine into ㄲ (which would require combinationOnDoubleStroke = true).
+        _ = composer.handle(TestEventFactory.keyEvent(char: "r", keyCode: 15)!, delegate: delegate)
+        _ = composer.handle(TestEventFactory.keyEvent(char: "r", keyCode: 15)!, delegate: delegate)
+
+        #expect(delegate.markedText != "ㄲ", "ㄱㄱ must not auto-combine into ㄲ")
+        #expect(
+            delegate.markedText == "ㄱ" ||
+            delegate.markedText == "\u{3131}" ||
+            delegate.markedText == "\u{1100}",
+            "second ㄱ should be the new preedit, got '\(delegate.markedText)'"
+        )
+        #expect(delegate.insertedTexts.contains { $0 == "ㄱ" || $0 == "\u{3131}" || $0 == "\u{1100}" },
+                "first ㄱ should have committed")
+    }
+
+    @Test("Fine-grained backspace decomposes a compound vowel: 와 → 오 → ㅇ (fineGrainedBackspace ON)")
+    func fineGrainedBackspaceDecomposesCompoundVowel() {
+        let (composer, delegate, _) = makeComposer()
+        // 와 = ㅇ(d) + ㅘ, where ㅘ = ㅗ(h) + ㅏ(k).
+        _ = composer.handle(TestEventFactory.keyEvent(char: "d", keyCode: 2)!, delegate: delegate)
+        _ = composer.handle(TestEventFactory.keyEvent(char: "h", keyCode: 4)!, delegate: delegate)
+        _ = composer.handle(TestEventFactory.keyEvent(char: "k", keyCode: 40)!, delegate: delegate)
+        #expect(delegate.markedText == "와")
+
+        let backspace = TestEventFactory.keyEvent(char: "\u{7F}", keyCode: KeyCode.backspace)!
+        // Fine-grained: the compound vowel ㅘ collapses one step to ㅗ → 오 (not the whole syllable).
+        #expect(composer.handle(backspace, delegate: delegate), "backspace consumed during composition")
+        #expect(delegate.markedText == "오", "compound vowel should decompose one step, got '\(delegate.markedText)'")
+        // Next backspace removes the vowel, leaving just the initial ㅇ.
+        _ = composer.handle(backspace, delegate: delegate)
+        #expect(
+            delegate.markedText == "ㅇ" ||
+            delegate.markedText == "\u{3147}" ||
+            delegate.markedText == "\u{110B}",
+            "should leave the initial ㅇ, got '\(delegate.markedText)'"
+        )
+    }
+
     // MARK: - Helper
     
     private func makeComposer() -> (HangulComposer, MockComposerDelegate, MockStatusBar) {

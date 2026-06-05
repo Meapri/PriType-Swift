@@ -50,7 +50,6 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
     #endif
     private var lastKeyboardOverrideClientID: ObjectIdentifier?
     private var lastKeyboardOverrideTime: CFAbsoluteTime = 0
-    private var applicationDeactivateObserver: Any?
 
     // Keep adapter alive for external toggle calls
     public private(set) var currentAdapter: (any HangulComposerDelegate)?
@@ -114,7 +113,7 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
         }
     }
     
-    /// Standard adapter with underlined marked text for composition display
+    /// Standard adapter with plain (no underline) marked text for composition display
     private class ClientAdapter: BaseClientAdapter {
         override func setMarkedText(_ text: String) {
             guard !text.isEmpty else {
@@ -124,11 +123,8 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
                 }
                 return
             }
-            let attributes: [NSAttributedString.Key: Any] = [
-                .underlineStyle: NSUnderlineStyle.single.rawValue,
-                .underlineColor: NSColor.textColor
-            ]
-            let attributed = NSAttributedString(string: text, attributes: attributes)
+            // No underline on composing (preedit) Hangul — show plain marked text.
+            let attributed = NSAttributedString(string: text)
             client.setMarkedText(attributed, selectionRange: NSRange(location: text.utf16.count, length: 0), replacementRange: NSRange(location: NSNotFound, length: NSNotFound))
         }
     }
@@ -198,66 +194,6 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
         return romanKeyboardLayoutCandidates.first { availableIDs.contains($0) } ?? romanKeyboardLayoutCandidates[0]
     }
 
-    private func updateApplicationDeactivateObserver(for context: ClientContext) {
-        removeApplicationDeactivateObserver()
-
-        // Host-agnostic safety net: commit any in-progress composition when the
-        // focused app loses focus. Well-behaved hosts get this for free via the
-        // IMK `deactivateServer` callback, but some apps never call it on focus
-        // loss and leave marked text stranded (historically KakaoTalk). Rather
-        // than hardcoding those bundle IDs, observe app deactivation for every
-        // session. This is safe because `forceCommitForApplicationDeactivate`
-        // is idempotent — it bails when there is no active composition, so for
-        // hosts that already committed via `deactivateServer` it does nothing.
-        guard !context.bundleId.isEmpty else {
-            return
-        }
-
-        applicationDeactivateObserver = NSWorkspace.shared.notificationCenter.addObserver(
-            forName: NSWorkspace.didDeactivateApplicationNotification,
-            object: nil,
-            queue: .main
-        ) { [weak self] notification in
-            guard let self,
-                  let app = notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication,
-                  app.bundleIdentifier == context.bundleId else {
-                return
-            }
-
-            self.forceCommitForApplicationDeactivate(bundleId: context.bundleId)
-        }
-
-        DebugLogger.log("PriTypeInputController: observing app deactivation for \(context.bundleId)")
-    }
-
-    private func removeApplicationDeactivateObserver() {
-        if let observer = applicationDeactivateObserver {
-            NSWorkspace.shared.notificationCenter.removeObserver(observer)
-            applicationDeactivateObserver = nil
-        }
-    }
-
-    private func forceCommitForApplicationDeactivate(bundleId: String) {
-        guard cachedContext?.bundleId == bundleId else {
-            removeApplicationDeactivateObserver()
-            return
-        }
-        guard composer.hasActiveComposition else {
-            removeApplicationDeactivateObserver()
-            return
-        }
-        guard let client = lastClient ?? lastKnownInputClient else {
-            DebugLogger.log("PriTypeInputController: no client for app deactivate commit (\(bundleId))")
-            removeApplicationDeactivateObserver()
-            return
-        }
-
-        let adapter = currentAdapter ?? ClientAdapter(client: client)
-        composer.forceCommit(delegate: adapter)
-        composer.localTextBuffer = ""
-        removeApplicationDeactivateObserver()
-        DebugLogger.log("PriTypeInputController: force committed composition on app deactivate (\(bundleId))")
-    }
 
     public func performPriTypeModeTransition(source: InputModeCoordinator.ToggleSource) {
         guard let client = lastClient ?? lastKnownInputClient else {
@@ -310,10 +246,8 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
 
     deinit {
         // The selector-based `.keyboardLayoutChanged` observer is auto-removed on
-        // modern macOS, but the block-based NSWorkspace deactivate observer is not,
-        // so clean both up explicitly to avoid a dangling registration.
+        // modern macOS, but remove it explicitly to be safe.
         NotificationCenter.default.removeObserver(self, name: .keyboardLayoutChanged, object: nil)
-        removeApplicationDeactivateObserver()
     }
 
     // 입력기가 활성화될 때 호출 - 새 세션 시작
@@ -336,12 +270,10 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
             let context = ClientContextDetector.analyzeForActivation(client: client)
             self.cachedContext = context
             currentAdapter = makeAdapter(for: client, context: context)
-            updateApplicationDeactivateObserver(for: context)
             DebugLogger.log("Activated for client: \(self.cachedContext?.bundleId ?? "unknown") (Lightweight Context)")
         } else {
             // Fallback if sender is not IMKTextInput (rare)
             self.cachedContext = nil
-            removeApplicationDeactivateObserver()
         }
         
         // Set as active controller for toggle access
@@ -382,7 +314,6 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
         lastClient = nil
         // Keep cachedContext alive — activateServer() will replace it with the new client's context.
         // Clearing it here causes unnecessary slow path if handle() arrives before activateServer().
-        removeApplicationDeactivateObserver()
         NotificationCenter.default.removeObserver(self, name: .keyboardLayoutChanged, object: nil)
     }
     
@@ -462,7 +393,6 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
             DebugLogger.log("cachedContext miss: client changed or nil, analyzing (Slow Path)")
             context = ClientContextDetector.analyze(client: client)
             self.cachedContext = context
-            updateApplicationDeactivateObserver(for: context)
             // Do not update self.lastClient here. It must be updated alongside currentAdapter
             // below to ensure the adapter is correctly recreated when the client changes.
         }
