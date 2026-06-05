@@ -110,11 +110,20 @@ struct SettingsView: View {
     // be replaced on repeated taps and invalidated when the view disappears.
     @State private var accessibilityPollTimer: Timer?
 
+    // Disable-default-English (ABC) action state (restored 2.6.5 feature)
+    @State private var removeABCStatus: RemoveABCStatus = .idle
+
     private enum UpdateStatus: Equatable {
         case idle
         case checking
         case upToDate
         case available(String)  // version string
+        case error
+    }
+
+    private enum RemoveABCStatus: Equatable {
+        case idle
+        case success
         case error
     }
 
@@ -355,6 +364,54 @@ struct SettingsView: View {
                     }
                     .padding(.vertical, 10)
                     .padding(.horizontal, 12)
+
+                    Divider()
+                        .opacity(0.15)
+                        .padding(.horizontal, 12)
+
+                    // Disable default English (ABC) input source — restored 2.6.5 feature.
+                    HStack(alignment: .top, spacing: 10) {
+                        SettingsRowIcon(systemName: "minus.square")
+
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(L10n.system.removeABC)
+                                .font(.system(size: 14, weight: .regular))
+                                .foregroundStyle(.primary)
+
+                            Text(L10n.system.removeABCSubtitle)
+                                .font(.system(size: 11, weight: .regular))
+                                .foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .layoutPriority(1)
+
+                        Spacer()
+
+                        switch removeABCStatus {
+                        case .success:
+                            StatusPill(
+                                title: L10n.system.removeABCSuccess,
+                                systemImage: "checkmark.circle.fill",
+                                color: .green
+                            )
+                        case .error:
+                            StatusPill(
+                                title: L10n.system.removeABCFailed,
+                                systemImage: "exclamationmark.triangle.fill",
+                                color: .orange
+                            )
+                        case .idle:
+                            Button(action: { removeABCKeyboard() }) {
+                                Text(L10n.system.removeABCButton)
+                                    .font(.system(size: 12, weight: .medium))
+                            }
+                            .buttonStyle(.bordered)
+                            .buttonBorderShape(.roundedRectangle(radius: 7))
+                            .controlSize(.small)
+                        }
+                    }
+                    .padding(.vertical, 10)
+                    .padding(.horizontal, 12)
                 }
             }
         }
@@ -521,6 +578,42 @@ struct SettingsView: View {
 
     private func checkAccessibility() {
         isAccessibilityGranted = AXIsProcessTrusted()
+    }
+
+    /// Disable the default English (ABC) keyboard input source so PriType alone
+    /// handles 한/영. Restored from v2.6.5 (removed in the 2.7 line). Reversible:
+    /// the user can re-add ABC in System Settings (needed for the login screen).
+    private func removeABCKeyboard() {
+        guard let defaults = UserDefaults(suiteName: "com.apple.HIToolbox"),
+              var sources = defaults.array(forKey: "AppleEnabledInputSources") as? [[String: Any]] else {
+            withAnimation { removeABCStatus = .error }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                withAnimation { self.removeABCStatus = .idle }
+            }
+            return
+        }
+
+        let originalCount = sources.count
+        sources.removeAll { source in
+            (source["KeyboardLayout Name"] as? String) == "ABC"
+        }
+
+        if sources.count < originalCount {
+            defaults.set(sources, forKey: "AppleEnabledInputSources")
+            _ = CFPreferencesAppSynchronize("com.apple.HIToolbox" as CFString)
+
+            // Restart TextInputMenuAgent so the menu-bar input-source list refreshes now.
+            let task = Process()
+            task.executableURL = URL(fileURLWithPath: "/usr/bin/killall")
+            task.arguments = ["TextInputMenuAgent"]
+            try? task.run()
+        }
+
+        // Treat "already absent" as success too — the end state is what matters.
+        withAnimation { removeABCStatus = .success }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+            withAnimation { self.removeABCStatus = .idle }
+        }
     }
 
     private func requestAccessibility() {

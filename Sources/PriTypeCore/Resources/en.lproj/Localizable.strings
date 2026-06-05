@@ -65,3 +65,8 @@
 "system.accessibilityGranted" = "Granted";
 "system.accessibilityRequest" = "Request Permission";
 "system.accessibilitySubtitle" = "Required for detecting shortcut keys such as Right Command and Right Option.";
+"system.removeABC" = "Disable default English (ABC)";
+"system.removeABCSubtitle" = "Turns off the ABC input source so PriType alone handles 한/영. Re-add it in System Settings if you need English at the login screen.";
+"system.removeABCButton" = "Disable";
+"system.removeABCSuccess" = "Disabled";
+"system.removeABCFailed" = "Failed";

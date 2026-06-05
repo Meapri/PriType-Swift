@@ -65,3 +65,8 @@
 "system.accessibilityGranted" = "허용됨";
 "system.accessibilityRequest" = "권한 요청";
 "system.accessibilitySubtitle" = "우측 Command·Option 같은 전환키와 한자키 감지에 필요합니다.";
+"system.removeABC" = "기본 영어 입력기(ABC) 비활성화";
+"system.removeABCSubtitle" = "PriType만으로 한/영을 쓸 때 ABC 입력 소스를 끕니다. 로그인 화면 영어가 필요하면 시스템 설정에서 다시 추가하세요.";
+"system.removeABCButton" = "비활성화";
+"system.removeABCSuccess" = "비활성화 완료";
+"system.removeABCFailed" = "비활성화 실패";
