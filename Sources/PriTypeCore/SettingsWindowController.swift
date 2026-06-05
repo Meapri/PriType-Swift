@@ -113,6 +113,9 @@ struct SettingsView: View {
     // Disable-default-English (ABC) action state (restored 2.6.5 feature)
     @State private var removeABCStatus: RemoveABCStatus = .idle
 
+    // Experimental Windows-style direct insertion (Phase 3). Default OFF.
+    @State private var experimentalDirectInsertion = false
+
     private enum UpdateStatus: Equatable {
         case idle
         case checking
@@ -155,6 +158,7 @@ struct SettingsView: View {
             toggleKeyBinding = ConfigurationManager.shared.toggleKeyBinding
             hanjaKeyBinding = ConfigurationManager.shared.hanjaKeyBinding
             autoUpdateCheckEnabled = ConfigurationManager.shared.autoUpdateCheckEnabled
+            experimentalDirectInsertion = ConfigurationManager.shared.experimentalDirectInsertion
             refreshCapsLockSwitchState()
             checkAccessibility()
         }
@@ -413,6 +417,33 @@ struct SettingsView: View {
                     .padding(.vertical, 10)
                     .padding(.horizontal, 12)
                 }
+            }
+
+            SettingsSection(
+                title: "실험적 기능",
+                icon: "flask"
+            ) {
+                VStack(alignment: .leading, spacing: 0) {
+                    Toggle(isOn: $experimentalDirectInsertion) {
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text("윈도우식 직접 입력 (실험)")
+                                .font(.system(size: 14, weight: .regular))
+                                .foregroundStyle(.primary)
+
+                            Text("조합 중인 글자를 밑줄 없는 실제 텍스트로 입력합니다. 네이티브 앱(카카오톡·메모 등)에 적용되며, 웹/Electron 앱(브라우저·VS Code·Slack 등)과 터미널은 텍스트 위치를 정확히 알 수 없어 자동으로 기존 방식으로 안전하게 동작합니다. 변경 후 입력 소스를 다시 선택하세요.")
+                                .font(.system(size: 11, weight: .regular))
+                                .foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .layoutPriority(1)
+                    }
+                    .toggleStyle(.switch)
+                    .padding(.vertical, 10)
+                    .padding(.horizontal, 12)
+                }
+            }
+            .onChange(of: experimentalDirectInsertion) { _, newValue in
+                ConfigurationManager.shared.experimentalDirectInsertion = newValue
             }
         }
     }

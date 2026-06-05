@@ -35,45 +35,64 @@ public final class StatusBarManager: NSObject, StatusBarUpdating, @unchecked Sen
     @MainActor
     public func setup() {
         guard statusItem == nil else { return }
-        
-        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+
+        // variableLength hugs the glyph like the system input-source indicator.
+        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         statusItem?.autosaveName = "PriTypeInputModeIndicator"
         statusItem?.isVisible = true
-        
+
         if let button = statusItem?.button {
-            let font = NSFont(name: "AppleSDGothicNeo-Medium", size: 14) ?? NSFont.systemFont(ofSize: 14)
-            let attributes: [NSAttributedString.Key: Any] = [
-                .font: font,
-                .baselineOffset: -1
-            ]
-            button.attributedTitle = NSAttributedString(string: "가", attributes: attributes)
-            button.imagePosition = .noImage
+            applyMode(lastMode ?? .korean, to: button)
         }
-        
+
         setupMenu()
         DebugLogger.log("StatusBarManager: Created status item with menu")
     }
-    
+
+    /// Render the menu-bar indicator natively: a PLAIN title (so the system applies
+    /// menu-bar vibrancy — white on a dark bar, and an inverted highlight while the menu
+    /// is open) in the system font. The Korean label is "한", matching macOS's own 2-Set
+    /// Korean indicator; English mirrors ABC's "A".
+    private func applyMode(_ mode: InputMode, to button: NSStatusBarButton) {
+        let isKorean = (mode == .korean)
+        button.image = nil
+        button.imagePosition = .noImage
+        button.font = NSFont.systemFont(ofSize: 15, weight: .regular)
+        button.title = isKorean ? "한" : "A"
+        button.toolTip = isKorean ? "한국어" : "English"
+        button.setAccessibilityLabel(isKorean ? "한국어 입력" : "영문 입력")
+    }
+
+    @MainActor
+    private func menuImage(_ symbol: String) -> NSImage? {
+        let image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)
+        image?.isTemplate = true   // tint to the native menu text color (light/dark/highlight)
+        return image
+    }
+
     @MainActor
     private func setupMenu() {
         let menu = NSMenu()
-        
+
         let settingsItem = NSMenuItem(title: L10n.settings.title + "...", action: #selector(openSettings), keyEquivalent: ",")
         settingsItem.target = self
+        settingsItem.image = menuImage("gearshape")
         menu.addItem(settingsItem)
-        
+
         menu.addItem(NSMenuItem.separator())
-        
+
         let aboutItem = NSMenuItem(title: L10n.about.title, action: #selector(showAbout), keyEquivalent: "")
         aboutItem.target = self
+        aboutItem.image = menuImage("info.circle")
         menu.addItem(aboutItem)
-        
+
         menu.addItem(NSMenuItem.separator())
-        
+
         let quitItem = NSMenuItem(title: L10n.app.quit, action: #selector(quitApp), keyEquivalent: "q")
         quitItem.target = self
+        quitItem.image = menuImage("power")
         menu.addItem(quitItem)
-        
+
         statusItem?.menu = menu
     }
     
@@ -101,37 +120,18 @@ public final class StatusBarManager: NSObject, StatusBarUpdating, @unchecked Sen
     
     // MARK: - Mode Update with Animation
     
-    /// Update the status bar to show current mode with subtle animation feedback
+    /// Update the menu-bar indicator to the current mode. The swap is instant, matching
+    /// the system input-source indicator (no fade), and uses the native plain-title
+    /// rendering set up in `applyMode`.
     public func setMode(_ mode: InputMode) {
         guard lastMode != mode else { return }
         lastMode = mode
-        
+
         let modeValue = mode
-        
+
         DispatchQueue.main.async { [weak self] in
-            guard let button = self?.statusItem?.button else { return }
-            
-            let isKorean = (modeValue == .korean)
-            let text = isKorean ? "가" : "A"
-            let font = NSFont(name: "AppleSDGothicNeo-Medium", size: 14) ?? NSFont.systemFont(ofSize: 14)
-            let attributes: [NSAttributedString.Key: Any] = [
-                .font: font,
-                .baselineOffset: CGFloat(-1)
-            ]
-            
-            // Subtle fade animation for mode change feedback
-            NSAnimationContext.runAnimationGroup { context in
-                context.duration = 0.08
-                button.animator().alphaValue = 0.4
-            }
-
-            button.attributedTitle = NSAttributedString(string: text, attributes: attributes)
-
-            NSAnimationContext.runAnimationGroup { context in
-                context.duration = 0.08
-                button.animator().alphaValue = 1.0
-            }
-            
+            guard let self, let button = self.statusItem?.button else { return }
+            self.applyMode(modeValue, to: button)
             DebugLogger.log("StatusBarManager: Mode set to \(modeValue)")
         }
     }

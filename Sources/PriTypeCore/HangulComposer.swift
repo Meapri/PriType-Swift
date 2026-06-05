@@ -455,15 +455,23 @@ public class HangulComposer: @unchecked Sendable {
     private func updateComposition(delegate: HangulComposerDelegate) {
         let preedit = context.getPreeditString()
         let commit = context.getCommitString()
-        
-        // If there is committed text, insert it first
+
+        // ORDERING INVARIANT (load-bearing — do not reorder):
+        // commit (insertText) MUST happen BEFORE the preedit update (setMarkedText).
+        // This is the macOS equivalent of the Windows Korean IME model — only the
+        // single in-progress syllable is ever "marked", and the previous syllable is
+        // committed the instant libhangul emits it on a syllable boundary. Reordering
+        // (mark-before-commit) reintroduces stale-cursor preedit (cf. kitty #4219) and
+        // breaks the experimental DirectInsertionAdapter, which relies on insertText
+        // arriving first to finalize the live preedit before the new one is rendered.
+        // See Docs/KoreanWindowsInputFeasibility.md (Phase 0/1).
         if !commit.isEmpty {
             let finalStr = CompositionHelpers.convertAndNormalize(commit)
             delegate.insertText(finalStr)
             appendToBuffer(finalStr)
         }
-        
-        // Update preedit text
+
+        // Update preedit text (the single live syllable).
         if !preedit.isEmpty {
             let preeditStr = CompositionHelpers.normalizeJamoForDisplay(preedit)
             delegate.setMarkedText(preeditStr)

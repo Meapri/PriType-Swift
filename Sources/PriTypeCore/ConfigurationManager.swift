@@ -247,6 +247,16 @@ public protocol ConfigurationProviding: AnyObject, Sendable {
     /// Whether the system double-space period feature is enabled.
     var doubleSpacePeriodEnabled: Bool { get }
 
+    /// Experimental: deliver the in-progress syllable as REAL text (Windows-style
+    /// direct insertion) instead of marked text, on probe-verified allowlisted hosts.
+    /// Default OFF. See Docs/KoreanWindowsInputFeasibility.md (Phase 3).
+    var experimentalDirectInsertion: Bool { get }
+}
+
+public extension ConfigurationProviding {
+    /// Default: experimental direct insertion disabled. Conformers (e.g. test mocks)
+    /// inherit this unless they override it; only `ConfigurationManager` reads the flag.
+    var experimentalDirectInsertion: Bool { false }
 }
 
 // MARK: - ConfigurationManager
@@ -298,6 +308,7 @@ public final class ConfigurationManager: ConfigurationProviding, @unchecked Send
         static let hanjaKeyBinding = "com.pritype.hanjaKeyBinding"
         static let lastUpdateCheck = "com.pritype.lastUpdateCheck"
         static let autoUpdateCheck = "com.pritype.autoUpdateCheck"
+        static let experimentalDirectInsertion = "com.pritype.experimentalDirectInsertion"
     }
     
     // MARK: - Keyboard Layout
@@ -466,6 +477,16 @@ public final class ConfigurationManager: ConfigurationProviding, @unchecked Send
         defaults.object(forKey: "NSAutomaticPeriodSubstitutionEnabled") == nil
             ? true
             : defaults.bool(forKey: "NSAutomaticPeriodSubstitutionEnabled")
+    }
+
+    /// Experimental Windows-style direct insertion (Phase 3). Default OFF.
+    /// When ON, the in-progress syllable is delivered as REAL text on allowlisted,
+    /// probe-verified native AppKit hosts instead of marked text. This is a research
+    /// vehicle — see Docs/KoreanWindowsInputFeasibility.md. Enable via Settings or:
+    ///   defaults write com.pritype.inputmethod.v2 com.pritype.experimentalDirectInsertion -bool YES
+    public var experimentalDirectInsertion: Bool {
+        get { defaults.bool(forKey: Keys.experimentalDirectInsertion) }
+        set { defaults.set(newValue, forKey: Keys.experimentalDirectInsertion) }
     }
 
     // MARK: - Update Settings

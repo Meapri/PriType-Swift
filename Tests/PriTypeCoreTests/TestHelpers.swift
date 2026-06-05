@@ -30,6 +30,9 @@ final class MockComposerDelegate: HangulComposerDelegate {
     var insertedTexts: [String] = []
     var markedText: String = ""
     var fullText: String = ""
+    /// Ordered log of delegate calls across insertText/setMarkedText, e.g.
+    /// ["insert:아", "mark:나"]. Used to assert the commit-before-mark invariant.
+    var orderedCalls: [String] = []
     var backspaceCompositionUpdateDepth = 0
     var backspaceCompositionUpdateCallCount = 0
     var markedTextDuringBackspaceUpdates: [String] = []
@@ -38,11 +41,13 @@ final class MockComposerDelegate: HangulComposerDelegate {
     
     func insertText(_ text: String) {
         insertedTexts.append(text)
+        orderedCalls.append("insert:\(text)")
         markedText = ""
         fullText.append(text)
     }
 
     func setMarkedText(_ text: String) {
+        orderedCalls.append("mark:\(text)")
         markedText = text
         if backspaceCompositionUpdateDepth > 0 {
             markedTextDuringBackspaceUpdates.append(text)
@@ -86,6 +91,7 @@ final class MockComposerDelegate: HangulComposerDelegate {
         insertedTexts = []
         markedText = ""
         fullText = ""
+        orderedCalls = []
         backspaceCompositionUpdateDepth = 0
         backspaceCompositionUpdateCallCount = 0
         markedTextDuringBackspaceUpdates = []

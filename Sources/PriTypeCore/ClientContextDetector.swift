@@ -68,16 +68,24 @@ public struct ClientContext: Sendable {
     /// Whether this context intentionally skipped client IPC for activation speed.
     public let isLightweight: Bool
 
+    /// Whether the client reports a usable selection range (proxy for legacy
+    /// Carbon `TSMDocumentAccess` support). When false, `insertText`'s
+    /// `replacementRange` is unreliable — direct insertion would corrupt text, so
+    /// the experimental direct-insertion path is denied. Probed once at activation.
+    public let documentAccessSafe: Bool
+
     public init(
         bundleId: String,
         hasTextInputCapability: Bool,
         isLikelyDesktopArea: Bool,
-        isLightweight: Bool = false
+        isLightweight: Bool = false,
+        documentAccessSafe: Bool = false
     ) {
         self.bundleId = bundleId
         self.hasTextInputCapability = hasTextInputCapability
         self.isLikelyDesktopArea = isLikelyDesktopArea
         self.isLightweight = isLightweight
+        self.documentAccessSafe = documentAccessSafe
     }
     
     // MARK: - Derived Properties
@@ -101,8 +109,48 @@ public struct ClientContext: Sendable {
 public enum ClientCompatibilityPolicy {
     private static let goodNotesBundleId = "com.goodnotesapp.x"
 
+    /// Apps where experimental direct insertion is known to be IMPOSSIBLE, not just
+    /// risky: Electron/Chromium and browser web-content fields report `selectedRange`
+    /// and `attributedSubstring` asynchronously / inaccurately, so the in-place
+    /// rewrite cannot verify or target the live region — it desyncs the composition.
+    /// (Confirmed in on-device logs: every keystroke tripped the caret-stability guard
+    /// in Claude Desktop / Electron.) These keep the canonical marked-text path, which
+    /// works fine there. This is graceful degradation, not a feature gate — direct
+    /// insertion still runs in every NATIVE app (e.g. KakaoTalk, Notes). See
+    /// Docs/KoreanWindowsInputFeasibility.md §2.
+    private static let directInsertionDenylist: Set<String> = [
+        "com.anthropic.claudefordesktop",
+        "com.openai.codex",
+        "com.microsoft.VSCode",
+        "com.microsoft.VSCodeInsiders",
+        "com.todesktop.230313mzl4w4u92",   // Cursor
+        "com.tinyspeck.slackmacgap",
+        "com.hnc.Discord",
+        "notion.id",
+        "com.figma.Desktop",
+        "com.google.Chrome",
+        "com.google.Chrome.canary",
+        "com.brave.Browser",
+        "com.microsoft.edgemac",
+        "company.thebrowser.Browser",        // Arc
+        "org.mozilla.firefox",
+        "com.apple.Safari",
+        "com.apple.SafariTechnologyPreview"
+    ]
+
     public static func needsDirectNewlineAfterReturnCommit(bundleId: String) -> Bool {
         bundleId == goodNotesBundleId
+    }
+
+    /// Whether direct insertion must be denied for `bundleId` because the host cannot
+    /// reliably support in-place real-text rewrites (Electron/Chromium/browsers).
+    /// Explicit list + a keyword heuristic for unlisted Electron/Chromium wrappers.
+    public static func directInsertionDenied(bundleId: String) -> Bool {
+        if directInsertionDenylist.contains(bundleId) { return true }
+        let lower = bundleId.lowercased()
+        return lower.contains("electron")
+            || lower.contains("chrome")
+            || lower.contains("chromium")
     }
 }
 
@@ -121,6 +169,21 @@ public enum ClientCompatibilityPolicy {
 /// }
 /// ```
 public struct ClientContextDetector: Sendable {
+    /// Probe for legacy Carbon `TSMDocumentAccess` support. A client that returns a
+    /// sane selection range honors `insertText(replacementRange:)`; NSNotFound
+    /// (terminals/secure/launchers) or absurd values (Chromium garbage) mean the
+    /// replacementRange is ignored, so direct insertion would corrupt text.
+    /// One IPC call — done once per activation, never on the keystroke hot path.
+    ///
+    /// Gated on the experimental flag: when direct insertion is OFF (the default,
+    /// shipping configuration) this returns false WITHOUT any IPC, so the marked-text
+    /// path pays zero extra cost for a feature it never uses.
+    static func probeDocumentAccessSafe(_ client: IMKTextInput) -> Bool {
+        guard ConfigurationManager.shared.experimentalDirectInsertion else { return false }
+        let sel = client.selectedRange()
+        return sel.location != NSNotFound && sel.location < 10_000_000
+    }
+
     public static func analyzeForActivation(client: IMKTextInput) -> ClientContext {
         let frontmostApp = NSWorkspace.shared.frontmostApplication
         var bundleId = frontmostApp?.bundleIdentifier ?? ""
@@ -133,7 +196,8 @@ public struct ClientContextDetector: Sendable {
             bundleId: bundleId,
             hasTextInputCapability: !isFinder,
             isLikelyDesktopArea: isFinder,
-            isLightweight: true
+            isLightweight: true,
+            documentAccessSafe: probeDocumentAccessSafe(client)
         )
     }
 
@@ -178,7 +242,8 @@ public struct ClientContextDetector: Sendable {
         return ClientContext(
             bundleId: bundleId,
             hasTextInputCapability: hasTextInputCapability,
-            isLikelyDesktopArea: isLikelyDesktopArea
+            isLikelyDesktopArea: isLikelyDesktopArea,
+            documentAccessSafe: probeDocumentAccessSafe(client)
         )
     }
 }

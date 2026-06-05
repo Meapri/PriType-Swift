@@ -276,30 +276,52 @@ public final class HanjaCandidateWindow: @unchecked Sendable {
     @MainActor
     private func positionWindow(near cursorRect: NSRect) {
         guard let window = window else { return }
-        
-        // Find the screen containing the cursor position (supports multi-monitor)
-        let cursorPoint = NSPoint(x: cursorRect.origin.x, y: cursorRect.origin.y)
-        let screen = NSScreen.screens.first { $0.frame.contains(cursorPoint) } ?? NSScreen.main
-        guard let activeScreen = screen else { return }
-        
+
+        // Gap (points) between the caret glyph and the candidate window edge.
+        let gap: CGFloat = 2
         let windowSize = window.frame.size
-        var origin = NSPoint(
-            x: cursorRect.origin.x,
-            y: cursorRect.origin.y - windowSize.height - 4
-        )
-        
-        // Ensure window stays on screen
-        let screenFrame = activeScreen.visibleFrame
+
+        // Anchor on the caret glyph's bottom-left (screen coords, bottom-left origin).
+        // Pick the screen that actually contains the caret so multi-monitor placement is
+        // exact; clamp to its visibleFrame (excludes menu bar / Dock).
+        let anchor = NSPoint(x: cursorRect.minX, y: cursorRect.minY)
+        let activeScreen = NSScreen.screens.first { $0.frame.contains(anchor) }
+            ?? NSScreen.main
+        guard let screenFrame = activeScreen?.visibleFrame else {
+            window.setFrameOrigin(NSPoint(x: cursorRect.minX, y: cursorRect.minY - windowSize.height - gap))
+            return
+        }
+
+        // Default: snug directly beneath the caret glyph, left edge aligned to the caret.
+        var origin = NSPoint(x: cursorRect.minX, y: cursorRect.minY - windowSize.height - gap)
+
+        // No room below → flip to just above the caret glyph.
+        if origin.y < screenFrame.minY {
+            origin.y = cursorRect.maxY + gap
+        }
+        // Clamp so the window never spills off the top edge either.
+        if origin.y + windowSize.height > screenFrame.maxY {
+            origin.y = screenFrame.maxY - windowSize.height
+        }
+        if origin.y < screenFrame.minY {
+            origin.y = screenFrame.minY
+        }
+        // Horizontal clamp.
         if origin.x + windowSize.width > screenFrame.maxX {
             origin.x = screenFrame.maxX - windowSize.width
         }
         if origin.x < screenFrame.minX {
             origin.x = screenFrame.minX
         }
-        if origin.y < screenFrame.minY {
-            origin.y = cursorRect.maxY + 4
+
+        // Snap to whole DEVICE pixels so the panel and its text render crisply
+        // (sub-pixel origins blur the glass/text on Retina).
+        let scale = activeScreen?.backingScaleFactor ?? 1
+        if scale > 0 {
+            origin.x = (origin.x * scale).rounded() / scale
+            origin.y = (origin.y * scale).rounded() / scale
         }
-        
+
         window.setFrameOrigin(origin)
     }
 }

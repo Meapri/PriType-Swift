@@ -56,6 +56,11 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
 
     // Keep adapter alive for external toggle calls
     public private(set) var currentAdapter: (any HangulComposerDelegate)?
+
+    // Duplicate-keyDown suppression (some hosts, e.g. KakaoTalk, deliver the same
+    // physical keyDown twice). Only acted on in experimental direct-insertion mode.
+    private var lastKeyDown: KeyDownSnapshot?
+    private var lastHandleReturn = false
     
     // MARK: - Adapter Classes
     
@@ -128,24 +133,214 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
         // Inherits no-op setMarkedText from base class
     }
 
+    /// EXPERIMENTAL (Phase 3): Windows-style direct insertion. There is no marked
+    /// text — the in-progress syllable is written as REAL text and rewritten in place
+    /// each keystroke. This isolates all direct-insertion state here so `HangulComposer`
+    /// stays unchanged: the composer keeps calling `insertText`/`setMarkedText` and this
+    /// adapter reinterprets them as in-place real-text rewrites.
+    ///
+    /// Selected only when `experimentalDirectInsertion` is ON, the host is on the
+    /// `directInsertionAllowed` allowlist, AND the activation probe found
+    /// `documentAccessSafe`. OFF by default. See Docs/KoreanWindowsInputFeasibility.md.
+    private final class DirectInsertionAdapter: BaseClientAdapter {
+        /// UTF-16 length of the live (in-progress) syllable currently sitting in the
+        /// document as real text. 0 when there is no live preedit.
+        private var livePreeditLength: Int = 0
+        /// The exact string we last wrote as the live preedit. Used to VERIFY the live
+        /// region is still where we think before deleting it (caret-stability guard).
+        private var livePreeditText: String = ""
+        /// Caret position we expect (UTF-16 offset) right after our last edit. When the
+        /// host reports the SAME caret on the next keystroke, the live region is provably
+        /// intact and we can SKIP the expensive attributedSubstring read-back (perf).
+        private var expectedCaret: Int = NSNotFound
+        /// Once the client proves it lacks reliable document access mid-composition,
+        /// degrade to marked text for the rest of the session rather than strand text.
+        private var fellBackToMarked = false
+
+        /// Clear live-preedit tracking. Called by the controller whenever composition
+        /// ends out-of-band (focus loss, mouse-click commit, secure passthrough). Also
+        /// re-arms direct insertion: a clean finalize lets a host that momentarily
+        /// returned a bad selectionRange try direct insertion again.
+        func resetPreeditTracking() {
+            livePreeditLength = 0
+            livePreeditText = ""
+            expectedCaret = NSNotFound
+            fellBackToMarked = false
+        }
+
+        private func renderMarkedFallback(_ text: String) {
+            let attributed = NSAttributedString(string: text, attributes: [.underlineStyle: 0])
+            client.setMarkedText(
+                attributed,
+                selectionRange: NSRange(location: text.utf16.count, length: 0),
+                replacementRange: NSRange(location: NSNotFound, length: NSNotFound)
+            )
+        }
+
+        /// Replace the live-preedit region (if any) with `text` as REAL text.
+        /// `keepingLive` = true means `text` is the new live preedit; false means it is
+        /// a finalized commit that becomes permanent (tracked length resets to 0).
+        private func rewriteLivePreedit(with text: String, keepingLive: Bool) {
+            if fellBackToMarked {
+                renderMarkedFallback(text)
+                return
+            }
+
+            let tStart = CFAbsoluteTimeGetCurrent()
+            let caret = client.selectedRange().location
+            let tAfterSel = CFAbsoluteTimeGetCurrent()
+            var readbackMs = 0.0
+
+            // CARET-STABILITY GUARD — prevents the direct-insertion corruption class.
+            // The live preedit is REAL text the user can click or arrow away from, and
+            // because there is no marked range IMK does NOT notify us when the caret moves.
+            //
+            // FAST PATH: if the host reports the caret exactly where our last edit left it
+            // (`caret == expectedCaret`), the live region is provably intact — skip the
+            // expensive attributedSubstring read-back (one synchronous IPC per keystroke,
+            // a real latency source in some native hosts). Only when the caret differs do
+            // we pay for the read-back to verify before deleting; on any mismatch we
+            // abandon tracking and insert fresh — never deleting text we cannot verify.
+            if livePreeditLength > 0 && caret != expectedCaret {
+                let tReadStart = CFAbsoluteTimeGetCurrent()
+                let actual: String?
+                if caret != NSNotFound, caret >= livePreeditLength,
+                   caret < DirectInsertionPlanner.maxReasonableLocation {
+                    let region = NSRange(location: caret - livePreeditLength, length: livePreeditLength)
+                    actual = client.attributedSubstring(from: region)?.string
+                } else {
+                    actual = nil
+                }
+                readbackMs = (CFAbsoluteTimeGetCurrent() - tReadStart) * 1000
+                let verified = DirectInsertionPlanner.liveRegionIsVerified(
+                    caret: caret,
+                    livePreeditLength: livePreeditLength,
+                    actualSubstring: actual,
+                    expectedText: livePreeditText
+                )
+                if !verified {
+                    livePreeditLength = 0
+                    livePreeditText = ""
+                    DebugLogger.log("DirectInsertionAdapter: caret moved (\(caret) != expected \(expectedCaret)), abandoning stale preedit tracking")
+                }
+            }
+
+            let plan = DirectInsertionPlanner.plan(
+                cursorLocation: caret,
+                livePreeditLength: livePreeditLength,
+                textUTF16Count: text.utf16.count,
+                keepingLive: keepingLive
+            )
+            if plan.bailed {
+                // Document access unreliable: degrade to marked text to avoid stranding
+                // a half-jamo. (Should be rare — probe + denylist gate this.)
+                fellBackToMarked = true
+                livePreeditLength = 0
+                livePreeditText = ""
+                expectedCaret = NSNotFound
+                renderMarkedFallback(text)
+                DebugLogger.log("DirectInsertionAdapter: invalid selectedRange, falling back to marked text")
+                return
+            }
+
+            let tBeforeInsert = CFAbsoluteTimeGetCurrent()
+            client.insertText(text, replacementRange: plan.replaceRange)
+            let tEnd = CFAbsoluteTimeGetCurrent()
+
+            livePreeditLength = plan.newLivePreeditLength
+            livePreeditText = keepingLive ? text : ""
+            expectedCaret = plan.replaceRange.location + text.utf16.count
+
+            // Instrumentation: surface a slow rewrite with a per-IPC breakdown so latency
+            // ("렉") can be pinpointed. Only logs the slow ones to avoid spam.
+            let totalMs = (tEnd - tStart) * 1000
+            if totalMs > 8 {
+                DebugLogger.log(String(
+                    format: "DirectInsert SLOW total=%.1fms selRange=%.1fms readback=%.1fms insert=%.1fms len=%d",
+                    totalMs, (tAfterSel - tStart) * 1000, readbackMs, (tEnd - tBeforeInsert) * 1000, livePreeditLength))
+            }
+        }
+
+        override func insertText(_ text: String) {
+            if fellBackToMarked {
+                super.insertText(text)   // base: NSNotFound auto-replaces marked text
+                return
+            }
+            guard !text.isEmpty else { return }
+            // A finalized insert replaces the live preedit (if any) and becomes permanent.
+            // This is also why a hard commit cannot double-insert: committing the live
+            // syllable rewrites the same region it already occupies.
+            rewriteLivePreedit(with: text, keepingLive: false)
+        }
+
+        override func setMarkedText(_ text: String) {
+            // No marked text in direct insertion: render the preedit as real text in place.
+            rewriteLivePreedit(with: text, keepingLive: true)
+        }
+
+        override func replaceTextBeforeCursor(length: Int, with text: String) {
+            // Committed-text edit (e.g. double-space period); no live preedit involved.
+            livePreeditLength = 0
+            super.replaceTextBeforeCursor(length: length, with: text)
+        }
+    }
+
+    private enum InputDeliveryMode {
+        case immediate          // Finder desktop: defer, no marked window
+        case directInsertion    // EXPERIMENTAL: real-text in-place rewrite
+        case markedText         // Default: canonical marked-text composition
+    }
+
     // MARK: - State Management
     
     /// Cached client context to avoid expensive IPC calls on every keystroke
     /// - Note: Calculated in `activateServer`, used in `handle`, cleared in `deactivateServer`
     private(set) var cachedContext: ClientContext?
 
-    private func makeAdapter(for client: IMKTextInput, context: ClientContext) -> any HangulComposerDelegate {
+    /// Decide how composition is delivered to this client. Default is canonical
+    /// marked text. Direct insertion (experimental) is attempted in EVERY app when the
+    /// flag is ON — there is no per-app allowlist. The only gate is the activation
+    /// probe `documentAccessSafe`: apps that cannot report a usable selection range
+    /// (e.g. terminals) physically cannot do in-place rewrites, so they keep the
+    /// marked-text path. Apps that pass the probe but misbehave at runtime degrade to
+    /// marked text via the adapter's caret-stability guard / bail path — so enabling
+    /// it everywhere never corrupts text, it just falls back where it can't work.
+    private func deliveryMode(for context: ClientContext) -> InputDeliveryMode {
         if context.shouldUseImmediateMode {
-            return ImmediateModeAdapter(client: client)
+            return .immediate
         }
-        return ClientAdapter(client: client)
+        if ConfigurationManager.shared.experimentalDirectInsertion,
+           context.documentAccessSafe,
+           !ClientCompatibilityPolicy.directInsertionDenied(bundleId: context.bundleId) {
+            return .directInsertion
+        }
+        return .markedText
+    }
+
+    private func makeAdapter(for client: IMKTextInput, context: ClientContext) -> any HangulComposerDelegate {
+        switch deliveryMode(for: context) {
+        case .immediate:
+            return ImmediateModeAdapter(client: client)
+        case .directInsertion:
+            DebugLogger.log("PriTypeInputController: DirectInsertionAdapter (experimental) for \(context.bundleId)")
+            return DirectInsertionAdapter(client: client)
+        case .markedText:
+            return ClientAdapter(client: client)
+        }
     }
 
     private func adapterMatchesContext(_ adapter: (any HangulComposerDelegate)?, context: ClientContext) -> Bool {
-        if context.shouldUseImmediateMode {
+        switch deliveryMode(for: context) {
+        case .immediate:
             return adapter is ImmediateModeAdapter
+        case .directInsertion:
+            return adapter is DirectInsertionAdapter
+        case .markedText:
+            // ClientAdapter only — DirectInsertionAdapter is a sibling BaseClientAdapter
+            // subclass, not a ClientAdapter, so this correctly forces recreation when
+            // the flag flips off mid-session.
+            return adapter is ClientAdapter
         }
-        return adapter is ClientAdapter
     }
 
     private func syncRomanKeyboardLayout(for client: IMKTextInput, force: Bool = false) {
@@ -193,7 +388,19 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
     /// separate clear) avoids the focus-loss flicker. Idempotent — no-op when there is
     /// no active composition, so the observer and deactivateServer can both call it.
     private func finalizeComposition(to client: IMKTextInput?, reason: String) {
-        guard composer.hasActiveComposition, let client else { return }
+        guard composer.hasActiveComposition else { return }
+
+        // EXPERIMENTAL direct insertion: the in-progress syllable is ALREADY real text
+        // in the document. Re-inserting it here would duplicate the character. Just end
+        // the engine's composition and clear the adapter's live-preedit tracking.
+        if let direct = currentAdapter as? DirectInsertionAdapter {
+            _ = composer.flushCommitString()   // flush engine + update buffer; do NOT insert
+            direct.resetPreeditTracking()
+            DebugLogger.log("PriTypeInputController: finalizeComposition[\(reason)] direct-insertion (already in document, no re-insert)")
+            return
+        }
+
+        guard let client else { return }
         let markedRange = client.markedRange()
         let committed = composer.flushCommitString()
         DebugLogger.log("PriTypeInputController: finalizeComposition[\(reason)] client=\(client.bundleIdentifier() ?? "?") marked=(\(markedRange.location),\(markedRange.length)) len=\(committed.count)")
@@ -421,6 +628,21 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
             return false
         }
 
+        // 0. Duplicate-keyDown suppression (direct-insertion mode only). Some hosts
+        // (observed: KakaoTalk) deliver the same physical keyDown to the IME twice. That
+        // double-processes input — notably one backspace decomposing TWO jamo, i.e. a
+        // composing syllable "deleted all at once". Drop the exact re-delivery and replay
+        // the original result. Gated to the direct adapter so the shipping marked-text
+        // path is completely untouched.
+        let keyDownSnapshot = KeyDownSnapshot(timestamp: event.timestamp, keyCode: event.keyCode, isARepeat: event.isARepeat)
+        if currentAdapter is DirectInsertionAdapter,
+           KeyEventDedup.isDuplicate(keyDownSnapshot, previous: lastKeyDown) {
+            DebugLogger.log("PriTypeInputController: dropped duplicate keyDown keyCode=\(event.keyCode) (direct mode)")
+            lastKeyDown = keyDownSnapshot
+            return lastHandleReturn
+        }
+        lastKeyDown = keyDownSnapshot
+
         // 1. Resolve context FIRST — all subsequent logic must use fresh bundleId.
         // Context is invalidated when the client object changes (app switch without activateServer).
         // When lastClient is nil (after deactivateServer), always re-analyze to avoid
@@ -445,7 +667,7 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
         #if DEBUG
         if debugHandleLogCount < 200 {
             debugHandleLogCount += 1
-            DebugLogger.log("PriTypeInputController: handle keyCode=\(event.keyCode) mode=\(composer.inputMode) chars='\(event.characters ?? "")' modifiers=\(event.modifierFlags.rawValue) bundle=\(context.bundleId) lightweight=\(context.isLightweight) immediate=\(context.shouldUseImmediateMode) clientChanged=\(lastClient !== client)")
+            DebugLogger.log("PriTypeInputController: handle keyCode=\(event.keyCode) repeat=\(event.isARepeat) mode=\(composer.inputMode) chars='\(event.characters ?? "")' modifiers=\(event.modifierFlags.rawValue) bundle=\(context.bundleId) lightweight=\(context.isLightweight) immediate=\(context.shouldUseImmediateMode) clientChanged=\(lastClient !== client)")
         }
         #endif
         
@@ -455,6 +677,10 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
         // 3. DYNAMIC CHECK: Secure Input (password fields)
         if shouldPassThroughSecureInput(client: client, context: context) {
             composer.discardCompositionForPassThrough()
+            // In direct insertion the syllable was written as real text; discarding the
+            // engine without clearing adapter tracking would leave a stale livePreedit
+            // length that the next keystroke would use to delete real text. Re-arm it.
+            (currentAdapter as? DirectInsertionAdapter)?.resetPreeditTracking()
             return false
         }
 
@@ -467,9 +693,10 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
                 syncRomanKeyboardLayout(for: client)
                 currentAdapter = makeAdapter(for: client, context: context)
             }
-            return composer.handle(event, delegate: currentAdapter!)
+            lastHandleReturn = composer.handle(event, delegate: currentAdapter!)
+            return lastHandleReturn
         }
-        
+
         // Reuse adapter from activateServer if client hasn't changed
         // This avoids ~20 heap allocations/second during fast typing
         if lastClient !== client || currentAdapter == nil || !adapterMatchesContext(currentAdapter, context: context) {
@@ -477,8 +704,9 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
             syncRomanKeyboardLayout(for: client)
             currentAdapter = makeAdapter(for: client, context: context)
         }
-        
-        return composer.handle(event, delegate: currentAdapter!)
+
+        lastHandleReturn = composer.handle(event, delegate: currentAdapter!)
+        return lastHandleReturn
     }
 
     private func shouldPassThroughSecureInput(client: IMKTextInput, context: ClientContext) -> Bool {
@@ -516,6 +744,19 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
         #if DEBUG
         assert(Thread.isMainThread, "IMK commitComposition must run on main thread")
         #endif
+
+        // EXPERIMENTAL direct insertion: the live syllable is ALREADY real text in the
+        // document. A mouse-click commit must NOT re-insert it (that would duplicate the
+        // syllable and, if the caret moved, overwrite unrelated text). End the engine's
+        // composition and clear adapter tracking instead — mirrors finalizeComposition.
+        if let direct = currentAdapter as? DirectInsertionAdapter {
+            if composer.hasActiveComposition { _ = composer.flushCommitString() }
+            direct.resetPreeditTracking()
+            composer.localTextBuffer = ""
+            super.commitComposition(sender)
+            return
+        }
+
         if let client = sender as? IMKTextInput ?? lastClient {
             let adapter = currentAdapter ?? ClientAdapter(client: client)
             composer.forceCommit(delegate: adapter)
