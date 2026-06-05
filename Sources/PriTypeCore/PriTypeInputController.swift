@@ -5,7 +5,11 @@ import Carbon.HIToolbox
 
 @objc(PriTypeInputController)
 public class PriTypeInputController: IMKInputController, @unchecked Sendable {
-    private static let priTypeInputSourceID = "com.pritype.inputmethod.v2"
+    // Two PriType input modes registered in Info.plist ComponentInputModeDict.
+    // Korean composes; English is a pure pass-through (ABC layout override).
+    // macOS Caps Lock / input-source switching moves between these two modes.
+    private static let priTypeInputSourceID = "com.pritype.inputmethod.v2"          // Korean mode (== bundle id)
+    private static let priTypeEnglishInputModeID = "com.pritype.inputmethod.v2.english"
     private static let romanKeyboardLayoutID = resolveRomanKeyboardLayoutID()
     private static let romanKeyboardLayoutCandidates = [
         "com.apple.keylayout.ABC",
@@ -267,6 +271,25 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
         commitActiveCompositionBeforeModeTransition()
         syncRomanKeyboardLayout(for: client, force: true)
         composer.setInputMode(nextMode)
+        syncSelectedInputModeForMenuBar(client: client, mode: nextMode)
+    }
+
+    /// Best-effort: tell macOS which PriType mode is active so the menu-bar input
+    /// source indicator (and Caps Lock's notion of the current mode) matches a
+    /// custom-key toggle. Cosmetic + consistency only — `composer.inputMode` is
+    /// already the authoritative composition state, so even if this is delayed or
+    /// unsupported, typing is unaffected (no first-key race). Without it, a
+    /// custom-key toggle and macOS's selected mode could drift apart.
+    private func syncSelectedInputModeForMenuBar(client: IMKTextInput, mode: InputMode) {
+        let modeID = mode == .english ? Self.priTypeEnglishInputModeID : Self.priTypeInputSourceID
+        let selector = NSSelectorFromString("selectInputMode:")
+        let object = client as AnyObject
+        guard object.responds(to: selector) else {
+            DebugLogger.log("PriTypeInputController: client does not support selectInputMode:")
+            return
+        }
+        _ = object.perform(selector, with: modeID)
+        DebugLogger.log("PriTypeInputController: selectInputMode -> \(modeID)")
     }
 
     private func commitActiveCompositionBeforeModeTransition() {
@@ -383,9 +406,18 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
                 return
             }
 
-            let isPriTypeMode = inputModeID == Self.priTypeInputSourceID
-            DebugLogger.log("PriTypeInputController: setValue inputMode='\(inputModeID)' priType=\(isPriTypeMode) current=\(composer.inputMode)")
-            guard isPriTypeMode else {
+            // Route the two PriType modes to the single composer source of truth.
+            // This is how macOS Caps Lock / input-source switching between the
+            // Korean and English modes reaches the composer — synchronously, so the
+            // next keyDown already sees the new mode (no first-key race).
+            let targetMode: InputMode?
+            switch inputModeID {
+            case Self.priTypeEnglishInputModeID: targetMode = .english
+            case Self.priTypeInputSourceID:      targetMode = .korean
+            default:                             targetMode = nil
+            }
+            DebugLogger.log("PriTypeInputController: setValue inputMode='\(inputModeID)' target=\(String(describing: targetMode)) current=\(composer.inputMode)")
+            guard let targetMode else {
                 super.setValue(value, forTag: tag, client: sender)
                 return
             }
@@ -394,9 +426,9 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
                 syncRomanKeyboardLayout(for: client, force: true)
             }
 
-            if composer.inputMode != .korean {
-                DebugLogger.log("PriTypeInputController: TIS selected PriType source -> korean")
-                composer.setInputMode(.korean)
+            if composer.inputMode != targetMode {
+                DebugLogger.log("PriTypeInputController: macOS selected PriType \(targetMode) mode")
+                composer.setInputMode(targetMode)
             }
             return
         }

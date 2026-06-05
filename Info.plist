@@ -23,7 +23,7 @@
 	<key>CFBundleShortVersionString</key>
 	<string>2.7.4</string>
 	<key>CFBundleVersion</key>
-	<string>39</string>
+	<string>40</string>
 	<key>PriTypeReleaseChannel</key>
 	<string>stable</string>
 	<key>ComponentInputModeDict</key>
@@ -37,12 +37,22 @@
 				<key>tsInputModeScriptKey</key>
 				<string>smKorean</string>
 			</dict>
+			<key>com.pritype.inputmethod.v2.english</key>
+			<dict>
+				<key>tsInputModePrimaryInScriptKey</key>
+				<true/>
+				<key>tsInputModeScriptKey</key>
+				<string>smRoman</string>
+			</dict>
 		</dict>
 		<key>tsVisibleInputModeOrderedArrayKey</key>
 		<array>
 			<string>com.pritype.inputmethod.v2</string>
+			<string>com.pritype.inputmethod.v2.english</string>
 		</array>
 	</dict>
+	<key>TICapsLockLanguageSwitchCapable</key>
+	<true/>
 	<key>InputMethodConnectionName</key>
 	<string>PriType_InputString_v2</string>
 	<key>InputMethodServerControllerClass</key>
@@ -52,6 +62,7 @@
 	<key>tsInputMethodCharacterRepertoireKey</key>
 	<array>
 		<string>Hang</string>
+		<string>Latn</string>
 	</array>
 	<key>tsInputMethodIconFileKey</key>
 	<string>icon.tiff</string>

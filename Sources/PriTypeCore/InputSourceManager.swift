@@ -29,9 +29,13 @@ public final class InputSourceManager: @unchecked Sendable {
     public static let abcKeyboardLayoutID = 252
 
     private static let priTypeBundleID = "com.pritype.inputmethod.v2"
-    private static let priTypeUnifiedInputMode = "com.pritype.inputmethod.v2"
+    private static let priTypeKoreanInputMode = "com.pritype.inputmethod.v2"
+    private static let priTypeEnglishInputMode = "com.pritype.inputmethod.v2.english"
+    // Both PriType modes are current. cleanupStaleInputSources must NOT strip the
+    // English mode (it is a real registered mode, not a stale leftover).
     private static let currentPriTypeInputModes: Set<String> = [
-        priTypeUnifiedInputMode
+        priTypeKoreanInputMode,
+        priTypeEnglishInputMode
     ]
     
     // MARK: - TIS API Methods
