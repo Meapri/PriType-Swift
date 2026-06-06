@@ -115,9 +115,20 @@ public class HangulComposer: @unchecked Sendable {
     ) {
         self.statusBar = statusBar
         self.configuration = configuration
-        self.textConvenience = TextConvenienceHandler(isDoubleSpacePeriodEnabled: {
-            configuration.doubleSpacePeriodEnabled
-        })
+        self.textConvenience = TextConvenienceHandler(
+            isDoubleSpacePeriodEnabled: {
+                configuration.doubleSpacePeriodEnabled
+            },
+            isAutoCapitalizationEnabled: {
+                configuration.autoCapitalizationEnabled
+            },
+            isSmartQuoteSubstitutionEnabled: {
+                configuration.smartQuoteSubstitutionEnabled
+            },
+            isSmartDashSubstitutionEnabled: {
+                configuration.smartDashSubstitutionEnabled
+            }
+        )
         DebugLogger.log("HangulComposer init")
     }
 
@@ -357,20 +368,23 @@ public class HangulComposer: @unchecked Sendable {
         }
         
         // English mode stays inside the PriType input source but performs no
-        // composition: every key passes through to the host app unchanged.
+        // composition. Most keys pass through to the host app unchanged.
         // - Roman characters come from the keyboard layout that the controller
         //   installs via `overrideKeyboardWithKeyboardNamed(ABC/US)`.
-        // - English text conveniences (double-space period, smart quotes, …) are
-        //   owned by macOS, mirroring the 2.7 decision. PriType does not
-        //   re-implement them.
-        // Keeping this path free of any local buffer eliminates the classic
-        // buffer-vs-cursor desync that a PriType-side English buffer invites.
+        // - Some macOS text conveniences do not fire for this internal English
+        //   mode in every host, so PriType supplies a narrow fallback for only
+        //   the transformed cases (double-space period and auto-capitalization).
+        // Keeping this path mostly pass-through avoids the classic buffer-vs-
+        // cursor desync that a PriType-side English buffer invites.
         if inputMode == .english {
             if !context.isEmpty() {
                 commitComposition(delegate: delegate)
                 delegate.setMarkedText("")
             }
             localTextBuffer = ""
+            if textConvenience.handleEnglishModeInput(event, delegate: delegate) {
+                return true
+            }
             return false
         }
         

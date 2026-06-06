@@ -22,6 +22,8 @@ cp Info.plist build_dist/Contents/
 cp -R Resources/* build_dist/Contents/Resources/ || true
 cp "AppIcon.icns" build_dist/Contents/Resources/ 2>/dev/null || true
 cp "icon.tiff" build_dist/Contents/Resources/ 2>/dev/null || true
+cp "input-ko.tiff" build_dist/Contents/Resources/ 2>/dev/null || true
+cp "input-en.tiff" build_dist/Contents/Resources/ 2>/dev/null || true
 
 # Copy Swift Package Manager resource bundle (required for Bundle.module / L10n)
 if [ -d ".build/release/PriType_PriTypeCore.bundle" ]; then

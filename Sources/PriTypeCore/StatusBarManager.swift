@@ -53,6 +53,7 @@ public final class StatusBarManager: NSObject, StatusBarUpdating, @unchecked Sen
     /// menu-bar vibrancy — white on a dark bar, and an inverted highlight while the menu
     /// is open) in the system font. The Korean label is "한", matching macOS's own 2-Set
     /// Korean indicator; English mirrors ABC's "A".
+    @MainActor
     private func applyMode(_ mode: InputMode, to button: NSStatusBarButton) {
         let isKorean = (mode == .korean)
         button.image = nil
@@ -129,7 +130,7 @@ public final class StatusBarManager: NSObject, StatusBarUpdating, @unchecked Sen
 
         let modeValue = mode
 
-        DispatchQueue.main.async { [weak self] in
+        Task { @MainActor [weak self] in
             guard let self, let button = self.statusItem?.button else { return }
             self.applyMode(modeValue, to: button)
             DebugLogger.log("StatusBarManager: Mode set to \(modeValue)")

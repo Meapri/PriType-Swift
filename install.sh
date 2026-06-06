@@ -32,7 +32,8 @@ cp "AppIcon.icns" "$RESOURCES_DIR/" 2>/dev/null || echo "No AppIcon.icns found"
 
 # Copy input source icons
 cp "icon.tiff" "$RESOURCES_DIR/" 2>/dev/null || echo "No icon.tiff found, skipping."
-cp "palette-ko.tiff" "$RESOURCES_DIR/" 2>/dev/null || echo "No palette-ko.tiff found, skipping."
+cp "input-ko.tiff" "$RESOURCES_DIR/" 2>/dev/null || echo "No input-ko.tiff found, skipping."
+cp "input-en.tiff" "$RESOURCES_DIR/" 2>/dev/null || echo "No input-en.tiff found, skipping."
 
 # Copy Swift Package Manager resource bundle (required for Bundle.module / L10n)
 if [ -d "$BUILD_DIR/PriType_PriTypeCore.bundle" ]; then

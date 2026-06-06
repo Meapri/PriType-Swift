@@ -23,6 +23,9 @@ final class MockConfiguration: ConfigurationProviding, @unchecked Sendable {
     var controlSpaceAsToggle: Bool { false }
     var capsLockInputSourceSwitchEnabled: Bool { false }
     var doubleSpacePeriodEnabled: Bool { true }
+    var autoCapitalizationEnabled: Bool { true }
+    var smartQuoteSubstitutionEnabled: Bool { true }
+    var smartDashSubstitutionEnabled: Bool { true }
 }
 
 /// Mock implementation of HangulComposerDelegate for tests
@@ -73,7 +76,7 @@ final class MockComposerDelegate: HangulComposerDelegate {
     }
     
     func textBeforeCursor(length: Int) -> String? {
-        if fullText.isEmpty { return nil }
+        if fullText.isEmpty { return "" }
         let count = fullText.count
         let start = max(0, count - length)
         let startIndex = fullText.index(fullText.startIndex, offsetBy: start)

@@ -82,4 +82,23 @@ struct RegistrationContractTests {
         let repertoire = info["tsInputMethodCharacterRepertoireKey"] as? [String]
         #expect(repertoire?.contains("Hang") == true, "must declare Hangul repertoire")
     }
+
+    @Test("Input source icons are mode-specific template images")
+    func modeIcons() throws {
+        let info = try loadInfoPlist()
+        #expect(info["TISIconIsTemplate"] as? Bool == true)
+        #expect(info["tsInputMethodIconFileKey"] as? String == "icon.tiff")
+
+        let list = modes(info)
+        let korean = list["com.pritype.inputmethod.v2"] as? [String: Any]
+        let english = list["com.pritype.inputmethod.v2.english"] as? [String: Any]
+
+        #expect(korean?["TISIconIsTemplate"] as? Bool == true)
+        #expect(korean?["tsInputModeMenuIconFileKey"] as? String == "input-ko.tiff")
+        #expect(korean?["tsInputModePaletteIconFileKey"] as? String == "input-ko.tiff")
+
+        #expect(english?["TISIconIsTemplate"] as? Bool == true)
+        #expect(english?["tsInputModeMenuIconFileKey"] as? String == "input-en.tiff")
+        #expect(english?["tsInputModePaletteIconFileKey"] as? String == "input-en.tiff")
+    }
 }

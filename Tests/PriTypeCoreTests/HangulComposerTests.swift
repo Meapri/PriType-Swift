@@ -109,38 +109,87 @@ struct HangulComposerTests {
         #expect(composer.inputMode == .korean)
     }
     
-    @Test("English mode passes through keys")
+    @Test("English mode passes through ordinary printable keys")
     func englishModePassthrough() {
         let (composer, delegate, _) = makeComposer()
         composer.setInputMode(.english)
         #expect(composer.inputMode == .english)
+        delegate.fullText = "middle"
         
         let event = TestEventFactory.keyEvent(char: "a", keyCode: 0)!
         let handled = composer.handle(event, delegate: delegate)
 
-        #expect(!handled, "English fake mode should pass printable keys through")
+        #expect(!handled, "English fake mode should pass ordinary printable keys through")
         #expect(delegate.insertedTexts.isEmpty)
         #expect(delegate.markedText.isEmpty)
     }
 
-    @Test("English mode is a pure pass-through (macOS owns double-space period)")
-    func englishModePurePassthrough() {
+    @Test("English mode applies double-space period fallback")
+    func englishModeDoubleSpacePeriodFallback() {
         let (composer, delegate, _) = makeComposer()
         composer.setInputMode(.english)
 
-        let h = TestEventFactory.keyEvent(char: "h", keyCode: 4)!
+        delegate.fullText = "h"
         let firstSpace = TestEventFactory.keyEvent(char: " ", keyCode: KeyCode.space)!
         let secondSpace = TestEventFactory.keyEvent(char: " ", keyCode: KeyCode.space)!
 
-        // PriType consumes nothing in English mode: every key flows to the host,
-        // which is responsible for any text substitution. PriType must not insert
-        // text or set marked text itself.
-        #expect(!composer.handle(h, delegate: delegate))
         #expect(!composer.handle(firstSpace, delegate: delegate))
-        #expect(!composer.handle(secondSpace, delegate: delegate))
+        delegate.fullText.append(" ")
 
-        #expect(delegate.insertedTexts.isEmpty)
+        #expect(composer.handle(secondSpace, delegate: delegate))
+        #expect(delegate.fullText == "h. ")
         #expect(delegate.markedText.isEmpty)
+    }
+
+    @Test("English mode applies auto-capitalization fallback")
+    func englishModeAutoCapitalizationFallback() {
+        let (composer, delegate, _) = makeComposer()
+        composer.setInputMode(.english)
+
+        let firstLetter = TestEventFactory.keyEvent(char: "h", keyCode: 4)!
+        #expect(composer.handle(firstLetter, delegate: delegate))
+        #expect(delegate.fullText == "H")
+
+        delegate.fullText = "Hello. "
+        let sentenceLetter = TestEventFactory.keyEvent(char: "w", keyCode: 13)!
+        #expect(composer.handle(sentenceLetter, delegate: delegate))
+        #expect(delegate.fullText == "Hello. W")
+    }
+
+    @Test("English mode leaves ordinary lowercase words pass-through")
+    func englishModeOrdinaryLowercasePassesThrough() {
+        let (composer, delegate, _) = makeComposer()
+        composer.setInputMode(.english)
+        delegate.fullText = "Hello "
+
+        let letter = TestEventFactory.keyEvent(char: "w", keyCode: 13)!
+        #expect(!composer.handle(letter, delegate: delegate))
+        #expect(delegate.insertedTexts.isEmpty)
+    }
+
+    @Test("English mode applies smart quote fallback")
+    func englishModeSmartQuoteFallback() {
+        let (composer, delegate, _) = makeComposer()
+        composer.setInputMode(.english)
+
+        let quote = TestEventFactory.keyEvent(char: "\"", keyCode: 39)!
+        #expect(composer.handle(quote, delegate: delegate))
+        #expect(delegate.fullText == "“")
+
+        delegate.fullText = "“Hello"
+        #expect(composer.handle(quote, delegate: delegate))
+        #expect(delegate.fullText == "“Hello”")
+    }
+
+    @Test("English mode applies smart dash fallback")
+    func englishModeSmartDashFallback() {
+        let (composer, delegate, _) = makeComposer()
+        composer.setInputMode(.english)
+        delegate.fullText = "-"
+
+        let hyphen = TestEventFactory.keyEvent(char: "-", keyCode: 27)!
+        #expect(composer.handle(hyphen, delegate: delegate))
+        #expect(delegate.fullText == "—")
     }
 
     @Test("English mode passes every printable key through without inserting")
@@ -148,17 +197,17 @@ struct HangulComposerTests {
         let (composer, delegate, _) = makeComposer()
         composer.setInputMode(.english)
 
-        // Letters (upper/lower), digits, punctuation, symbols, and space must all
-        // flow to the host untouched: handle() returns false and nothing is
-        // inserted or marked by PriType.
+        // Most printable keys flow to the host untouched. Lowercase letters at
+        // sentence boundaries and second spaces are covered by fallback tests.
         let cases: [(String, UInt16)] = [
-            ("a", 0), ("Z", 6), ("r", 15), ("k", 40),   // including 2-bulsik jamo keys
+            ("Z", 6), ("r", 15), ("k", 40),   // including 2-bulsik jamo keys
             ("1", 18), ("0", 29), ("!", 18), ("@", 19),
             (".", 47), (",", 43), (";", 41), ("/", 44),
             (" ", KeyCode.space)
         ]
 
         for (char, keyCode) in cases {
+            delegate.fullText = "mid"
             let event = TestEventFactory.keyEvent(char: char, keyCode: keyCode)!
             #expect(!composer.handle(event, delegate: delegate), "‘\(char)’ should pass through in English mode")
         }

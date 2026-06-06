@@ -93,7 +93,7 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
             
             let location = max(0, selRange.location - length)
             let actualLength = selRange.location - location
-            guard actualLength > 0 else { return nil }
+            guard actualLength > 0 else { return "" }
             
             let charRange = NSRange(location: location, length: actualLength)
             return client.attributedSubstring(from: charRange)?.string

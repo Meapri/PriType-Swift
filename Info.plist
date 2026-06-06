@@ -30,6 +30,12 @@
 		<dict>
 			<key>com.pritype.inputmethod.v2</key>
 			<dict>
+				<key>TISIconIsTemplate</key>
+				<true/>
+				<key>tsInputModeMenuIconFileKey</key>
+				<string>input-ko.tiff</string>
+				<key>tsInputModePaletteIconFileKey</key>
+				<string>input-ko.tiff</string>
 				<key>tsInputModePrimaryInScriptKey</key>
 				<true/>
 				<key>tsInputModeScriptKey</key>
@@ -37,6 +43,12 @@
 			</dict>
 			<key>com.pritype.inputmethod.v2.english</key>
 			<dict>
+				<key>TISIconIsTemplate</key>
+				<true/>
+				<key>tsInputModeMenuIconFileKey</key>
+				<string>input-en.tiff</string>
+				<key>tsInputModePaletteIconFileKey</key>
+				<string>input-en.tiff</string>
 				<key>tsInputModePrimaryInScriptKey</key>
 				<true/>
 				<key>tsInputModeScriptKey</key>
@@ -64,6 +76,8 @@
 		<string>Hang</string>
 		<string>Latn</string>
 	</array>
+	<key>TISIconIsTemplate</key>
+	<true/>
 	<key>tsInputMethodIconFileKey</key>
 	<string>icon.tiff</string>
 </dict>

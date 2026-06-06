@@ -374,7 +374,7 @@ struct SettingsView: View {
                         .padding(.horizontal, 12)
 
                     // Disable default English (ABC) input source — restored 2.6.5 feature.
-                    HStack(alignment: .top, spacing: 10) {
+                    HStack(alignment: .center, spacing: 10) {
                         SettingsRowIcon(systemName: "minus.square")
 
                         VStack(alignment: .leading, spacing: 3) {
@@ -408,10 +408,13 @@ struct SettingsView: View {
                             Button(action: { removeABCKeyboard() }) {
                                 Text(L10n.system.removeABCButton)
                                     .font(.system(size: 12, weight: .medium))
+                                    .lineLimit(1)
+                                    .fixedSize(horizontal: true, vertical: false)
                             }
                             .buttonStyle(.bordered)
                             .buttonBorderShape(.roundedRectangle(radius: 7))
                             .controlSize(.small)
+                            .frame(minWidth: 70)
                         }
                     }
                     .padding(.vertical, 10)

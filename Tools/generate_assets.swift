@@ -249,37 +249,6 @@ func drawInputGlyph(_ glyph: String, fontName: String?, fontSize: CGFloat, xOffs
     return image
 }
 
-func drawPaletteGlyphRep(_ glyph: String, fontName: String?, fontSize: CGFloat, canvasSize: CGFloat, pixels: Int, xOffset: CGFloat, yOffset: CGFloat) -> NSBitmapImageRep {
-    bitmap(width: pixels, height: pixels, pointSize: canvasSize) { _ in
-        NSColor.clear.setFill()
-        NSRect(x: 0, y: 0, width: canvasSize, height: canvasSize).fill()
-
-        let paragraph = NSMutableParagraphStyle()
-        paragraph.alignment = .center
-        let font = fontName.flatMap { NSFont(name: $0, size: fontSize) }
-            ?? NSFont.systemFont(ofSize: fontSize, weight: .bold)
-        let attrs: [NSAttributedString.Key: Any] = [
-            .font: font,
-            .foregroundColor: NSColor(calibratedWhite: 0.02, alpha: 0.92),
-            .paragraphStyle: paragraph,
-            .kern: 0
-        ]
-        let origin = centeredTextOrigin(text: glyph, attributes: attrs, canvasSize: canvasSize)
-        NSString(string: glyph).draw(
-            at: NSPoint(x: origin.x + xOffset, y: origin.y + yOffset),
-            withAttributes: attrs
-        )
-    }
-}
-
-func drawPaletteGlyph(_ glyph: String, fontName: String?, fontSize: CGFloat, xOffset: CGFloat = 0, yOffset: CGFloat = 0) -> NSImage {
-    let image = NSImage(size: NSSize(width: 32, height: 32))
-    image.addRepresentation(drawPaletteGlyphRep(glyph, fontName: fontName, fontSize: fontSize, canvasSize: 32, pixels: 32, xOffset: xOffset, yOffset: yOffset))
-    image.addRepresentation(drawPaletteGlyphRep(glyph, fontName: fontName, fontSize: fontSize, canvasSize: 32, pixels: 64, xOffset: xOffset, yOffset: yOffset))
-    image.addRepresentation(drawPaletteGlyphRep(glyph, fontName: fontName, fontSize: fontSize, canvasSize: 32, pixels: 128, xOffset: xOffset, yOffset: yOffset))
-    return image
-}
-
 func writeTIFF(_ image: NSImage, to url: URL) throws {
     guard let data = image.tiffRepresentation else {
         fatalError("Failed to encode multi-representation TIFF")
@@ -309,32 +278,14 @@ try writeTIFF(
     drawInputGlyph("한", fontName: "AppleSDGothicNeo-Bold", fontSize: 15.0, yOffset: -1.15),
     to: root.appendingPathComponent("input-ko.tiff")
 )
-try drawGlyphPDF("한", fontName: "AppleSDGothicNeo-Bold", fontSize: 15.0, canvasSize: 16, yOffset: -1.15, to: root.appendingPathComponent("input-ko.pdf"))
 try writeTIFF(
     drawInputGlyph("A", fontName: nil, fontSize: 16.0, yOffset: -0.20),
     to: root.appendingPathComponent("input-en.tiff")
 )
-try drawGlyphPDF("A", fontName: nil, fontSize: 16.0, canvasSize: 16, yOffset: -0.20, to: root.appendingPathComponent("input-en.pdf"))
 try writeTIFF(
-    drawInputGlyph("P", fontName: nil, fontSize: 16.0, xOffset: -0.15, yOffset: -0.20),
-    to: root.appendingPathComponent("input-pritype.tiff")
-)
-try drawGlyphPDF("P", fontName: nil, fontSize: 16.0, canvasSize: 16, xOffset: -0.15, yOffset: -0.20, to: root.appendingPathComponent("input-pritype.pdf"))
-try writeTIFF(
-    drawInputGlyph("P", fontName: nil, fontSize: 16.0, xOffset: -0.15, yOffset: -0.20),
+    drawInputGlyph("한", fontName: "AppleSDGothicNeo-Bold", fontSize: 15.0, yOffset: -1.15),
     to: root.appendingPathComponent("icon.tiff")
 )
-try writeTIFF(
-    drawPaletteGlyph("한", fontName: "AppleSDGothicNeo-Bold", fontSize: 23.0, yOffset: -2.0),
-    to: root.appendingPathComponent("palette-ko.tiff")
-)
-try drawGlyphPDF("한", fontName: "AppleSDGothicNeo-Bold", fontSize: 23.0, canvasSize: 32, yOffset: -2.0, to: root.appendingPathComponent("palette-ko.pdf"))
-try writeTIFF(
-    drawPaletteGlyph("A", fontName: nil, fontSize: 24.0, xOffset: 0, yOffset: 0.5),
-    to: root.appendingPathComponent("palette-en.tiff")
-)
-try drawGlyphPDF("A", fontName: nil, fontSize: 24.0, canvasSize: 32, xOffset: 0, yOffset: 0.5, to: root.appendingPathComponent("palette-en.pdf"))
-
 let process = Process()
 process.executableURL = URL(fileURLWithPath: "/usr/bin/iconutil")
 process.arguments = ["-c", "icns", iconset.path, "-o", root.appendingPathComponent("AppIcon.icns").path]
@@ -345,4 +296,4 @@ guard process.terminationStatus == 0 else {
 }
 
 try? FileManager.default.removeItem(at: iconset)
-print("Generated AppIcon.icns and input source TIFF/PDF assets.")
+print("Generated AppIcon.icns and input source TIFF assets.")

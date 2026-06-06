@@ -157,4 +157,5 @@ struct ConfigurationManagerTests {
         let value = ConfigurationManager.shared.doubleSpacePeriodEnabled
         #expect(value == true || value == false)
     }
+
 }
