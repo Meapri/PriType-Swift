@@ -123,6 +123,20 @@ struct ClientContextTests {
         #expect(ClientCompatibilityPolicy.needsDirectNewlineAfterReturnCommit(bundleId: "com.goodnotesapp.x"))
         #expect(!ClientCompatibilityPolicy.needsDirectNewlineAfterReturnCommit(bundleId: "com.openai.codex"))
     }
+
+    @Test("Client compatibility policy consumes Return after Hangul commit for Hermes")
+    func hermesConsumesReturnAfterCompositionCommit() {
+        #expect(ClientCompatibilityPolicy.needsReturnConsumedAfterCompositionCommit(bundleId: "com.nousresearch.hermes"))
+        #expect(ClientCompatibilityPolicy.needsReturnConsumedAfterCompositionCommit(bundleId: "com.nousresearch.hermes.setup"))
+        #expect(!ClientCompatibilityPolicy.needsReturnConsumedAfterCompositionCommit(bundleId: "com.openai.codex"))
+    }
+
+    @Test("Client compatibility policy prefers direct insertion for Hermes")
+    func hermesPrefersDirectInsertionForComposition() {
+        #expect(ClientCompatibilityPolicy.prefersDirectInsertionForComposition(bundleId: "com.nousresearch.hermes"))
+        #expect(ClientCompatibilityPolicy.prefersDirectInsertionForComposition(bundleId: "com.nousresearch.hermes.setup"))
+        #expect(!ClientCompatibilityPolicy.prefersDirectInsertionForComposition(bundleId: "com.openai.codex"))
+    }
     
     // MARK: - Resolution / Desktop Detection (migrated from ResolutionTests.swift)
     

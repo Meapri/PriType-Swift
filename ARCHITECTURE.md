@@ -13,14 +13,19 @@
 │  ┌──────────────────────────────────────────┼─────────┐  │
 │  │ PriType.app                              │         │  │
 │  │                                          ▼         │  │
-│  │  ┌──────────────────────┐  위임    ┌───────────┐   │  │
-│  │  │ PriTypeInputController│ ──────► │HangulComposer│ │  │
-│  │  │ (IMKInputController) │  Client  │(libhangul)│   │  │
-│  │  └──────────┬───────────┘  Adapter └─────┬─────┘   │  │
-│  │             │                            │         │  │
-│  │  ┌──────────▼───────────┐  ┌─────────────▼──────┐  │  │
-│  │  │ClientContextDetector │  │HanjaCandidateWindow│  │  │
-│  │  │(컨텍스트 분석/캐싱)    │  │(SwiftUI 후보 패널)  │  │  │
+│  │  ┌──────────────────────┐ 세션관리 ┌───────────┐   │  │
+│  │  │ PriTypeInputController│ ──────► │InputSession│   │  │
+│  │  │ (IMKInputController) │         │(finalize 단일)│ │  │
+│  │  └──────────────────────┘         └─────┬─────┘   │  │
+│  │                                          │adapter  │  │
+│  │  ┌──────────────────────┐         ┌─────▼─────┐   │  │
+│  │  │ClientContextDetector │         │HangulComposer│ │  │
+│  │  │(컨텍스트 분석)         │         │(libhangul)│   │  │
+│  │  └──────────────────────┘         └─────┬─────┘   │  │
+│  │                                          │         │  │
+│  │  ┌──────────────────────┐  ┌─────────────▼──────┐  │  │
+│  │  │TextDelivery 어댑터 3종 │  │HanjaCandidateWindow│  │  │
+│  │  │(marked/direct/immediate)│ │(SwiftUI 후보 패널) │  │  │
 │  │  └──────────────────────┘  └────────────────────┘  │  │
 │  │                                                    │  │
 │  │  ┌──────────────────────┐  ┌────────────────────┐  │  │
@@ -33,12 +38,38 @@
 
 ## 입력 처리 흐름
 
+키 입력·한/영 전환·조합 종료가 모두 하나의 세션 객체(`InputSession`)를 중심으로 연결된다.
+
+```
+keyDown ──► PriTypeInputController.handle()
+              1. ensureSession(client)      ← 클라이언트 변경/포커스 복귀 시 컨텍스트 재분석
+              2. 중복 keyDown 억제           ← 동일 물리 이벤트 2회 전달 호스트(예: KakaoTalk) 방어, 전 모드 공통
+              3. markKeystroke(bundleId)    ← 한자 cross-app 검증용
+              4. Secure Input 게이트         ← 통과 시 session.discardForSecureInput() 후 raw pass-through
+              5. ensureAdapterMatchesPolicy ← 실험 플래그 토글 등 delivery 모드 변경 반영
+              6. HangulComposer.handle(event, delegate: session.adapter)
+
+조합 종료(어떤 이유든) ──► InputSession.finalize(reason:)   ★ 단일 경로
+              • appDeactivate        — NSWorkspace 비활성 옵저버 (가장 이른 시점, 호스트가 아직 insertText를 수용)
+              • deactivateServer     — IMK 포커스 전환 (fallback, 멱등)
+              • mouseCommit          — 조합 영역 외 클릭
+              • modeTransition       — 사용자 한/영 전환키
+              • systemModeSwitch     — macOS Caps Lock/메뉴 입력 모드 선택 (setValue ingress)
+              • keyboardLayoutChange — 두벌식/세벌식 전환
+```
+
 1. macOS가 키 이벤트를 `PriTypeInputController.handle()`에 전달한다.
-2. `handle()`은 캐싱된 `ClientContext`를 참조해 Secure Input 여부, Finder 바탕화면 여부를 판정한다.
-3. 한글 모드일 경우 `client.firstRect()` / `client.attributes()`로 커서 좌표를 proactive 캐시한다.
-4. 판정을 통과하면 `ClientAdapter`로 감싸서 `HangulComposer.handle()`에 위임한다.
-5. `HangulComposer`는 libhangul-swift의 `ThreadSafeHangulInputContext`를 통해 한글 조합을 수행하고, preedit(밑줄 표시)과 commit(확정 삽입)을 `ClientAdapter` 콜백으로 전달한다.
-6. `ClientAdapter`는 `IMKTextInput` 프로토콜을 통해 최종 텍스트를 앱에 삽입한다.
+2. `ensureSession()`이 클라이언트·`ClientContext`·delivery 어댑터·중복키 상태·포커스 안전망을 묶은 `InputSession`을 반환한다(같은 클라이언트면 재사용, 다르면 재분석 후 교체).
+3. Secure Input·중복 keyDown 판정을 통과하면 `HangulComposer.handle()`에 위임한다.
+4. `HangulComposer`는 libhangul-swift의 `ThreadSafeHangulInputContext`로 한글 조합을 수행하고, preedit과 commit을 어댑터 콜백으로 전달한다.
+5. `TextDelivery`의 어댑터(`MarkedTextAdapter` / `DirectInsertionAdapter` / `ImmediateModeAdapter`)가 `IMKTextInput` 프로토콜로 텍스트를 앱에 전달한다. 모드 선택은 `TextDeliveryPolicy.mode(for:)` 한 곳에서 결정한다.
+
+### 조합 종료 단일 경로 (InputSession.finalize)
+
+과거 KakaoTalk 계열 버그(stranded preedit, 마지막 글자 유실, 이모티콘 팝업 깜빡임)는 조합 종료 이벤트마다 commit 시퀀스가 조금씩 달랐던 데서 왔다. 현재는 모든 종료 이벤트가 `InputSession.finalize(reason:)` 하나로 수렴하며, 검증된 **1-op commit**(`insertText` + `replacementRange = NSNotFound`, 호스트가 자신의 marked text를 composition-end로 확정)만 사용한다. 번들 ID 하드코딩 없이 모든 호스트에 동일하게 동작하는 멱등 안전망이다.
+
+- 포커스 상실: 세션이 소유한 `NSWorkspace` 비활성 옵저버가 IMK `deactivateServer`보다 먼저 finalize한다(네이티브 호스트가 이미 resign한 뒤의 insertText는 무시되기 때문). 옵저버는 세션 자신의 앱과만 비교하며, `deactivateServer`에서 반드시 disarm해 stale 옵저버가 이후 세션의 조합을 엉뚱한 클라이언트로 흘리는 것을 막는다.
+- 직접 삽입(실험) 모드: 조합 글자가 이미 실제 텍스트로 문서에 있으므로 finalize는 재삽입 없이 엔진만 flush하고 live-preedit 추적을 초기화한다.
 
 ## 한/영 전환 흐름
 
@@ -139,7 +170,10 @@ libhangul preedit: ᄆ (U+1106)
 |---|---|
 | **HangulComposer** | 한글 조합 엔진. libhangul 컨텍스트를 감싸고, 키 이벤트 → 초·중·종성 조합 → preedit/commit 변환을 담당한다. `inputMode`가 한/영 단일 source of truth다. 영어 내부 모드에서는 조합 없이 모든 키를 `return false`로 순수 pass-through하며(로컬 버퍼 미사용), 영문 텍스트 편의(더블스페이스 마침표 등)는 macOS가 소유한다. |
 | **HangulComposerTypes** | `HangulComposerDelegate` 프로토콜(insertText, setMarkedText, textBeforeCursor, replaceTextBeforeCursor)과 `InputMode` enum 정의. |
-| **PriTypeInputController** | `IMKInputController` 서브클래스. `activateServer` → `handle()` → `deactivateServer` 수명 주기를 관리한다. 내부에 `ClientAdapter`(밑줄 표시 모드)와 `ImmediateModeAdapter`(Finder 바탕화면용, setMarkedText 생략) 두 가지 어댑터를 포함한다. 한글 모드에서 커서 좌표를 proactive 캐시한다. |
+| **PriTypeInputController** | `IMKInputController` 서브클래스. IMK 수명 주기(`activateServer` → `handle()` → `deactivateServer`)만 담당하는 얇은 edge. 세션 스코프 상태는 전부 `InputSession`에 위임하고, 모든 조합 종료 이벤트를 `session.finalize(reason:)`로 라우팅한다. |
+| **InputSession** | 활성 입력 세션 1개의 단일 소유자: 클라이언트, 분석된 `ClientContext`, delivery 어댑터, 중복 keyDown 상태, 포커스 상실 안전망(NSWorkspace 옵저버). `finalize(reason:)`이 조합 종료의 유일한 경로(1-op commit, 멱등, 호스트 무관)다. |
+| **TextDelivery** | 조합 출력이 호스트에 도달하는 방식. `TextDeliveryPolicy.mode(for:)`가 단일 결정 지점이고, `MarkedTextAdapter`(canonical marked text), `DirectInsertionAdapter`(실험: 실제 텍스트 in-place rewrite), `ImmediateModeAdapter`(Finder 바탕화면) 세 어댑터를 제공한다. 조합 밑줄: `PreeditUnderline`이 엔진별 invisible 속성을 보내지만(분류는 `ClientCompatibilityPolicy.compositionRenderer`), **macOS 26부터는 전송 계층이 IME 속성을 전부 폐기하고 시스템 스타일(`NSUnderline=2`+액센트색)을 재생성하므로 marked text 밑줄은 숨길 수 없다**(13종 페이로드 실측, `PreeditUnderline` 주석 참고). 구버전 macOS에서만 유효. 밑줄 없는 입력은 직접 삽입 모드가 유일한 경로다. |
+| **CursorRectResolver** | 한자 후보창 좌표 전략 체인(firstRect → attributes → 캐시 → AX → 마우스)과 좌표 유효성 검증. |
 | **ClientContextDetector** | 입력 클라이언트 분석기. 번들 ID, `validAttributesForMarkedText`, 좌표 휴리스틱을 조합해 `ClientContext` 구조체를 생성한다. Finder 바탕화면은 좌표 기반(`y < 50`)으로 판별한다. |
 | **RightCommandSuppressor** | `CGEventTap` 기반 시스템 레벨 키 인터셉터. `ConfigurationManager`의 `toggleKeyBinding`/`hanjaKeyBinding`을 읽어 사용자 지정 키를 동적으로 처리한다. Key Recorder 모드를 지원하여 설정 창에서 키 캡처가 가능하다. 이벤트 탭 비활성화 시 재활성화를 시도하며, 60초 내 3회 실패 시 IOKit 백업으로 자동 전환한다. |
 | **IOKitManager** | `IOHIDManager` 기반 하드웨어 레벨 키 모니터. CGEventTap 실패 시 백업 핸들러로 동작한다. HID usage 매핑 테이블을 통해 사용자 지정 키를 동적으로 처리한다. |
@@ -219,7 +253,10 @@ PriType-Swift/
 │   ├── PriType/                    # 실행 타깃 (main.swift)
 │   ├── PriTypeCore/                # 코어 라이브러리
 │   │   ├── HangulComposer.swift        # 한글 조합 엔진
-│   │   ├── PriTypeInputController.swift # IMK 컨트롤러
+│   │   ├── PriTypeInputController.swift # IMK 컨트롤러 (얇은 edge)
+│   │   ├── InputSession.swift           # 세션 상태 + finalize 단일 경로
+│   │   ├── TextDelivery.swift           # delivery 정책 + 어댑터 3종
+│   │   ├── CursorRectResolver.swift     # 한자 후보창 좌표 전략 체인
 │   │   ├── RightCommandSuppressor.swift # CGEventTap 핸들러
 │   │   ├── IOKitManager.swift           # IOKit 백업 핸들러
 │   │   ├── HanjaCandidateWindow.swift   # 한자 후보창 (SwiftUI)

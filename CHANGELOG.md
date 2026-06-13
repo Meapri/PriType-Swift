@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 조사 (한글 조합 밑줄 — macOS 26에서는 marked text로 제거 불가)
+- 조합 밑줄을 모든 앱에서 없애기 위해 marked text 속성을 엔진별로 조정했으나(`PreeditUnderline`: Blink는 `underlineStyle 1 + alpha 1/255`, 그 외는 `underlineStyle 0 + NSColor.clear`), **macOS 26에서는 효과가 없음을 실측으로 확인했습니다**. NSTextInputClient 프로브로 실제 IMK 전송 경로를 측정한 결과, IME가 보내는 모든 속성 조합 — underline 0+clear, alpha 1/255, `NSMarkedClauseSegment` 1~9(kNoHilite 포함 전체 TSM hilite 카테고리), 심지어 속성 없는 문자열까지 13종 전부 — 이 앱에는 동일한 `NSUnderline=2 + 액센트 블루`로 재생성되어 도착합니다. 수신 측 프레임워크가 IME 스타일을 폐기하고 시스템 표준 스타일을 합성하므로, **macOS 26에서는 어떤 IME도 marked text 밑줄을 숨길 수 없습니다**(애플 한글 IME도 동일한 밑줄). 엔진별 속성 튜닝은 속성이 통과되는 구버전 macOS에서만 유효하며 코드에 유지합니다(오분류·부작용 없음). 밑줄 없는 입력은 marked text를 쓰지 않는 직접 삽입 모드(`com.pritype.experimentalDirectInsertion`)로 제공됩니다. 측정 과정은 `PreeditUnderline` 주석에 기록했습니다.
+
+### 구조 (end-to-end 입력 파이프라인 개편)
+- 세션 스코프 상태(클라이언트, `ClientContext`, delivery 어댑터, 중복 keyDown 상태, 포커스 상실 안전망)를 단일 소유자 `InputSession`으로 통합했습니다. `PriTypeInputController`는 IMK 수명 주기만 담당하는 얇은 edge가 되었고, 흩어져 있던 `lastClient`/`lastKnownInputClient`/`cachedContext`/`currentAdapter`/옵저버 필드 간 drift 가능성이 사라졌습니다.
+- 조합 종료를 `InputSession.finalize(reason:)` **단일 경로**로 통일했습니다. 앱 비활성, IMK `deactivateServer`, 마우스 클릭 commit, 사용자 한/영 전환키, macOS Caps Lock/메뉴 모드 전환(`setValue` ingress), 자판 배열 변경 — 여섯 가지 종료 이벤트가 전부 같은 멱등 1-op commit(`insertText` + `NSNotFound`)을 사용합니다. 과거 KakaoTalk에서 검증된 시퀀스를 모든 경로에 적용한 것으로, 번들 ID 하드코딩이 전혀 없습니다.
+- 조합 출력 전달(어댑터 3종: marked text / 직접 삽입 / immediate)을 `TextDelivery.swift`로 분리하고, 모드 결정을 `TextDeliveryPolicy.mode(for:)` 한 곳으로 모았습니다.
+- 한자 후보창 좌표 전략 체인(firstRect → attributes → 캐시 → AX → 마우스)을 `CursorRectResolver.swift`로 분리해 `HangulComposer`가 조합에만 집중하도록 했습니다(약 280줄 감소).
+
+### 수정 (KakaoTalk 한글 커밋 문제, 하드코딩 없이)
+- 한/영 전환·Caps Lock 전환·자판 변경 중 조합 종료가 기존에는 별도 2-op commit 경로(`forceCommit` + `setMarkedText("")`)를 사용해, KakaoTalk 등 일부 네이티브 호스트에서 마지막 글자 유실/stranded preedit/이모티콘 팝업 깜빡임이 재발할 수 있었습니다. 모든 종료 경로가 검증된 1-op commit으로 수렴하면서 이 잔여 표면이 제거되었습니다.
+- 중복 keyDown 억제(동일 물리 키 이벤트를 2회 전달하는 호스트 — KakaoTalk에서 관찰, 예: 백스페이스 1회에 자모 2개 분해)를 실험적 직접 삽입 모드 전용에서 **모든 delivery 모드 공통**으로 일반화했습니다. 중복 전달은 호스트 이벤트 전달의 속성이지 렌더링 방식의 속성이 아니기 때문입니다.
+- 포커스 상실 안전망(NSWorkspace 비활성 옵저버)을 세션 소유로 옮기고, `deactivateServer`에서 반드시 disarm하도록 했습니다. 이전 구조에서는 stale 옵저버가 늦게 발화하면 공유 composer의 새 조합을 이전 앱 클라이언트로 흘릴 수 있는 cross-app commit-leak 가능성이 있었습니다.
+- `deactivateServer` 이후 같은 클라이언트 객체로 `handle()`이 먼저 도착하는 경우(컨텍스트 stale — 같은 앱의 다른 필드로 포커스 이동 가능) 컨텍스트를 재분석한 뒤 처리하도록 명시했습니다.
+
 ### 변경
 - 한글 조합 중 표시되던 밑줄(preedit underline)을 제거하고 평문 marked text로 표시하도록 했습니다.
 - 앱 포커스 상실 시 조합을 강제 커밋하던 호환성 로직(과거 KakaoTalk 대응에서 일반화한 NSWorkspace 비활성 옵저버)을 완전히 제거했습니다. 정상 포커스 전환 commit은 IMK `deactivateServer`가 담당합니다.

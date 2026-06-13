@@ -433,7 +433,7 @@ struct SettingsView: View {
                                 .font(.system(size: 14, weight: .regular))
                                 .foregroundStyle(.primary)
 
-                            Text("조합 중인 글자를 밑줄 없는 실제 텍스트로 입력합니다. 네이티브 앱(카카오톡·메모 등)에 적용되며, 웹/Electron 앱(브라우저·VS Code·Slack 등)과 터미널은 텍스트 위치를 정확히 알 수 없어 자동으로 기존 방식으로 안전하게 동작합니다. 변경 후 입력 소스를 다시 선택하세요.")
+                            Text("조합 중인 글자를 밑줄 없는 실제 텍스트로 입력합니다. macOS 26부터는 시스템이 조합 밑줄을 강제하므로 밑줄 없는 한글 입력은 이 모드가 유일합니다. 네이티브 앱(카카오톡·메모 등)에 적용되며, 웹/Electron 앱(브라우저·VS Code·Slack 등)과 터미널은 텍스트 위치를 정확히 알 수 없어 자동으로 기존 방식으로 안전하게 동작합니다. 변경은 즉시 적용됩니다.")
                                 .font(.system(size: 11, weight: .regular))
                                 .foregroundStyle(.secondary)
                                 .fixedSize(horizontal: false, vertical: true)

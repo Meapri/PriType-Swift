@@ -325,6 +325,22 @@ struct HangulComposerTests {
         #expect(delegate.markedText.isEmpty)
     }
 
+    @Test("Return key commits and consumes original Return for Hermes")
+    func returnKeyHermesCompatibility() {
+        let (composer, delegate, _) = makeComposer()
+        composer.markKeystroke(bundleId: "com.nousresearch.hermes")
+        _ = composer.handle(TestEventFactory.keyEvent(char: "r", keyCode: 15)!, delegate: delegate)
+        _ = composer.handle(TestEventFactory.keyEvent(char: "k", keyCode: 40)!, delegate: delegate)
+
+        let returnEvent = TestEventFactory.keyEvent(char: "\r", keyCode: KeyCode.`return`)!
+        let handled = composer.handle(returnEvent, delegate: delegate)
+
+        #expect(handled, "Hermes compatibility should consume Return after committing Hangul composition")
+        #expect(delegate.insertedTexts.contains("가"))
+        #expect(delegate.insertedTexts.filter { $0 == "\n" }.isEmpty)
+        #expect(delegate.markedText.isEmpty)
+    }
+
     @Test("Return key passes through without composition")
     func returnKeyPassthroughWithoutComposition() {
         let (composer, delegate, _) = makeComposer()

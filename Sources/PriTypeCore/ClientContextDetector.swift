@@ -108,6 +108,10 @@ public struct ClientContext: Sendable {
 
 public enum ClientCompatibilityPolicy {
     private static let goodNotesBundleId = "com.goodnotesapp.x"
+    private static let hermesBundleIds: Set<String> = [
+        "com.nousresearch.hermes",
+        "com.nousresearch.hermes.setup"
+    ]
 
     /// Apps where experimental direct insertion is known to be IMPOSSIBLE, not just
     /// risky: Electron/Chromium and browser web-content fields report `selectedRange`
@@ -142,6 +146,21 @@ public enum ClientCompatibilityPolicy {
         bundleId == goodNotesBundleId
     }
 
+    /// Some chat-style hosts send the message on Return before their text system has
+    /// incorporated the IMK commit. When Hangul is still marked, the submitted text can
+    /// miss the last composing syllable. For those hosts, consume the Return that only
+    /// finalizes composition; the next Return remains a normal send/newline action.
+    public static func needsReturnConsumedAfterCompositionCommit(bundleId: String) -> Bool {
+        hermesBundleIds.contains(bundleId)
+    }
+
+    /// Hermes is an Electron chat host whose send action can read the DOM value before
+    /// Chromium has incorporated IMK marked text, dropping only the final Hangul
+    /// syllable. Prefer real-text composition there when document access is usable.
+    public static func prefersDirectInsertionForComposition(bundleId: String) -> Bool {
+        hermesBundleIds.contains(bundleId)
+    }
+
     /// Whether direct insertion must be denied for `bundleId` because the host cannot
     /// reliably support in-place real-text rewrites (Electron/Chromium/browsers).
     /// Explicit list + a keyword heuristic for unlisted Electron/Chromium wrappers.
@@ -152,6 +171,54 @@ public enum ClientCompatibilityPolicy {
             || lower.contains("chrome")
             || lower.contains("chromium")
     }
+
+    /// Hosts whose text fields are rendered by Blink (Chromium/Electron/CEF).
+    /// ENGINE classification, not per-app behavior: it decides only which form of
+    /// "invisible underline" attributes the preedit uses (see `PreeditUnderline`),
+    /// because Blink is the one renderer that repaints a fully transparent
+    /// composition-underline color in the TEXT color (Blink
+    /// `StyleableMarker::UseTextColor`), so `NSColor.clear` cannot hide it there.
+    /// Misclassification is benign: a Blink host left as `.system` just keeps a
+    /// thin text-colored underline (the pre-existing behavior), and a native/WebKit
+    /// host wrongly marked `.blink` gets an alpha-1/255 underline that AppKit and
+    /// legacy WebKit paint invisibly anyway.
+    private static let blinkRendererBundleIds: Set<String> = [
+        "com.anthropic.claudefordesktop",
+        "com.openai.codex",
+        "com.microsoft.VSCode",
+        "com.microsoft.VSCodeInsiders",
+        "com.todesktop.230313mzl4w4u92",   // Cursor
+        "com.tinyspeck.slackmacgap",
+        "com.hnc.Discord",
+        "notion.id",
+        "com.figma.Desktop",
+        "com.spotify.client",              // CEF
+        "com.google.Chrome",
+        "com.google.Chrome.canary",
+        "com.brave.Browser",
+        "com.microsoft.edgemac",
+        "company.thebrowser.Browser",      // Arc
+        "com.naver.whale",
+        "com.vivaldi.Vivaldi",
+        "com.operasoftware.Opera"
+    ]
+
+    public static func compositionRenderer(bundleId: String) -> CompositionRenderer {
+        if blinkRendererBundleIds.contains(bundleId) { return .blink }
+        let lower = bundleId.lowercased()
+        if lower.contains("electron") || lower.contains("chrome") || lower.contains("chromium") {
+            return .blink
+        }
+        return .system
+    }
+}
+
+/// Which engine renders the host's marked-text (composition) decoration.
+/// `.system` covers AppKit/TextKit, Catalyst, WebKit (Safari) and everything else;
+/// `.blink` is Chromium-derived hosts. Used only to pick preedit underline styling.
+public enum CompositionRenderer: Sendable, Equatable {
+    case system
+    case blink
 }
 
 // MARK: - ClientContextDetector
@@ -178,8 +245,11 @@ public struct ClientContextDetector: Sendable {
     /// Gated on the experimental flag: when direct insertion is OFF (the default,
     /// shipping configuration) this returns false WITHOUT any IPC, so the marked-text
     /// path pays zero extra cost for a feature it never uses.
-    static func probeDocumentAccessSafe(_ client: IMKTextInput) -> Bool {
-        guard ConfigurationManager.shared.experimentalDirectInsertion else { return false }
+    static func probeDocumentAccessSafe(_ client: IMKTextInput, bundleId: String) -> Bool {
+        guard ConfigurationManager.shared.experimentalDirectInsertion ||
+              ClientCompatibilityPolicy.prefersDirectInsertionForComposition(bundleId: bundleId) else {
+            return false
+        }
         let sel = client.selectedRange()
         return sel.location != NSNotFound && sel.location < 10_000_000
     }
@@ -197,7 +267,7 @@ public struct ClientContextDetector: Sendable {
             hasTextInputCapability: !isFinder,
             isLikelyDesktopArea: isFinder,
             isLightweight: true,
-            documentAccessSafe: probeDocumentAccessSafe(client)
+            documentAccessSafe: probeDocumentAccessSafe(client, bundleId: bundleId)
         )
     }
 
@@ -243,7 +313,7 @@ public struct ClientContextDetector: Sendable {
             bundleId: bundleId,
             hasTextInputCapability: hasTextInputCapability,
             isLikelyDesktopArea: isLikelyDesktopArea,
-            documentAccessSafe: probeDocumentAccessSafe(client)
+            documentAccessSafe: probeDocumentAccessSafe(client, bundleId: bundleId)
         )
     }
 }
