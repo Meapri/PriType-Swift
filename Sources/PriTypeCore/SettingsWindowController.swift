@@ -618,33 +618,15 @@ struct SettingsView: View {
     /// handles 한/영. Restored from v2.6.5 (removed in the 2.7 line). Reversible:
     /// the user can re-add ABC in System Settings (needed for the login screen).
     private func removeABCKeyboard() {
-        guard let defaults = UserDefaults(suiteName: "com.apple.HIToolbox"),
-              var sources = defaults.array(forKey: "AppleEnabledInputSources") as? [[String: Any]] else {
-            withAnimation { removeABCStatus = .error }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                withAnimation { self.removeABCStatus = .idle }
-            }
-            return
-        }
-
-        let originalCount = sources.count
-        sources.removeAll { source in
-            (source["KeyboardLayout Name"] as? String) == "ABC"
-        }
-
-        if sources.count < originalCount {
-            defaults.set(sources, forKey: "AppleEnabledInputSources")
-            _ = CFPreferencesAppSynchronize("com.apple.HIToolbox" as CFString)
-
-            // Restart TextInputMenuAgent so the menu-bar input-source list refreshes now.
+        let succeeded = InputSourceManager.shared.disableDefaultABCInputSource()
+        if succeeded {
             let task = Process()
             task.executableURL = URL(fileURLWithPath: "/usr/bin/killall")
             task.arguments = ["TextInputMenuAgent"]
             try? task.run()
         }
 
-        // Treat "already absent" as success too — the end state is what matters.
-        withAnimation { removeABCStatus = .success }
+        withAnimation { removeABCStatus = succeeded ? .success : .error }
         DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
             withAnimation { self.removeABCStatus = .idle }
         }

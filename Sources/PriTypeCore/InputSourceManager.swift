@@ -77,6 +77,54 @@ public final class InputSourceManager: @unchecked Sendable {
         return sources.contains { $0.id.contains("US") || $0.name == "U.S." }
     }
 
+    /// Enabled ABC or US keyboard layout ID, or nil if the user has neither on.
+    ///
+    /// Used before `overrideKeyboardWithKeyboardNamed`. Requesting a *disabled*
+    /// layout is what re-inserts ABC into `AppleEnabledInputSources` after the
+    /// user turned it off.
+    public func enabledRomanKeyboardLayoutID() -> String? {
+        let enabledIDs = Set(getEnabledKeyboardInputSources().map(\.id))
+        let candidates = ["com.apple.keylayout.ABC", "com.apple.keylayout.US"]
+        return candidates.first { enabledIDs.contains($0) }
+    }
+
+    /// Remove the default ABC keyboard layout from the enabled input-source list.
+    ///
+    /// Matches KeyboardLayout ID 252 and the name "ABC". Does not touch U.S.
+    /// Already-absent is treated as success. Does not enable or select sources.
+    @discardableResult
+    public func disableDefaultABCInputSource() -> Bool {
+        guard let defaults = UserDefaults(suiteName: "com.apple.HIToolbox"),
+              var sources = defaults.array(forKey: "AppleEnabledInputSources") as? [[String: Any]] else {
+            return false
+        }
+
+        let originalCount = sources.count
+        sources.removeAll { Self.isDefaultABCSource($0) }
+        guard sources.count < originalCount else {
+            return true
+        }
+
+        defaults.set(sources, forKey: "AppleEnabledInputSources")
+        CFPreferencesAppSynchronize("com.apple.HIToolbox" as CFString)
+        DebugLogger.log("InputSourceManager: disabled default ABC input source")
+        return true
+    }
+
+    internal static func isDefaultABCSource(_ source: [String: Any]) -> Bool {
+        if (source["KeyboardLayout ID"] as? Int) == abcKeyboardLayoutID {
+            return true
+        }
+        if (source["KeyboardLayout Name"] as? String) == "ABC" {
+            return true
+        }
+        if let bundleID = source["Bundle ID"] as? String,
+           bundleID.contains("keylayout.ABC") {
+            return true
+        }
+        return false
+    }
+
     /// Remove stale legacy entries without enabling or selecting input sources.
     ///
     /// This intentionally does not enable PriType itself. Calling

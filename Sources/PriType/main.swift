@@ -62,12 +62,20 @@ class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
             DebugLogger.log("Requesting Accessibility permission...")
             IOKitManager.requestAccessibilityPermission()
             
-            // Poll until user grants permission from the system popup
+            // Poll until user grants permission, with a 2-minute cap so a
+            // never-granted prompt cannot leave a timer running forever.
+            let pollDeadline = Date().addingTimeInterval(120)
             Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { timer in
-                guard AXIsProcessTrusted() else { return }
-                timer.invalidate()
-                DebugLogger.log("Accessibility granted via system popup — starting key monitoring")
-                self.setupIOKit()
+                if AXIsProcessTrusted() {
+                    timer.invalidate()
+                    DebugLogger.log("Accessibility granted via system popup — starting key monitoring")
+                    self.setupIOKit()
+                    return
+                }
+                if Date() >= pollDeadline {
+                    timer.invalidate()
+                    DebugLogger.log("Accessibility not granted within 2 minutes; stop polling")
+                }
             }
             return
         }

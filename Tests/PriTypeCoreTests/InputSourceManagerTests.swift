@@ -71,4 +71,25 @@ struct InputSourceManagerTests {
         #expect(!sanitized.contains { ($0["Input Mode"] as? String) == "com.pritype.inputmethod.v2.korean" })
         #expect(sanitized.contains { ($0["Bundle ID"] as? String) == "com.apple.PressAndHold" })
     }
+
+    @Test("Identifies ABC sources by layout id and name")
+    func isDefaultABCSource() {
+        #expect(InputSourceManager.isDefaultABCSource([
+            "InputSourceKind": "Keyboard Layout",
+            "KeyboardLayout ID": 252,
+            "KeyboardLayout Name": "ABC"
+        ]))
+        #expect(InputSourceManager.isDefaultABCSource([
+            "KeyboardLayout Name": "ABC"
+        ]))
+        #expect(!InputSourceManager.isDefaultABCSource([
+            "InputSourceKind": "Keyboard Layout",
+            "KeyboardLayout ID": 0,
+            "KeyboardLayout Name": "U.S."
+        ]))
+        #expect(!InputSourceManager.isDefaultABCSource([
+            "Bundle ID": "com.pritype.inputmethod.v2",
+            "InputSourceKind": "Keyboard Input Method"
+        ]))
+    }
 }

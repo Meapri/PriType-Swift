@@ -167,15 +167,21 @@ public class HangulComposer: @unchecked Sendable {
     /// - Important: `inputMode` is the single source of truth for the Korean/
     ///   English state. The only sanctioned writers are
     ///   `PriTypeInputController.performPriTypeModeTransition` (custom toggle) and
-    ///   `PriTypeInputController.setValue(_:forTag:)` (macOS re-selecting the
-    ///   PriType source, which always lands back in `.korean`). No other path —
-    ///   including `activateServer` focus changes — may mutate the mode.
+    ///   `PriTypeInputController.setValue(_:forTag:)` (macOS selecting a PriType
+    ///   mode, including the English child mode). No other path — including
+    ///   `activateServer` focus changes — may mutate the mode.
     public func setInputMode(_ mode: InputMode) {
         guard inputMode != mode else {
             return
         }
 
         DebugLogger.log("setInputMode called externally: \(mode)")
+
+        hanjaMode = false
+        hanjaKey = ""
+        if Thread.isMainThread, HanjaCandidateWindow.shared.isVisible {
+            HanjaCandidateWindow.shared.dismiss()
+        }
 
         if let delegate = lastDelegate, !context.isEmpty() {
             commitComposition(delegate: delegate)
@@ -375,7 +381,8 @@ public class HangulComposer: @unchecked Sendable {
         //   installs via `overrideKeyboardWithKeyboardNamed(ABC/US)`.
         // - Some macOS text conveniences do not fire for this internal English
         //   mode in every host, so PriType supplies a narrow fallback for only
-        //   the transformed cases (double-space period and auto-capitalization).
+        //   the transformed cases (double-space period, and auto-capitalization
+        //   after an explicit sentence end — never for empty/unknown cursor context).
         // Keeping this path mostly pass-through avoids the classic buffer-vs-
         // cursor desync that a PriType-side English buffer invites.
         if inputMode == .english {

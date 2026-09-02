@@ -28,23 +28,23 @@ struct SecureInputPolicy: Sendable {
             return true
         }
 
-        guard signals.hasInvalidSelection || signals.hasGlobalSecureInput else {
-            return false
-        }
-
-        if signals.hasInvalidSelection && !signals.hasTextInputCapability {
+        // Password-like fields: no marked-text capability, or a missing selection
+        // *and* no text-input attributes. Invalid selection alone is not enough —
+        // Chromium reports NSNotFound in ordinary web fields too, and treating
+        // that as secure input made Korean type as ABC qwerty.
+        let looksLikeSecureField = !signals.hasTextInputCapability || !signals.hasMarkedTextSupport
+        if signals.hasInvalidSelection && looksLikeSecureField {
             return true
         }
 
-        if !signals.hasMarkedTextSupport || !signals.hasTextInputCapability {
+        // Global Secure Event Input is process-wide. A password field in another
+        // app must not disable Hangul in this client if this client looks like a
+        // normal text field.
+        if signals.hasGlobalSecureInput && (looksLikeSecureField || signals.hasInvalidSelection) {
             return true
         }
 
-        if signals.hasInvalidSelection {
-            return true
-        }
-
-        return signals.hasGlobalSecureInput
+        return false
     }
 }
 

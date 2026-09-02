@@ -28,11 +28,6 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
     // macOS Caps Lock / input-source switching moves between these two modes.
     private static let priTypeInputSourceID = "com.pritype.inputmethod.v2"          // Korean mode (== bundle id)
     private static let priTypeEnglishInputModeID = "com.pritype.inputmethod.v2.english"
-    private static let romanKeyboardLayoutID = resolveRomanKeyboardLayoutID()
-    private static let romanKeyboardLayoutCandidates = [
-        "com.apple.keylayout.ABC",
-        "com.apple.keylayout.US"
-    ]
 
     // MARK: - Shared State
     //
@@ -112,7 +107,6 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
         session?.disarmFocusLossFinalizer()
         session = newSession
         newSession.armFocusLossFinalizer()
-        syncRomanKeyboardLayout(for: client)
         return newSession
     }
 
@@ -139,7 +133,17 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
 
     // MARK: - Keyboard Layout (English pass-through support)
 
+    /// Install the ABC/US keyboard layout for English pass-through, but only
+    /// when that layout is already enabled. Requesting a disabled ABC layout
+    /// is what makes "ABC 끄기" appear to succeed and then reverse on the next
+    /// keystroke.
     private func syncRomanKeyboardLayout(for client: IMKTextInput, force: Bool = false) {
+        guard composer.inputMode == .english else { return }
+        guard let layoutID = InputSourceManager.shared.enabledRomanKeyboardLayoutID() else {
+            DebugLogger.log("PriTypeInputController: skip keyboard override; ABC/US is not enabled")
+            return
+        }
+
         let clientID = ObjectIdentifier(client as AnyObject)
         let now = CFAbsoluteTimeGetCurrent()
         guard force || lastKeyboardOverrideClientID != clientID || now - lastKeyboardOverrideTime > 0.5 else {
@@ -153,29 +157,10 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
             return
         }
 
-        _ = object.perform(selector, with: Self.romanKeyboardLayoutID)
+        _ = object.perform(selector, with: layoutID)
         lastKeyboardOverrideClientID = clientID
         lastKeyboardOverrideTime = now
-        DebugLogger.log("PriTypeInputController: override keyboard layout -> \(Self.romanKeyboardLayoutID)")
-    }
-
-    private static func resolveRomanKeyboardLayoutID() -> String {
-        let filter: [String: Any] = [
-            kTISPropertyInputSourceCategory as String: kTISCategoryKeyboardInputSource as String
-        ]
-
-        guard let sourceList = TISCreateInputSourceList(filter as CFDictionary, true)?.takeRetainedValue() as? [TISInputSource] else {
-            return romanKeyboardLayoutCandidates[0]
-        }
-
-        let availableIDs = Set(sourceList.compactMap { source -> String? in
-            guard let idPointer = TISGetInputSourceProperty(source, kTISPropertyInputSourceID) else {
-                return nil
-            }
-            return Unmanaged<CFString>.fromOpaque(idPointer).takeUnretainedValue() as String
-        })
-
-        return romanKeyboardLayoutCandidates.first { availableIDs.contains($0) } ?? romanKeyboardLayoutCandidates[0]
+        DebugLogger.log("PriTypeInputController: override keyboard layout -> \(layoutID)")
     }
 
     // MARK: - Mode Transitions (한/영)
@@ -191,27 +176,15 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
 
         session.finalize(reason: .modeTransition)
         composer.clearLocalBuffer()
-        syncRomanKeyboardLayout(for: session.client, force: true)
         composer.setInputMode(nextMode)
-        syncSelectedInputModeForMenuBar(client: session.client, mode: nextMode)
-    }
-
-    /// Best-effort: tell macOS which PriType mode is active so the menu-bar input
-    /// source indicator (and Caps Lock's notion of the current mode) matches a
-    /// custom-key toggle. Cosmetic + consistency only — `composer.inputMode` is
-    /// already the authoritative composition state, so even if this is delayed or
-    /// unsupported, typing is unaffected (no first-key race). Without it, a
-    /// custom-key toggle and macOS's selected mode could drift apart.
-    private func syncSelectedInputModeForMenuBar(client: IMKTextInput, mode: InputMode) {
-        let modeID = mode == .english ? Self.priTypeEnglishInputModeID : Self.priTypeInputSourceID
-        let selector = NSSelectorFromString("selectInputMode:")
-        let object = client as AnyObject
-        guard object.responds(to: selector) else {
-            DebugLogger.log("PriTypeInputController: client does not support selectInputMode:")
-            return
+        // Do not call selectInputMode: here. That IMK call is cosmetic for the
+        // menu bar, but in Latin-only fields TIS often reacts by selecting the
+        // real ABC source and dropping the PriType session.
+        // Do not overrideKeyboard on a stale session (deactivateServer already
+        // ran): the previous client may no longer be the focused field.
+        if !session.contextNeedsRefresh, nextMode == .english {
+            syncRomanKeyboardLayout(for: session.client, force: true)
         }
-        _ = object.perform(selector, with: modeID)
-        DebugLogger.log("PriTypeInputController: selectInputMode -> \(modeID)")
     }
 
     // MARK: - IMK Lifecycle
@@ -222,12 +195,11 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
         assert(Thread.isMainThread, "IMK activateServer must run on main thread")
         #endif
         super.activateServer(sender)
-        // NOTE: Focus changes never reset `composer.inputMode`. The Korean/English
-        // state is owned solely by the toggle path and the `setValue` ingress, so
-        // switching apps preserves whatever mode the user last chose.
         if let client = sender as? IMKTextInput {
-            syncRomanKeyboardLayout(for: client, force: true)
-
+            // NOTE: Focus changes never reset `composer.inputMode`. The Korean/English
+            // state is owned solely by the toggle path and the `setValue` ingress, so
+            // switching apps preserves whatever mode the user last chose.
+            //
             // PERFORMANCE: Analyze context ONCE per activation (lightweight — no
             // client IPC) and let `ensureSession` upgrade it lazily. This avoids
             // heavy IPC calls (validAttributes, coordinates) on every focus change.
@@ -239,6 +211,7 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
             session?.disarmFocusLossFinalizer()
             session = newSession
             newSession.armFocusLossFinalizer()
+            syncRomanKeyboardLayout(for: client, force: true)
             DebugLogger.log("Activated for client: \(newSession.context.bundleId) (Lightweight Context)")
         } else {
             // Fallback if sender is not IMKTextInput (rare). Keep the old session's
@@ -329,16 +302,16 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
                 return
             }
 
-            if let client = sender as? IMKTextInput {
-                syncRomanKeyboardLayout(for: client, force: true)
-            }
-
             if composer.inputMode != targetMode {
                 DebugLogger.log("PriTypeInputController: macOS selected PriType \(targetMode) mode")
                 // System-driven mode switches end composition through the same
                 // single path as everything else (not via a stale delegate).
                 finalizeActiveComposition(sender: sender, reason: .systemModeSwitch)
                 composer.setInputMode(targetMode)
+            }
+
+            if let client = sender as? IMKTextInput {
+                syncRomanKeyboardLayout(for: client, force: true)
             }
             return
         }
@@ -399,33 +372,19 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
     }
 
     private func shouldPassThroughSecureInput(client: IMKTextInput, context: ClientContext) -> Bool {
-        let bundleId = context.bundleId
-
-        if SecureInputPolicy.isSystemSecureClient(bundleId) {
-            DebugLogger.log("Secure Input: System secure client (\(bundleId)), passing through")
-            return true
-        }
-
-        let hasGlobalSecureInput = IsSecureEventInputEnabled()
-
-        if hasGlobalSecureInput {
-            DebugLogger.log("Secure Input: global secure input active in '\(bundleId)', passing through")
-            return true
-        }
-
-        guard !context.hasTextInputCapability else {
-            return false
-        }
-
         let selectionRange = client.selectedRange()
-        let hasInvalidSelection = selectionRange.location == NSNotFound
-
-        if hasInvalidSelection {
-            DebugLogger.log("Secure Input: invalid selection in '\(bundleId)', passing through")
-            return true
+        let signals = SecureInputSignals(
+            bundleId: context.bundleId,
+            hasTextInputCapability: context.hasTextInputCapability,
+            hasInvalidSelection: selectionRange.location == NSNotFound,
+            hasGlobalSecureInput: IsSecureEventInputEnabled(),
+            hasMarkedTextSupport: context.hasTextInputCapability
+        )
+        let passThrough = SecureInputPolicy.shouldPassThrough(signals)
+        if passThrough {
+            DebugLogger.log("Secure Input: pass-through bundle=\(context.bundleId) global=\(signals.hasGlobalSecureInput) invalidSel=\(signals.hasInvalidSelection) textCap=\(context.hasTextInputCapability)")
         }
-
-        return false
+        return passThrough
     }
 
     // 마우스 클릭 등으로 조합 영역 외부 클릭 시 조합 커밋

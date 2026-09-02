@@ -515,26 +515,53 @@ public final class ConfigurationManager: ConfigurationProviding, @unchecked Send
     
     /// Mirrors macOS "Add period with double-space" for PriType Korean input.
     public var doubleSpacePeriodEnabled: Bool {
-        return systemTextFeatureLock.withLock { cachedDoubleSpacePeriodEnabled }
+        return systemTextFeatureLock.withLock {
+            let value = Self.readSystemTextFeature(
+                key: SystemTextInputKeys.automaticPeriodSubstitution,
+                defaultValue: true
+            )
+            cachedDoubleSpacePeriodEnabled = value
+            return value
+        }
     }
 
     /// Mirrors macOS "Capitalize words automatically".
     ///
-    /// PriType reads and caches this setting for observability, but does not
-    /// apply it in Korean composition. English mode passes through to macOS, so
-    /// the system handles capitalization without PriType tracking text context.
+    /// Re-read on each access so toggling the system setting takes effect without
+    /// restarting the input method.
     public var autoCapitalizationEnabled: Bool {
-        return systemTextFeatureLock.withLock { cachedAutoCapitalizationEnabled }
+        return systemTextFeatureLock.withLock {
+            let value = Self.readSystemTextFeature(
+                key: SystemTextInputKeys.automaticCapitalization,
+                defaultValue: true
+            )
+            cachedAutoCapitalizationEnabled = value
+            return value
+        }
     }
 
     /// Mirrors macOS "Use smart quotes".
     public var smartQuoteSubstitutionEnabled: Bool {
-        return systemTextFeatureLock.withLock { cachedSmartQuoteSubstitutionEnabled }
+        return systemTextFeatureLock.withLock {
+            let value = Self.readSystemTextFeature(
+                key: SystemTextInputKeys.automaticQuoteSubstitution,
+                defaultValue: true
+            )
+            cachedSmartQuoteSubstitutionEnabled = value
+            return value
+        }
     }
 
     /// Mirrors macOS "Use smart dashes".
     public var smartDashSubstitutionEnabled: Bool {
-        return systemTextFeatureLock.withLock { cachedSmartDashSubstitutionEnabled }
+        return systemTextFeatureLock.withLock {
+            let value = Self.readSystemTextFeature(
+                key: SystemTextInputKeys.automaticDashSubstitution,
+                defaultValue: true
+            )
+            cachedSmartDashSubstitutionEnabled = value
+            return value
+        }
     }
 
     private static func readSystemTextFeature(key: String, defaultValue: Bool) -> Bool {

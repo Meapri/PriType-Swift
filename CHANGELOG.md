@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 수정
+- 한→영 전환 직후 첫 글자가 대문자로 들어가던 문제를 고쳤습니다. 영어 자동 대문자 폴백이 커서 앞 텍스트를 빈 문자열로 보면 문장 시작으로 취급했는데, Chromium/Electron은 전환 직후 그 조회가 자주 비어 있었습니다. 이제 빈 컨텍스트는 패스스루하고, `.!?` 뒤 공백처럼 문장 끝이 확인될 때만 대문자로 넣습니다.
+- 설정에서 ABC를 꺼도 다음 포커스/전환에서 다시 살아나던 문제를 고쳤습니다. 비활성 ABC 레이아웃을 `overrideKeyboardWithKeyboardNamed`로 요청하던 경로를 제거하고, 영어 모드에서만, 그리고 ABC/US가 실제로 켜져 있을 때만 오버라이드합니다.
+- 커스텀 한/영 전환키에서 `selectInputMode:`를 호출하지 않습니다. Latin-only 필드에서 TIS가 실제 ABC 소스로 넘어가던 경로입니다.
+- 다른 앱 비밀번호 필드의 전역 Secure Input 때문에 현재 앱 한글이 영문 자판으로 나가던 문제를 줄였습니다. 일반 텍스트 필드는 조합을 유지합니다.
+- CGEventTap이 반복 실패한 뒤 IOKit으로 넘길 때 기존 탭을 끄지 않아 전환키가 두 번 먹을 수 있던 문제를 고쳤습니다.
+- 한/영 전환 시 한자 후보창을 닫습니다.
+- 시스템 자동 대문자/스마트 치환 설정을 프로세스 시작 때 한 번만 캐시하던 것을, 읽을 때마다 다시 반영하도록 바꿨습니다.
+- 시작 시 손쉬운 사용 권한 폴링이 권한을 안 주면 끝나지 않던 타이머에 2분 상한을 넣었습니다.
+
 ### 조사 (한글 조합 밑줄 — macOS 26에서는 marked text로 제거 불가)
 - 조합 밑줄을 모든 앱에서 없애기 위해 marked text 속성을 엔진별로 조정했으나(`PreeditUnderline`: Blink는 `underlineStyle 1 + alpha 1/255`, 그 외는 `underlineStyle 0 + NSColor.clear`), **macOS 26에서는 효과가 없음을 실측으로 확인했습니다**. NSTextInputClient 프로브로 실제 IMK 전송 경로를 측정한 결과, IME가 보내는 모든 속성 조합 — underline 0+clear, alpha 1/255, `NSMarkedClauseSegment` 1~9(kNoHilite 포함 전체 TSM hilite 카테고리), 심지어 속성 없는 문자열까지 13종 전부 — 이 앱에는 동일한 `NSUnderline=2 + 액센트 블루`로 재생성되어 도착합니다. 수신 측 프레임워크가 IME 스타일을 폐기하고 시스템 표준 스타일을 합성하므로, **macOS 26에서는 어떤 IME도 marked text 밑줄을 숨길 수 없습니다**(애플 한글 IME도 동일한 밑줄). 엔진별 속성 튜닝은 속성이 통과되는 구버전 macOS에서만 유효하며 코드에 유지합니다(오분류·부작용 없음). 밑줄 없는 입력은 marked text를 쓰지 않는 직접 삽입 모드(`com.pritype.experimentalDirectInsertion`)로 제공됩니다. 측정 과정은 `PreeditUnderline` 주석에 기록했습니다.
 

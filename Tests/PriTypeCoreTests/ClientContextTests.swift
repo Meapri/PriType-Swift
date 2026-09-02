@@ -65,9 +65,9 @@ struct ClientContextTests {
         #expect(!unknownCtx.shouldUseImmediateMode)
     }
 
-    @Test("Secure input policy passes through global secure input")
-    func secureInputPolicyPassesThroughGlobalSecureInput() {
-        #expect(SecureInputPolicy.shouldPassThrough(SecureInputSignals(
+    @Test("Secure input policy does not treat leaked global secure input as this field")
+    func secureInputPolicyIgnoresGlobalSecureInputOnNormalFields() {
+        #expect(!SecureInputPolicy.shouldPassThrough(SecureInputSignals(
             bundleId: "com.example.messenger",
             hasTextInputCapability: true,
             hasInvalidSelection: false,
@@ -86,8 +86,16 @@ struct ClientContextTests {
             hasMarkedTextSupport: false
         )))
 
-        #expect(SecureInputPolicy.shouldPassThrough(SecureInputSignals(
+        #expect(!SecureInputPolicy.shouldPassThrough(SecureInputSignals(
             bundleId: "com.example.messenger",
+            hasTextInputCapability: true,
+            hasInvalidSelection: true,
+            hasGlobalSecureInput: false,
+            hasMarkedTextSupport: true
+        )))
+
+        #expect(!SecureInputPolicy.shouldPassThrough(SecureInputSignals(
+            bundleId: "com.google.Chrome",
             hasTextInputCapability: true,
             hasInvalidSelection: true,
             hasGlobalSecureInput: false,
@@ -98,7 +106,7 @@ struct ClientContextTests {
             bundleId: "com.google.Chrome",
             hasTextInputCapability: true,
             hasInvalidSelection: true,
-            hasGlobalSecureInput: false,
+            hasGlobalSecureInput: true,
             hasMarkedTextSupport: true
         )))
     }

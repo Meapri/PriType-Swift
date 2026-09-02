@@ -75,7 +75,6 @@ struct TextConvenienceHandlerTests {
         #expect(!handler.isHangul("!"))
     }
     
-    // English mode performs no composition and is a pure pass-through, so it no
-    // longer routes through TextConvenienceHandler. The behaviour is covered by
-    // `HangulComposerTests.englishModePurePassthrough`.
+    // English auto-capitalization: empty cursor context must pass through.
+    // Sentence-end fallback is covered by HangulComposerTests.
 }

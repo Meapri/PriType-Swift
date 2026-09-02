@@ -141,14 +141,21 @@ struct HangulComposerTests {
         #expect(delegate.markedText.isEmpty)
     }
 
-    @Test("English mode applies auto-capitalization fallback")
-    func englishModeAutoCapitalizationFallback() {
+    @Test("English mode does not auto-capitalize when cursor context is empty")
+    func englishModeDoesNotAutoCapitalizeEmptyContext() {
         let (composer, delegate, _) = makeComposer()
         composer.setInputMode(.english)
 
         let firstLetter = TestEventFactory.keyEvent(char: "h", keyCode: 4)!
-        #expect(composer.handle(firstLetter, delegate: delegate))
-        #expect(delegate.fullText == "H")
+        #expect(!composer.handle(firstLetter, delegate: delegate))
+        #expect(delegate.insertedTexts.isEmpty)
+        #expect(delegate.fullText.isEmpty)
+    }
+
+    @Test("English mode applies auto-capitalization after a sentence end")
+    func englishModeAutoCapitalizationFallback() {
+        let (composer, delegate, _) = makeComposer()
+        composer.setInputMode(.english)
 
         delegate.fullText = "Hello. "
         let sentenceLetter = TestEventFactory.keyEvent(char: "w", keyCode: 13)!
