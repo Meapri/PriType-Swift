@@ -26,26 +26,29 @@
 "keyBinding.conflict" = "Cannot use the same key";
 "keyBinding.conflictRestored" = "Cannot use the same key. Restored the previous setting.";
 "keyBinding.reset" = "Reset to Default";
-"keyBinding.capsLockSummary" = "When Caps Lock input-source switching is on, PriType's toggle key is disabled.";
+"keyBinding.capsLockSummary" = "When Caps Lock input-source switching is on, %@'s toggle key is disabled.";
 "keyBinding.capsLockStatusTitle" = "Caps Lock input-source switch";
 "keyBinding.capsLockStatusOn" = "On";
 "keyBinding.capsLockStatusOff" = "Off";
-"keyBinding.capsLockOnDescription" = "Caps Lock switches Korean/English through macOS Input Source settings. PriType's toggle key is disabled to avoid duplicate switching.";
-"keyBinding.capsLockOffDescription" = "PriType's toggle key switches Korean/English. Enable Caps Lock in macOS Input Source settings if you prefer that key.";
+"keyBinding.capsLockOnDescription" = "Caps Lock switches Korean/English through macOS Input Source settings. %@'s toggle key is disabled to avoid duplicate switching.";
+"keyBinding.capsLockOffDescription" = "%@'s toggle key switches Korean/English. Enable Caps Lock in macOS Input Source settings if you prefer that key.";
 "keyBinding.disabledByCapsLock" = "Disabled while Caps Lock input-source switching is on";
 "keyBinding.managedByMacOS" = "macOS Caps Lock";
 "keyBinding.capsLockBlockedTitle" = "Set Caps Lock in macOS";
-"keyBinding.capsLockBlockedMessage" = "Caps Lock is not a PriType custom key. Enable Caps Lock switching in macOS Input Source settings.";
+"keyBinding.capsLockBlockedMessage" = "Caps Lock is not a %@ custom key. Enable Caps Lock switching in macOS Input Source settings.";
 "keyBinding.capsLockOpenSettings" = "Open Input Source Settings";
 
 /* About */
 "about.title" = "About";
 "about.description" = "Korean Input Method for macOS";
 "about.version" = "Version";
+"about.patchNote" = "Local patch based on PriType 2.7.4. Not an official release.";
 
 /* App */
 "app.copyright" = "© 2025";
-"app.quit" = "Quit PriType";
+"app.quit" = "Quit %@";
+"app.settingsMenu" = "%@ Settings...";
+"app.aboutMenu" = "About %@";
 
 /* Update */
 "update.title" = "Update";
@@ -55,9 +58,10 @@
 "update.available" = "New version available: %@";
 "update.download" = "Download";
 "update.error" = "Check failed";
-"update.notificationTitle" = "PriType Update Available";
-"update.notificationBody" = "PriType %@ is now available. Click to download.";
+"update.notificationTitle" = "%@ Update Available";
+"update.notificationBody" = "%1$@ %2$@ is now available. Click to download.";
 "update.autoCheck" = "Automatically check for updates";
+"update.localPatchDisabled" = "This is a local patch, distinct from official PriType. It does not check for upstream updates.";
 
 /* System */
 "system.title" = "System Options";
@@ -66,7 +70,7 @@
 "system.accessibilityRequest" = "Request Permission";
 "system.accessibilitySubtitle" = "Required for detecting shortcut keys such as Right Command and Right Option.";
 "system.removeABC" = "Turn Off ABC Input Source";
-"system.removeABCSubtitle" = "Removes the default ABC input source when PriType alone handles Korean and English. You can add it again in System Settings.";
+"system.removeABCSubtitle" = "Removes the default ABC input source when %@ alone handles Korean and English. You can add it again in System Settings.";
 "system.removeABCButton" = "Turn Off";
 "system.removeABCSuccess" = "Disabled";
 "system.removeABCFailed" = "Failed";

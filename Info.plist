@@ -28,7 +28,7 @@
 	<dict>
 		<key>tsInputModeListKey</key>
 		<dict>
-			<key>com.pritype.inputmethod.v2</key>
+			<key>com.pritype.inputmethod.v2.korean</key>
 			<dict>
 				<key>TISIconIsTemplate</key>
 				<true/>
@@ -57,8 +57,7 @@
 		</dict>
 		<key>tsVisibleInputModeOrderedArrayKey</key>
 		<array>
-			<string>com.pritype.inputmethod.v2</string>
-			<string>com.pritype.inputmethod.v2.english</string>
+			<string>com.pritype.inputmethod.v2.korean</string>
 		</array>
 	</dict>
 	<key>InputMethodConnectionName</key>
@@ -74,7 +73,6 @@
 	<key>tsInputMethodCharacterRepertoireKey</key>
 	<array>
 		<string>Hang</string>
-		<string>Latn</string>
 	</array>
 	<key>TISIconIsTemplate</key>
 	<true/>

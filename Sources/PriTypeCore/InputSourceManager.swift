@@ -28,15 +28,23 @@ public final class InputSourceManager: @unchecked Sendable {
     /// Keyboard Layout ID for ABC (252)
     public static let abcKeyboardLayoutID = 252
 
-    private static let priTypeBundleID = "com.pritype.inputmethod.v2"
-    private static let priTypeKoreanInputMode = "com.pritype.inputmethod.v2"
-    private static let priTypeEnglishInputMode = "com.pritype.inputmethod.v2.english"
-    // Both PriType modes are current. cleanupStaleInputSources must NOT strip the
-    // English mode (it is a real registered mode, not a stale leftover).
-    private static let currentPriTypeInputModes: Set<String> = [
-        priTypeKoreanInputMode,
-        priTypeEnglishInputMode
-    ]
+    /// Modes belonging to `activeBundleID`. cleanupStaleInputSources must NOT
+    /// strip the English mode (it is a real registered mode, not a leftover).
+    private static func currentInputModes(forBundleID bundleID: String) -> Set<String> {
+        [
+            Brand.koreanModeID(forBundleID: bundleID),
+            Brand.englishModeID(forBundleID: bundleID)
+        ]
+    }
+
+    /// Old Korean mode key was the bundle id itself. TIS then minted
+    /// `<bundleID>.<last-component>` and Settings showed every row as the app name.
+    private static func legacyKoreanModeIds(forBundleID bundleID: String) -> Set<String> {
+        [
+            bundleID,
+            Brand.mintedCollisionModeID(forBundleID: bundleID)
+        ]
+    }
     
     // MARK: - TIS API Methods
     
@@ -77,6 +85,54 @@ public final class InputSourceManager: @unchecked Sendable {
         return sources.contains { $0.id.contains("US") || $0.name == "U.S." }
     }
 
+    /// Enabled ABC or US keyboard layout ID, or nil if the user has neither on.
+    ///
+    /// Used before `overrideKeyboardWithKeyboardNamed`. Requesting a *disabled*
+    /// layout is what re-inserts ABC into `AppleEnabledInputSources` after the
+    /// user turned it off.
+    public func enabledRomanKeyboardLayoutID() -> String? {
+        let enabledIDs = Set(getEnabledKeyboardInputSources().map(\.id))
+        let candidates = ["com.apple.keylayout.ABC", "com.apple.keylayout.US"]
+        return candidates.first { enabledIDs.contains($0) }
+    }
+
+    /// Remove the default ABC keyboard layout from the enabled input-source list.
+    ///
+    /// Matches KeyboardLayout ID 252 and the name "ABC". Does not touch U.S.
+    /// Already-absent is treated as success. Does not enable or select sources.
+    @discardableResult
+    public func disableDefaultABCInputSource() -> Bool {
+        guard let defaults = UserDefaults(suiteName: "com.apple.HIToolbox"),
+              var sources = defaults.array(forKey: "AppleEnabledInputSources") as? [[String: Any]] else {
+            return false
+        }
+
+        let originalCount = sources.count
+        sources.removeAll { Self.isDefaultABCSource($0) }
+        guard sources.count < originalCount else {
+            return true
+        }
+
+        defaults.set(sources, forKey: "AppleEnabledInputSources")
+        CFPreferencesAppSynchronize("com.apple.HIToolbox" as CFString)
+        DebugLogger.log("InputSourceManager: disabled default ABC input source")
+        return true
+    }
+
+    internal static func isDefaultABCSource(_ source: [String: Any]) -> Bool {
+        if (source["KeyboardLayout ID"] as? Int) == abcKeyboardLayoutID {
+            return true
+        }
+        if (source["KeyboardLayout Name"] as? String) == "ABC" {
+            return true
+        }
+        if let bundleID = source["Bundle ID"] as? String,
+           bundleID.contains("keylayout.ABC") {
+            return true
+        }
+        return false
+    }
+
     /// Remove stale legacy entries without enabling or selecting input sources.
     ///
     /// This intentionally does not enable PriType itself. Calling
@@ -94,7 +150,8 @@ public final class InputSourceManager: @unchecked Sendable {
         enabledSources = Self.sanitizedInputSources(
             enabledSources,
             removeAppleKoreanInputModes: false,
-            allowsPriTypeParentEntry: true
+            allowsPriTypeParentEntry: true,
+            activeBundleID: Brand.bundleID
         )
 
         var didChange = !Self.inputSourcesEqual(enabledSources, originalEnabledSources)
@@ -109,7 +166,8 @@ public final class InputSourceManager: @unchecked Sendable {
             let sanitizedSources = Self.sanitizedInputSources(
                 originalSources,
                 removeAppleKoreanInputModes: false,
-                allowsPriTypeParentEntry: true
+                allowsPriTypeParentEntry: true,
+                activeBundleID: Brand.bundleID
             )
             if !Self.inputSourcesEqual(sanitizedSources, originalSources) {
                 defaults.set(sanitizedSources, forKey: key)
@@ -134,15 +192,26 @@ public final class InputSourceManager: @unchecked Sendable {
     internal static func sanitizedInputSources(
         _ sources: [[String: Any]],
         removeAppleKoreanInputModes: Bool,
-        allowsPriTypeParentEntry: Bool
+        allowsPriTypeParentEntry: Bool,
+        activeBundleID: String = Brand.bundleID
     ) -> [[String: Any]] {
         var seen = Set<String>()
+        let currentModes = currentInputModes(forBundleID: activeBundleID)
+        let legacyKorean = legacyKoreanModeIds(forBundleID: activeBundleID)
 
         return sources.compactMap { source in
+            let source = migrateLegacyPriTypeMode(
+                source,
+                bundleID: activeBundleID,
+                koreanModeID: Brand.koreanModeID(forBundleID: activeBundleID),
+                legacyIds: legacyKorean
+            )
             if shouldRemoveInputSource(
                 source,
                 removeAppleKoreanInputModes: removeAppleKoreanInputModes,
-                allowsPriTypeParentEntry: allowsPriTypeParentEntry
+                allowsPriTypeParentEntry: allowsPriTypeParentEntry,
+                activeBundleID: activeBundleID,
+                currentModes: currentModes
             ) {
                 return nil
             }
@@ -156,17 +225,45 @@ public final class InputSourceManager: @unchecked Sendable {
         }
     }
 
+    /// Rewrite the Korean mode id that used to equal the bundle id so enabled /
+    /// selected lists keep working after the Info.plist rename.
+    private static func migrateLegacyPriTypeMode(
+        _ source: [String: Any],
+        bundleID: String,
+        koreanModeID: String,
+        legacyIds: Set<String>
+    ) -> [String: Any] {
+        guard (source["Bundle ID"] as? String) == bundleID,
+              (source["InputSourceKind"] as? String) == "Input Mode",
+              let inputMode = source["Input Mode"] as? String,
+              legacyIds.contains(inputMode) else {
+            return source
+        }
+        var migrated = source
+        migrated["Input Mode"] = koreanModeID
+        return migrated
+    }
+
     private static func shouldRemoveInputSource(
         _ source: [String: Any],
         removeAppleKoreanInputModes: Bool,
-        allowsPriTypeParentEntry: Bool
+        allowsPriTypeParentEntry: Bool,
+        activeBundleID: String,
+        currentModes: Set<String>
     ) -> Bool {
-        if (source["Bundle ID"] as? String) == priTypeBundleID {
+        if let bundleID = source["Bundle ID"] as? String,
+           bundleID == Brand.officialBundleID,
+           activeBundleID != Brand.officialBundleID {
+            // PatchType must not leave official PriType rows in HIToolbox.
+            return true
+        }
+
+        if (source["Bundle ID"] as? String) == activeBundleID {
             let inputMode = source["Input Mode"] as? String
             guard let inputMode else {
                 return !allowsPriTypeParentEntry
             }
-            if !currentPriTypeInputModes.contains(inputMode) {
+            if !currentModes.contains(inputMode) {
                 return true
             }
             return false

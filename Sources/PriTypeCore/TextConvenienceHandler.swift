@@ -218,8 +218,13 @@ public final class TextConvenienceHandler: @unchecked Sendable {
     }
 
     private func shouldAutoCapitalize(after beforeCursor: String) -> Bool {
+        // Empty context must NOT capitalize. After a Korean→English switch,
+        // many hosts (Chromium/Electron) report an empty substring even mid-sentence.
+        // Treating that as "start of document" is what made the first English
+        // letter uppercase. Empty/unknown context stays pass-through so macOS
+        // can apply its own capitalization when it actually knows the caret.
         if beforeCursor.isEmpty {
-            return true
+            return false
         }
 
         let scalars = Array(beforeCursor.unicodeScalars)

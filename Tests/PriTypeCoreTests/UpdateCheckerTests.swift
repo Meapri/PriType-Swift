@@ -61,6 +61,9 @@ struct UpdateCheckerTests {
         #expect(ReleaseChannel.detect(tagName: "v3.0.0", name: "PriType 3.0", prerelease: true) == .beta)
         #expect(ReleaseChannel.detect(plistValue: "beta", version: "3.0.0") == .beta)
         #expect(ReleaseChannel.detect(plistValue: "stable", version: "3.0.0-beta.1") == .stable)
+        #expect(ReleaseChannel.detect(plistValue: "local", version: "2.7.4-patch.1") == .local)
+        #expect(ReleaseChannel.detect(plistValue: "patch", version: "2.7.4") == .local)
+        #expect(ReleaseChannel.local.displayName == "local patch")
     }
 
     @Test("Stable update candidate ignores higher beta versions")

@@ -3,7 +3,7 @@ import InputMethodKit
 import Cocoa
 import PriTypeCore
 
-let kConnectionName = "PriType_InputString_v2"
+let kConnectionName = Brand.connectionName
 
 // MARK: - App Delegate
 
@@ -34,7 +34,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
         UpdateNotifier.shared.setup()
         
         // Check for updates in background (respects user preference and 24h throttle)
-        if ConfigurationManager.shared.autoUpdateCheckEnabled {
+        if ConfigurationManager.shared.autoUpdateCheckEnabled && Brand.tracksUpstreamUpdates {
             Task.detached(priority: .utility) {
                 let result = await UpdateChecker.shared.checkForUpdatesIfNeeded()
                 if case .updateAvailable(let info) = result {
@@ -62,12 +62,20 @@ class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
             DebugLogger.log("Requesting Accessibility permission...")
             IOKitManager.requestAccessibilityPermission()
             
-            // Poll until user grants permission from the system popup
+            // Poll until user grants permission, with a 2-minute cap so a
+            // never-granted prompt cannot leave a timer running forever.
+            let pollDeadline = Date().addingTimeInterval(120)
             Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { timer in
-                guard AXIsProcessTrusted() else { return }
-                timer.invalidate()
-                DebugLogger.log("Accessibility granted via system popup — starting key monitoring")
-                self.setupIOKit()
+                if AXIsProcessTrusted() {
+                    timer.invalidate()
+                    DebugLogger.log("Accessibility granted via system popup — starting key monitoring")
+                    self.setupIOKit()
+                    return
+                }
+                if Date() >= pollDeadline {
+                    timer.invalidate()
+                    DebugLogger.log("Accessibility not granted within 2 minutes; stop polling")
+                }
             }
             return
         }

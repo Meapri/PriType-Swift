@@ -107,7 +107,7 @@ public final class UpdateNotifier: NSObject, @unchecked Sendable, UNUserNotifica
         
         let content = UNMutableNotificationContent()
         content.title = L10n.update.notificationTitle
-        content.body = String(format: L10n.update.notificationBody, update.version)
+        content.body = String(format: L10n.update.notificationBody, L10n.app.name, update.version)
         content.sound = .default
         content.categoryIdentifier = categoryIdentifier
         

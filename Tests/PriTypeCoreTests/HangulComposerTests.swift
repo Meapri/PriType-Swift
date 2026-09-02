@@ -42,6 +42,36 @@ struct HangulComposerTests {
         
         #expect(delegate.markedText == "안")
     }
+
+    @Test("Web hosts keep choseong jamo in preedit instead of compatibility jamo")
+    func webHostKeepsRawChoseongJamo() {
+        let (composer, delegate, _) = makeComposer()
+        composer.markKeystroke(bundleId: "com.google.Chrome")
+        _ = composer.handle(TestEventFactory.keyEvent(char: "r", keyCode: 15)!, delegate: delegate)
+
+        #expect(delegate.markedText == "\u{1100}",
+                "Chrome preedit must stay U+1100 so the host keeps composition open; got '\(delegate.markedText)'")
+        #expect(delegate.insertedTexts.isEmpty, "First choseong must not commit")
+    }
+
+    @Test("Native hosts display compatibility jamo in preedit")
+    func nativeHostUsesCompatibilityJamo() {
+        let (composer, delegate, _) = makeComposer()
+        composer.markKeystroke(bundleId: "com.kakao.KakaoTalkMac")
+        _ = composer.handle(TestEventFactory.keyEvent(char: "r", keyCode: 15)!, delegate: delegate)
+
+        #expect(delegate.markedText == "\u{3131}",
+                "Native preedit stays U+3131 for display; got '\(delegate.markedText)'")
+    }
+
+    @Test("Web host syllable composition still produces a precomposed syllable")
+    func webHostSyllableStillPrecomposed() {
+        let (composer, delegate, _) = makeComposer()
+        composer.markKeystroke(bundleId: "com.google.Chrome")
+        _ = composer.handle(TestEventFactory.keyEvent(char: "r", keyCode: 15)!, delegate: delegate)
+        _ = composer.handle(TestEventFactory.keyEvent(char: "k", keyCode: 40)!, delegate: delegate)
+        #expect(delegate.markedText == "가")
+    }
     
     // MARK: - Syllable Boundary Tests
     
@@ -141,14 +171,21 @@ struct HangulComposerTests {
         #expect(delegate.markedText.isEmpty)
     }
 
-    @Test("English mode applies auto-capitalization fallback")
-    func englishModeAutoCapitalizationFallback() {
+    @Test("English mode does not auto-capitalize when cursor context is empty")
+    func englishModeDoesNotAutoCapitalizeEmptyContext() {
         let (composer, delegate, _) = makeComposer()
         composer.setInputMode(.english)
 
         let firstLetter = TestEventFactory.keyEvent(char: "h", keyCode: 4)!
-        #expect(composer.handle(firstLetter, delegate: delegate))
-        #expect(delegate.fullText == "H")
+        #expect(!composer.handle(firstLetter, delegate: delegate))
+        #expect(delegate.insertedTexts.isEmpty)
+        #expect(delegate.fullText.isEmpty)
+    }
+
+    @Test("English mode applies auto-capitalization after a sentence end")
+    func englishModeAutoCapitalizationFallback() {
+        let (composer, delegate, _) = makeComposer()
+        composer.setInputMode(.english)
 
         delegate.fullText = "Hello. "
         let sentenceLetter = TestEventFactory.keyEvent(char: "w", keyCode: 13)!

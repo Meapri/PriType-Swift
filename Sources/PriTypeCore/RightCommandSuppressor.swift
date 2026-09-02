@@ -146,13 +146,19 @@ public final class RightCommandSuppressor: @unchecked Sendable {
             tapDisableCount += 1
             
             if tapDisableCount >= maxTapDisableRetries {
-                // CGEventTap is repeatedly failing — switch to IOKit backup
+                // CGEventTap is repeatedly failing — stop it completely so IOKit
+                // is the only handler. Re-enabling here used to leave a zombie
+                // tap that double-fired the toggle.
                 DebugLogger.log("RightCommandSuppressor: Tap disabled \(tapDisableCount) times, switching to IOKit fallback")
+                if let tap = eventTap {
+                    CGEvent.tapEnable(tap: tap, enable: false)
+                }
                 let callback = onTapFailed
-                DispatchQueue.main.async {
+                DispatchQueue.main.async { [weak self] in
+                    self?.stop()
                     callback?()
                 }
-                // Still try to re-enable in case IOKit also needs it
+                return Unmanaged.passUnretained(event)
             } else {
                 DebugLogger.log("RightCommandSuppressor: Tap disabled (\(tapDisableCount)/\(maxTapDisableRetries)), re-enabling")
             }
