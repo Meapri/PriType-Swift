@@ -161,6 +161,20 @@ public enum ClientCompatibilityPolicy {
         hermesBundleIds.contains(bundleId)
     }
 
+    /// Whether `bundleId` is a browser / Electron / CEF / Atlassian web editor.
+    /// These hosts run contenteditable (often ProseMirror), not AppKit text views.
+    public static func isWebContentHost(bundleId: String) -> Bool {
+        if directInsertionDenylist.contains(bundleId) { return true }
+        if blinkRendererBundleIds.contains(bundleId) { return true }
+        let lower = bundleId.lowercased()
+        return lower.contains("electron")
+            || lower.contains("chrome")
+            || lower.contains("chromium")
+            || lower.contains("atlassian")
+            || lower.contains("confluence")
+            || lower.contains("jira")
+    }
+
     /// Whether direct insertion must be denied for `bundleId` because the host cannot
     /// reliably support in-place real-text rewrites (Electron/Chromium/browsers).
     /// Explicit list + a keyword heuristic for unlisted Electron/Chromium wrappers.
@@ -170,6 +184,25 @@ public enum ClientCompatibilityPolicy {
         return lower.contains("electron")
             || lower.contains("chrome")
             || lower.contains("chromium")
+    }
+
+    /// Web editors treat Hangul Compatibility Jamo (U+3131 ㄱ) as a finished letter
+    /// and may fire compositionend after the first choseong. That commits `ㄱ` into
+    /// its own Confluence/ProseMirror list item while libhangul continues composing
+    /// the same syllable in the next item (`- ㄱ` / `- 감사합니다.`). Keep the
+    /// engine's choseong jamo (U+1100) so the host leaves composition open.
+    /// Native AppKit hosts keep compatibility jamo for display.
+    public static func prefersRawJamoPreedit(bundleId: String) -> Bool {
+        isWebContentHost(bundleId: bundleId)
+    }
+
+    /// Web editors' empty list items often have a non-collapsed / placeholder
+    /// selection. `setMarkedText` with `replacementRange = NSNotFound` then
+    /// **replaces that selection** (Apple NSTextInputClient). Collapsing the
+    /// first mark to `{caret, 0}` inserts without eating the list structure.
+    /// Native hosts (KakaoTalk) must keep NSNotFound.
+    public static func prefersCollapsedCompositionReplacement(bundleId: String) -> Bool {
+        isWebContentHost(bundleId: bundleId)
     }
 
     /// Hosts whose text fields are rendered by Blink (Chromium/Electron/CEF).

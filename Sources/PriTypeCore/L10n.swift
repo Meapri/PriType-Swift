@@ -71,16 +71,16 @@ public enum L10n {
         public static var conflict: String { localized("keyBinding.conflict") }
         public static var conflictRestored: String { localized("keyBinding.conflictRestored") }
         public static var reset: String { localized("keyBinding.reset") }
-        public static var capsLockSummary: String { localized("keyBinding.capsLockSummary") }
+        public static var capsLockSummary: String { String(format: localized("keyBinding.capsLockSummary"), app.name) }
         public static var capsLockStatusTitle: String { localized("keyBinding.capsLockStatusTitle") }
         public static var capsLockStatusOn: String { localized("keyBinding.capsLockStatusOn") }
         public static var capsLockStatusOff: String { localized("keyBinding.capsLockStatusOff") }
-        public static var capsLockOnDescription: String { localized("keyBinding.capsLockOnDescription") }
-        public static var capsLockOffDescription: String { localized("keyBinding.capsLockOffDescription") }
+        public static var capsLockOnDescription: String { String(format: localized("keyBinding.capsLockOnDescription"), app.name) }
+        public static var capsLockOffDescription: String { String(format: localized("keyBinding.capsLockOffDescription"), app.name) }
         public static var disabledByCapsLock: String { localized("keyBinding.disabledByCapsLock") }
         public static var managedByMacOS: String { localized("keyBinding.managedByMacOS") }
         public static var capsLockBlockedTitle: String { localized("keyBinding.capsLockBlockedTitle") }
-        public static var capsLockBlockedMessage: String { localized("keyBinding.capsLockBlockedMessage") }
+        public static var capsLockBlockedMessage: String { String(format: localized("keyBinding.capsLockBlockedMessage"), app.name) }
         public static var capsLockOpenSettings: String { localized("keyBinding.capsLockOpenSettings") }
     }
     
@@ -90,14 +90,17 @@ public enum L10n {
         public static var title: String { localized("about.title") }
         public static var description: String { localized("about.description") }
         public static var version: String { localized("about.version") }
+        public static var patchNote: String { localized("about.patchNote") }
     }
     
     // MARK: - App
     
     public enum app {
-        public static var name: String { "PriType" }
+        public static var name: String { Brand.displayName }
         public static var copyright: String { localized("app.copyright") }
-        public static var quit: String { localized("app.quit") }
+        public static var quit: String { String(format: localized("app.quit"), name) }
+        public static var settingsMenu: String { String(format: localized("app.settingsMenu"), name) }
+        public static var aboutMenu: String { String(format: localized("app.aboutMenu"), name) }
     }
     
     // MARK: - Update
@@ -110,9 +113,10 @@ public enum L10n {
         public static var available: String { localized("update.available") }
         public static var download: String { localized("update.download") }
         public static var error: String { localized("update.error") }
-        public static var notificationTitle: String { localized("update.notificationTitle") }
+        public static var notificationTitle: String { String(format: localized("update.notificationTitle"), app.name) }
         public static var notificationBody: String { localized("update.notificationBody") }
         public static var autoCheck: String { localized("update.autoCheck") }
+        public static var localPatchDisabled: String { localized("update.localPatchDisabled") }
     }
     
     // MARK: - System
@@ -124,7 +128,7 @@ public enum L10n {
         public static var accessibilityRequest: String { localized("system.accessibilityRequest") }
         public static var accessibilitySubtitle: String { localized("system.accessibilitySubtitle") }
         public static var removeABC: String { localized("system.removeABC") }
-        public static var removeABCSubtitle: String { localized("system.removeABCSubtitle") }
+        public static var removeABCSubtitle: String { String(format: localized("system.removeABCSubtitle"), app.name) }
         public static var removeABCButton: String { localized("system.removeABCButton") }
         public static var removeABCSuccess: String { localized("system.removeABCSuccess") }
         public static var removeABCFailed: String { localized("system.removeABCFailed") }

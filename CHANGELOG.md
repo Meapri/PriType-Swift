@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### 수정
+- 로컬 설치 `./install.sh --as-patchtype`은 입력기를 **PatchType / 패치타입**으로 등록합니다. 번들 ID는 `com.calvinjkim.patchtype`, 버전은 `2.7.4-patch.1 (local patch)`라서 설정·정보창에서 공식 PriType 2.7.4와 구분됩니다. 소스 트리 `Info.plist`의 공식 identity는 PR용으로 유지합니다.
+- Confluence 같은 웹 편집기 목록에서 `감사합니다.`를 치면 초성 `ㄱ`이 따로 한 항목이 되고 나머지가 다음 항목으로 들어가던 문제를 고쳤습니다. 웹 호스트는 첫 `setMarkedText`가 비어 있는 목록의 선택 영역을 통째로 갈아치우지 않도록 캐럿에만 삽입하고, 조합 중인 초성을 호환 자모(U+3131)가 아니라 초성 자모(U+1100)로 보내 조합이 첫 타건에서 끝나지 않게 합니다. 카카오톡 등 네이티브 호스트는 기존 `NSNotFound` + 호환 자모 경로를 유지합니다.
+- 설정에 PriType가 여러 개로 보이던 문제를 줄였습니다. 한글 모드 키를 번들 ID와 같게 두면 TIS가 `com.pritype.inputmethod.v2.v2`를 만들고 모든 행이 `PriType`으로 표시됩니다. 한글 모드를 `com.pritype.inputmethod.v2.korean`으로 구분해 `한글`/`영어`로 보이게 하고, 예전 모드 ID는 기동 시 마이그레이션합니다. `~/Library`와 `/Library`에 동시에 설치하면 여전히 복제가 생기므로 `install.sh`가 경고합니다. 문자 레퍼토리에서 `Latn`을 빼고 설정에 한글 모드만 노출합니다. `Hang`+`Latn`이면 입력 소스 추가 화면이 PriType를 모든 라틴/한글 자판과 짝지어 수백 줄로 보여 줍니다.
 - 한→영 전환 직후 첫 글자가 대문자로 들어가던 문제를 고쳤습니다. 영어 자동 대문자 폴백이 커서 앞 텍스트를 빈 문자열로 보면 문장 시작으로 취급했는데, Chromium/Electron은 전환 직후 그 조회가 자주 비어 있었습니다. 이제 빈 컨텍스트는 패스스루하고, `.!?` 뒤 공백처럼 문장 끝이 확인될 때만 대문자로 넣습니다.
 - 설정에서 ABC를 꺼도 다음 포커스/전환에서 다시 살아나던 문제를 고쳤습니다. 비활성 ABC 레이아웃을 `overrideKeyboardWithKeyboardNamed`로 요청하던 경로를 제거하고, 영어 모드에서만, 그리고 ABC/US가 실제로 켜져 있을 때만 오버라이드합니다.
 - 커스텀 한/영 전환키에서 `selectInputMode:`를 호출하지 않습니다. Latin-only 필드에서 TIS가 실제 ABC 소스로 넘어가던 경로입니다.

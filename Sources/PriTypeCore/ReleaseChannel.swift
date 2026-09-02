@@ -4,6 +4,7 @@ import Foundation
 public enum ReleaseChannel: String, Sendable, Codable {
     case stable
     case beta
+    case local
 
     public var displayName: String {
         switch self {
@@ -11,6 +12,8 @@ public enum ReleaseChannel: String, Sendable, Codable {
             return "Stable"
         case .beta:
             return "Beta"
+        case .local:
+            return "local patch"
         }
     }
 
@@ -19,6 +22,9 @@ public enum ReleaseChannel: String, Sendable, Codable {
     public static func detect(plistValue: String?, version: String) -> ReleaseChannel {
         if let plistValue {
             let normalized = plistValue.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            if normalized == ReleaseChannel.local.rawValue || normalized == "patch" {
+                return .local
+            }
             if normalized == ReleaseChannel.beta.rawValue {
                 return .beta
             }

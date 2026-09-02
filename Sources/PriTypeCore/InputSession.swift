@@ -160,7 +160,7 @@ final class InputSession: @unchecked Sendable {
             // Nothing to commit, but the session-ending event (e.g. a mouse click)
             // likely moved the caret — stale direct-insertion tracking must never
             // survive it, or the next keystroke could rewrite unrelated text.
-            (adapter as? DirectInsertionAdapter)?.resetPreeditTracking()
+            resetAdapterTracking()
             return false
         }
 
@@ -175,7 +175,13 @@ final class InputSession: @unchecked Sendable {
         }
 
         Self.finalizeMarkedComposition(composer: composer, client: client, reason: reason)
+        resetAdapterTracking()
         return true
+    }
+
+    private func resetAdapterTracking() {
+        (adapter as? DirectInsertionAdapter)?.resetPreeditTracking()
+        (adapter as? MarkedTextAdapter)?.resetLiveMarkedText()
     }
 
     /// The marked-text finalize, callable against any client. `PriTypeInputController`
@@ -204,6 +210,6 @@ final class InputSession: @unchecked Sendable {
     /// a stale live-preedit length can never delete real text on the next keystroke.
     func discardForSecureInput() {
         composer.discardCompositionForPassThrough()
-        (adapter as? DirectInsertionAdapter)?.resetPreeditTracking()
+        resetAdapterTracking()
     }
 }

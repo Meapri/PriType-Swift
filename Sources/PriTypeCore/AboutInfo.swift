@@ -35,7 +35,12 @@ public struct AboutInfo: Sendable {
     public static var copyright: String { L10n.app.copyright }
     
     /// Full description for about dialog (localized)
-    public static var description: String { L10n.about.description }
+    public static var description: String {
+        if Brand.tracksUpstreamUpdates && releaseChannel != .local {
+            return L10n.about.description
+        }
+        return "\(L10n.about.description)\n\(L10n.about.patchNote)"
+    }
     
     // MARK: - About Dialog
     

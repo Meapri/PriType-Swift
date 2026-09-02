@@ -166,10 +166,55 @@ class BaseClientAdapter: NSObject, HangulComposerDelegate {
     }
 }
 
+// MARK: - MarkedTextReplacement
+
+/// Pure policy for `setMarkedText` `replacementRange`.
+///
+/// Native AppKit hosts (KakaoTalk) need `NSNotFound`: the host replaces its own
+/// marked text. Web contenteditable hosts (Confluence/ProseMirror lists) often
+/// have a non-collapsed placeholder selection in an empty `<li>`; Apple's
+/// NSTextInputClient then **replaces that selection** when there is no marked
+/// text yet, which splits the list (`- ㄱ` then `- 감사합니다.`).
+enum MarkedTextReplacement {
+    static let notFound = NSRange(location: NSNotFound, length: NSNotFound)
+    static let maxLocation = 10_000_000
+
+    static func range(
+        isClearing: Bool,
+        hasLiveMarkedText: Bool,
+        selectedRange: NSRange,
+        prefersCollapsedStart: Bool
+    ) -> NSRange {
+        if isClearing || !prefersCollapsedStart || hasLiveMarkedText {
+            return notFound
+        }
+        guard selectedRange.location != NSNotFound,
+              selectedRange.location < maxLocation else {
+            return notFound
+        }
+        return NSRange(location: selectedRange.location, length: 0)
+    }
+}
+
 // MARK: - MarkedTextAdapter
 
 /// Standard adapter with invisible-underline marked text for composition display
 final class MarkedTextAdapter: BaseClientAdapter {
+    /// True after we have sent a non-empty marked string that has not yet been
+    /// committed or cleared. Used instead of `client.markedRange()` because
+    /// Chromium often reports NSNotFound for markedRange even during preedit.
+    private var hasLiveMarkedText = false
+
+    override func insertText(_ text: String) {
+        hasLiveMarkedText = false
+        super.insertText(text)
+    }
+
+    /// Session-ending commits talk to the IMK client directly and skip `insertText`.
+    func resetLiveMarkedText() {
+        hasLiveMarkedText = false
+    }
+
     override func setMarkedText(_ text: String) {
         // Canonical marked-text protocol, matching Apple's own input methods:
         // set the marked text directly with replacementRange = NSNotFound (an
@@ -178,11 +223,25 @@ final class MarkedTextAdapter: BaseClientAdapter {
         // non-canonical path (clearing via insertText("") over an explicit marked
         // range) left native hosts like KakaoTalk in an inconsistent composition
         // state — a stranded/underlined preedit that never committed on focus loss.
+        //
+        // Web hosts are the exception on the *first* mark only: insert at the
+        // caret (`length: 0`) so an empty-list placeholder selection is not
+        // replaced. Later updates still use NSNotFound.
+        let prefersCollapsedStart = ClientCompatibilityPolicy
+            .prefersCollapsedCompositionReplacement(bundleId: bundleId)
+        let needsCollapsedStart = prefersCollapsedStart && !text.isEmpty && !hasLiveMarkedText
+        let replacement = MarkedTextReplacement.range(
+            isClearing: text.isEmpty,
+            hasLiveMarkedText: hasLiveMarkedText,
+            selectedRange: needsCollapsedStart ? client.selectedRange() : MarkedTextReplacement.notFound,
+            prefersCollapsedStart: prefersCollapsedStart
+        )
+        hasLiveMarkedText = !text.isEmpty
         let attributed = NSAttributedString(string: text, attributes: preeditAttributes)
         client.setMarkedText(
             attributed,
             selectionRange: NSRange(location: text.utf16.count, length: 0),
-            replacementRange: NSRange(location: NSNotFound, length: NSNotFound)
+            replacementRange: replacement
         )
     }
 }

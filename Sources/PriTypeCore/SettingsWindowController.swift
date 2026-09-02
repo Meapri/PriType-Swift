@@ -32,7 +32,7 @@ public class SettingsWindowController: NSObject {
         let newWindow = NSWindow(contentViewController: hostingController)
         // Visually hidden (titleVisibility = .hidden) but still used by the Window
         // menu, Mission Control, and VoiceOver — so keep it localized.
-        newWindow.title = "PriType \(L10n.settings.title)"
+        newWindow.title = "\(L10n.app.name) \(L10n.settings.title)"
         newWindow.styleMask = [.titled, .closable, .miniaturizable, .fullSizeContentView]
         newWindow.titlebarAppearsTransparent = true
         newWindow.titleVisibility = .hidden
@@ -282,50 +282,64 @@ struct SettingsView: View {
                 clearKeyConflict()
             }
 
-            SettingsSection(
-                title: L10n.update.title,
-                icon: "arrow.triangle.2.circlepath"
-            ) {
-                VStack(spacing: 0) {
-                    SettingsToggleRow(
-                        title: L10n.update.autoCheck,
-                        icon: "clock.arrow.2.circlepath",
-                        isOn: $autoUpdateCheckEnabled
-                    )
+            if Brand.tracksUpstreamUpdates {
+                SettingsSection(
+                    title: L10n.update.title,
+                    icon: "arrow.triangle.2.circlepath"
+                ) {
+                    VStack(spacing: 0) {
+                        SettingsToggleRow(
+                            title: L10n.update.autoCheck,
+                            icon: "clock.arrow.2.circlepath",
+                            isOn: $autoUpdateCheckEnabled
+                        )
 
-                    Divider()
-                        .opacity(0.2)
-                        .padding(.horizontal, 12)
+                        Divider()
+                            .opacity(0.2)
+                            .padding(.horizontal, 12)
 
-                    HStack(spacing: 10) {
-                        Button(action: { checkForUpdates() }) {
-                            HStack(spacing: 6) {
-                                if updateStatus == .checking {
-                                    ProgressView()
-                                        .controlSize(.small)
-                                } else {
-                                    Image(systemName: "arrow.clockwise")
-                                        .font(.system(size: 12, weight: .medium))
+                        HStack(spacing: 10) {
+                            Button(action: { checkForUpdates() }) {
+                                HStack(spacing: 6) {
+                                    if updateStatus == .checking {
+                                        ProgressView()
+                                            .controlSize(.small)
+                                    } else {
+                                        Image(systemName: "arrow.clockwise")
+                                            .font(.system(size: 12, weight: .medium))
+                                    }
+                                    Text(L10n.update.checkButton)
+                                        .font(.system(size: 13, weight: .medium))
                                 }
-                                Text(L10n.update.checkButton)
-                                    .font(.system(size: 13, weight: .medium))
                             }
+                            .buttonStyle(.bordered)
+                            .buttonBorderShape(.roundedRectangle(radius: 7))
+                            .controlSize(.small)
+                            .disabled(updateStatus == .checking)
+
+                            Spacer()
+
+                            updateStatusView
                         }
-                        .buttonStyle(.bordered)
-                        .buttonBorderShape(.roundedRectangle(radius: 7))
-                        .controlSize(.small)
-                        .disabled(updateStatus == .checking)
-
-                        Spacer()
-
-                        updateStatusView
+                        .padding(.vertical, 10)
+                        .padding(.horizontal, 12)
                     }
-                    .padding(.vertical, 10)
-                    .padding(.horizontal, 12)
                 }
-            }
-            .onChange(of: autoUpdateCheckEnabled) { _, newValue in
-                ConfigurationManager.shared.autoUpdateCheckEnabled = newValue
+                .onChange(of: autoUpdateCheckEnabled) { _, newValue in
+                    ConfigurationManager.shared.autoUpdateCheckEnabled = newValue
+                }
+            } else {
+                SettingsSection(
+                    title: L10n.update.title,
+                    icon: "arrow.triangle.2.circlepath"
+                ) {
+                    Text(L10n.update.localPatchDisabled)
+                        .font(.system(size: 13))
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.vertical, 10)
+                        .padding(.horizontal, 12)
+                }
             }
 
             SettingsSection(
@@ -457,7 +471,7 @@ struct SettingsView: View {
                 SettingsHeaderIcon()
 
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("PriType")
+                    Text(L10n.app.name)
                         .font(.system(size: 23, weight: .semibold))
                         .foregroundStyle(.primary)
                     Text(L10n.settings.title)

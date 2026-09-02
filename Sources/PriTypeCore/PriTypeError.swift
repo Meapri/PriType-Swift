@@ -35,7 +35,7 @@ public enum PriTypeError: LocalizedError, Sendable {
         case .eventTapDisabled:
             return "CGEventTap이 시스템에 의해 비활성화되었습니다."
         case .accessibilityPermissionDenied:
-            return "접근성 권한이 필요합니다. 시스템 설정에서 PriType에 권한을 부여하세요."
+            return "접근성 권한이 필요합니다. 시스템 설정에서 \(Brand.displayName)에 권한을 부여하세요."
         case .hidManagerOpenFailed(let code):
             return "IOHIDManager 열기 실패 (코드: \(code))"
         }
@@ -44,7 +44,7 @@ public enum PriTypeError: LocalizedError, Sendable {
     public var recoverySuggestion: String? {
         switch self {
         case .eventTapCreationFailed, .accessibilityPermissionDenied:
-            return "시스템 설정 > 개인정보 보호 및 보안 > 접근성에서 PriType을 활성화하세요."
+            return "시스템 설정 > 개인정보 보호 및 보안 > 접근성에서 \(Brand.displayName)을 활성화하세요."
         case .eventTapDisabled:
             return "입력기를 재시작하거나 시스템을 다시 시작하세요."
         case .hidManagerOpenFailed:

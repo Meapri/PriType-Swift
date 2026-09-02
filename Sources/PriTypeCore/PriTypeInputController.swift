@@ -23,11 +23,21 @@ import Carbon.HIToolbox
 /// ```
 @objc(PriTypeInputController)
 public class PriTypeInputController: IMKInputController, @unchecked Sendable {
-    // Two PriType input modes registered in Info.plist ComponentInputModeDict.
+    // Two input modes registered in Info.plist ComponentInputModeDict.
     // Korean composes; English is a pure pass-through (ABC layout override).
     // macOS Caps Lock / input-source switching moves between these two modes.
-    private static let priTypeInputSourceID = "com.pritype.inputmethod.v2"          // Korean mode (== bundle id)
-    private static let priTypeEnglishInputModeID = "com.pritype.inputmethod.v2.english"
+    // The Korean mode id MUST be distinct from the bundle id — using the bundle
+    // id as the mode key made TIS mint `<bundle>.<last>` and every Settings row
+    // displayed as the app name.
+    private static let priTypeKoreanInputModeID = Brand.koreanModeID
+    private static let priTypeEnglishInputModeID = Brand.englishModeID
+    private static let legacyKoreanInputModeIDs: Set<String> = [
+        Brand.bundleID,
+        Brand.mintedCollisionModeID(forBundleID: Brand.bundleID),
+        Brand.officialBundleID,
+        Brand.officialKoreanModeID,
+        Brand.mintedCollisionModeID(forBundleID: Brand.officialBundleID)
+    ]
 
     // MARK: - Shared State
     //
@@ -292,9 +302,12 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
             // next keyDown already sees the new mode (no first-key race).
             let targetMode: InputMode?
             switch inputModeID {
-            case Self.priTypeEnglishInputModeID: targetMode = .english
-            case Self.priTypeInputSourceID:      targetMode = .korean
-            default:                             targetMode = nil
+            case Self.priTypeEnglishInputModeID:
+                targetMode = .english
+            case Self.priTypeKoreanInputModeID:
+                targetMode = .korean
+            default:
+                targetMode = Self.legacyKoreanInputModeIDs.contains(inputModeID) ? .korean : nil
             }
             DebugLogger.log("PriTypeInputController: setValue inputMode='\(inputModeID)' target=\(String(describing: targetMode)) current=\(composer.inputMode)")
             guard let targetMode else {
@@ -404,14 +417,14 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
         let menu = NSMenu()
 
         // Settings
-        let settingsItem = NSMenuItem(title: "PriType 설정...", action: #selector(openSettings(_:)), keyEquivalent: "")
+        let settingsItem = NSMenuItem(title: L10n.app.settingsMenu, action: #selector(openSettings(_:)), keyEquivalent: "")
         settingsItem.target = self
         menu.addItem(settingsItem)
 
         menu.addItem(NSMenuItem.separator())
 
         // About
-        let aboutItem = NSMenuItem(title: "PriType 정보", action: #selector(showAbout(_:)), keyEquivalent: "")
+        let aboutItem = NSMenuItem(title: L10n.app.aboutMenu, action: #selector(showAbout(_:)), keyEquivalent: "")
         aboutItem.target = self
         menu.addItem(aboutItem)
 

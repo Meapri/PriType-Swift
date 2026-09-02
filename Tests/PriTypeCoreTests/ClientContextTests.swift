@@ -145,6 +145,36 @@ struct ClientContextTests {
         #expect(ClientCompatibilityPolicy.prefersDirectInsertionForComposition(bundleId: "com.nousresearch.hermes.setup"))
         #expect(!ClientCompatibilityPolicy.prefersDirectInsertionForComposition(bundleId: "com.openai.codex"))
     }
+
+    @Test("Web content hosts include browsers, Electron, and Atlassian wrappers")
+    func webContentHosts() {
+        for id in [
+            "com.google.Chrome",
+            "com.apple.Safari",
+            "org.mozilla.firefox",
+            "com.anthropic.claudefordesktop",
+            "com.atlassian.confluence",
+            "com.example.MyElectronApp"
+        ] {
+            #expect(ClientCompatibilityPolicy.isWebContentHost(bundleId: id), "\(id) should be a web content host")
+            #expect(ClientCompatibilityPolicy.prefersRawJamoPreedit(bundleId: id), "\(id) should keep raw jamo")
+            #expect(ClientCompatibilityPolicy.prefersCollapsedCompositionReplacement(bundleId: id), "\(id) should start composition without replacing host selection")
+        }
+    }
+
+    @Test("Native AppKit hosts are not treated as web content")
+    func nativeHostsAreNotWebContent() {
+        for id in [
+            "com.kakao.KakaoTalkMac",
+            "com.apple.TextEdit",
+            "com.apple.Notes",
+            "com.apple.dt.Xcode"
+        ] {
+            #expect(!ClientCompatibilityPolicy.isWebContentHost(bundleId: id), "\(id) should stay native")
+            #expect(!ClientCompatibilityPolicy.prefersRawJamoPreedit(bundleId: id))
+            #expect(!ClientCompatibilityPolicy.prefersCollapsedCompositionReplacement(bundleId: id))
+        }
+    }
     
     // MARK: - Resolution / Desktop Detection (migrated from ResolutionTests.swift)
     

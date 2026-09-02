@@ -26,26 +26,29 @@
 "keyBinding.conflict" = "같은 키는 사용할 수 없습니다";
 "keyBinding.conflictRestored" = "같은 키는 사용할 수 없습니다. 기존 설정으로 복원했습니다.";
 "keyBinding.reset" = "기본값으로 복원";
-"keyBinding.capsLockSummary" = "Caps Lock 입력 소스 전환이 켜져 있으면 PriType 한/영 전환키는 비활성화됩니다.";
+"keyBinding.capsLockSummary" = "Caps Lock 입력 소스 전환이 켜져 있으면 %@ 한/영 전환키는 비활성화됩니다.";
 "keyBinding.capsLockStatusTitle" = "Caps Lock 입력 소스 전환";
 "keyBinding.capsLockStatusOn" = "켜짐";
 "keyBinding.capsLockStatusOff" = "꺼짐";
-"keyBinding.capsLockOnDescription" = "macOS 입력 소스 설정을 따라 Caps Lock으로 한/영을 전환합니다. PriType 전환키는 중복 동작을 막기 위해 비활성화됩니다.";
-"keyBinding.capsLockOffDescription" = "PriType 전환키로 한/영을 전환합니다. Caps Lock을 쓰려면 macOS 입력 소스 설정에서 켜 주세요.";
+"keyBinding.capsLockOnDescription" = "macOS 입력 소스 설정을 따라 Caps Lock으로 한/영을 전환합니다. %@ 전환키는 중복 동작을 막기 위해 비활성화됩니다.";
+"keyBinding.capsLockOffDescription" = "%@ 전환키로 한/영을 전환합니다. Caps Lock을 쓰려면 macOS 입력 소스 설정에서 켜 주세요.";
 "keyBinding.disabledByCapsLock" = "Caps Lock 입력 소스 전환이 켜져 있어 비활성화됨";
 "keyBinding.managedByMacOS" = "macOS Caps Lock";
 "keyBinding.capsLockBlockedTitle" = "Caps Lock은 macOS에서 설정합니다";
-"keyBinding.capsLockBlockedMessage" = "PriType 전환키로는 사용할 수 없습니다. macOS 입력 소스 설정에서 Caps Lock 전환을 켜 주세요.";
+"keyBinding.capsLockBlockedMessage" = "%@ 전환키로는 사용할 수 없습니다. macOS 입력 소스 설정에서 Caps Lock 전환을 켜 주세요.";
 "keyBinding.capsLockOpenSettings" = "입력 소스 설정 열기";
 
 /* About */
 "about.title" = "정보";
 "about.description" = "macOS용 한글 입력기";
 "about.version" = "버전";
+"about.patchNote" = "원본 PriType 2.7.4 기반 로컬 패치입니다. 공식 빌드가 아닙니다.";
 
 /* App */
 "app.copyright" = "© 2025";
-"app.quit" = "PriType 종료";
+"app.quit" = "%@ 종료";
+"app.settingsMenu" = "%@ 설정...";
+"app.aboutMenu" = "%@ 정보";
 
 /* Update */
 "update.title" = "업데이트";
@@ -55,9 +58,10 @@
 "update.available" = "새 버전 사용 가능: %@";
 "update.download" = "다운로드";
 "update.error" = "확인 실패";
-"update.notificationTitle" = "PriType 업데이트 사용 가능";
-"update.notificationBody" = "PriType %@이(가) 출시되었습니다. 클릭하여 다운로드하세요.";
+"update.notificationTitle" = "%@ 업데이트 사용 가능";
+"update.notificationBody" = "%1$@ %2$@이(가) 출시되었습니다. 클릭하여 다운로드하세요.";
 "update.autoCheck" = "자동으로 업데이트 확인";
+"update.localPatchDisabled" = "이 빌드는 원본 PriType과 구분되는 로컬 패치입니다. 공식 업데이트는 확인하지 않습니다.";
 
 /* System */
 "system.title" = "시스템 옵션";
@@ -66,7 +70,7 @@
 "system.accessibilityRequest" = "권한 요청";
 "system.accessibilitySubtitle" = "우측 Command·Option 같은 전환키와 한자키 감지에 필요합니다.";
 "system.removeABC" = "ABC 입력 소스 끄기";
-"system.removeABCSubtitle" = "PriType만으로 한/영을 쓸 때 기본 ABC를 입력 소스 목록에서 제거합니다. 필요하면 시스템 설정에서 다시 추가할 수 있습니다.";
+"system.removeABCSubtitle" = "%@만으로 한/영을 쓸 때 기본 ABC를 입력 소스 목록에서 제거합니다. 필요하면 시스템 설정에서 다시 추가할 수 있습니다.";
 "system.removeABCButton" = "ABC 끄기";
 "system.removeABCSuccess" = "비활성화 완료";
 "system.removeABCFailed" = "비활성화 실패";

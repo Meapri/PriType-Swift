@@ -5,8 +5,39 @@ import Testing
 struct InputSourceManagerTests {
     @Test("Keeps PriType parent and BOTH Korean + English modes in enabled sources")
     func keepsPriTypeParentAndBothModesInEnabledSources() {
-        // Dual-mode design: korean (com.pritype.inputmethod.v2) and english
-        // (com.pritype.inputmethod.v2.english) are BOTH current — neither is stale.
+        let sources: [[String: Any]] = [
+            [
+                "Bundle ID": "com.pritype.inputmethod.v2",
+                "InputSourceKind": "Keyboard Input Method"
+            ],
+            [
+                "Bundle ID": "com.pritype.inputmethod.v2",
+                "InputSourceKind": "Input Mode",
+                "Input Mode": "com.pritype.inputmethod.v2.korean"
+            ],
+            [
+                "Bundle ID": "com.pritype.inputmethod.v2",
+                "InputSourceKind": "Input Mode",
+                "Input Mode": "com.pritype.inputmethod.v2.english"
+            ]
+        ]
+
+        let sanitized = InputSourceManager.sanitizedInputSources(
+            sources,
+            removeAppleKoreanInputModes: false,
+            allowsPriTypeParentEntry: true
+        )
+
+        #expect(sanitized.count == 3)
+        #expect(sanitized.contains { $0["Input Mode"] == nil })  // parent
+        #expect(sanitized.contains { ($0["Input Mode"] as? String) == "com.pritype.inputmethod.v2.korean" })
+        #expect(sanitized.contains { ($0["Input Mode"] as? String) == "com.pritype.inputmethod.v2.english" })
+    }
+
+    @Test("Migrates legacy Korean mode id that collided with the bundle id")
+    func migratesLegacyKoreanModeIdEqualToBundle() {
+        // Old Info.plist used the bundle id as the Korean mode key. TIS then
+        // minted com.pritype.inputmethod.v2.v2 and every Settings row said PriType.
         let sources: [[String: Any]] = [
             [
                 "Bundle ID": "com.pritype.inputmethod.v2",
@@ -31,12 +62,13 @@ struct InputSourceManagerTests {
         )
 
         #expect(sanitized.count == 3)
-        #expect(sanitized.contains { $0["Input Mode"] == nil })  // parent
-        #expect(sanitized.contains { ($0["Input Mode"] as? String) == "com.pritype.inputmethod.v2" })          // korean
-        #expect(sanitized.contains { ($0["Input Mode"] as? String) == "com.pritype.inputmethod.v2.english" })  // english (kept)
+        #expect(sanitized.contains { ($0["Bundle ID"] as? String) == "com.pritype.inputmethod.v2" && $0["Input Mode"] == nil })
+        #expect(sanitized.contains { ($0["Input Mode"] as? String) == "com.pritype.inputmethod.v2.korean" })
+        #expect(!sanitized.contains { ($0["Input Mode"] as? String) == "com.pritype.inputmethod.v2" })
+        #expect(sanitized.contains { ($0["Input Mode"] as? String) == "com.pritype.inputmethod.v2.english" })
     }
 
-    @Test("Keeps PriType parent and removes stale child modes from selected and history sources")
+    @Test("Keeps PriType parent and removes unknown stale child modes")
     func keepsPriTypeParentAndRemovesStaleChildModesFromSelectedAndHistorySources() {
         let sources: [[String: Any]] = [
             [
@@ -46,12 +78,12 @@ struct InputSourceManagerTests {
             [
                 "Bundle ID": "com.pritype.inputmethod.v2",
                 "InputSourceKind": "Input Mode",
-                "Input Mode": "com.pritype.inputmethod.v2"
+                "Input Mode": "com.pritype.inputmethod.v2.korean"
             ],
             [
                 "Bundle ID": "com.pritype.inputmethod.v2",
                 "InputSourceKind": "Input Mode",
-                "Input Mode": "com.pritype.inputmethod.v2.korean"
+                "Input Mode": "com.pritype.inputmethod.v2.legacy"
             ],
             [
                 "Bundle ID": "com.apple.PressAndHold",
@@ -67,8 +99,8 @@ struct InputSourceManagerTests {
 
         #expect(sanitized.count == 3)
         #expect(sanitized.contains { ($0["Bundle ID"] as? String) == "com.pritype.inputmethod.v2" && $0["Input Mode"] == nil })
-        #expect(sanitized.contains { ($0["Input Mode"] as? String) == "com.pritype.inputmethod.v2" })
-        #expect(!sanitized.contains { ($0["Input Mode"] as? String) == "com.pritype.inputmethod.v2.korean" })
+        #expect(sanitized.contains { ($0["Input Mode"] as? String) == "com.pritype.inputmethod.v2.korean" })
+        #expect(!sanitized.contains { ($0["Input Mode"] as? String) == "com.pritype.inputmethod.v2.legacy" })
         #expect(sanitized.contains { ($0["Bundle ID"] as? String) == "com.apple.PressAndHold" })
     }
 
@@ -91,5 +123,68 @@ struct InputSourceManagerTests {
             "Bundle ID": "com.pritype.inputmethod.v2",
             "InputSourceKind": "Keyboard Input Method"
         ]))
+    }
+
+    @Test("Migrating a legacy Korean mode that is already present as .korean does not duplicate")
+    func migrateThenDedupKoreanModes() {
+        let sources: [[String: Any]] = [
+            [
+                "Bundle ID": "com.pritype.inputmethod.v2",
+                "InputSourceKind": "Input Mode",
+                "Input Mode": "com.pritype.inputmethod.v2"
+            ],
+            [
+                "Bundle ID": "com.pritype.inputmethod.v2",
+                "InputSourceKind": "Input Mode",
+                "Input Mode": "com.pritype.inputmethod.v2.korean"
+            ]
+        ]
+        let sanitized = InputSourceManager.sanitizedInputSources(
+            sources,
+            removeAppleKoreanInputModes: false,
+            allowsPriTypeParentEntry: true
+        )
+        #expect(sanitized.count == 1)
+        #expect((sanitized[0]["Input Mode"] as? String) == "com.pritype.inputmethod.v2.korean")
+    }
+
+    @Test("PatchType identity strips leftover official PriType rows")
+    func patchTypeStripsOfficialPriTypeRows() {
+        let sources: [[String: Any]] = [
+            [
+                "Bundle ID": Brand.officialBundleID,
+                "InputSourceKind": "Keyboard Input Method"
+            ],
+            [
+                "Bundle ID": Brand.officialBundleID,
+                "InputSourceKind": "Input Mode",
+                "Input Mode": Brand.officialKoreanModeID
+            ],
+            [
+                "Bundle ID": Brand.patchBundleID,
+                "InputSourceKind": "Keyboard Input Method"
+            ],
+            [
+                "Bundle ID": Brand.patchBundleID,
+                "InputSourceKind": "Input Mode",
+                "Input Mode": Brand.patchKoreanModeID
+            ],
+            [
+                "Bundle ID": "com.apple.inputmethod.Korean",
+                "InputSourceKind": "Keyboard Input Method"
+            ]
+        ]
+
+        let sanitized = InputSourceManager.sanitizedInputSources(
+            sources,
+            removeAppleKoreanInputModes: false,
+            allowsPriTypeParentEntry: true,
+            activeBundleID: Brand.patchBundleID
+        )
+
+        #expect(!sanitized.contains { ($0["Bundle ID"] as? String) == Brand.officialBundleID })
+        #expect(sanitized.contains { ($0["Bundle ID"] as? String) == Brand.patchBundleID && $0["Input Mode"] == nil })
+        #expect(sanitized.contains { ($0["Input Mode"] as? String) == Brand.patchKoreanModeID })
+        #expect(sanitized.contains { ($0["Bundle ID"] as? String) == "com.apple.inputmethod.Korean" })
     }
 }

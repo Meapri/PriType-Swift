@@ -42,6 +42,36 @@ struct HangulComposerTests {
         
         #expect(delegate.markedText == "안")
     }
+
+    @Test("Web hosts keep choseong jamo in preedit instead of compatibility jamo")
+    func webHostKeepsRawChoseongJamo() {
+        let (composer, delegate, _) = makeComposer()
+        composer.markKeystroke(bundleId: "com.google.Chrome")
+        _ = composer.handle(TestEventFactory.keyEvent(char: "r", keyCode: 15)!, delegate: delegate)
+
+        #expect(delegate.markedText == "\u{1100}",
+                "Chrome preedit must stay U+1100 so the host keeps composition open; got '\(delegate.markedText)'")
+        #expect(delegate.insertedTexts.isEmpty, "First choseong must not commit")
+    }
+
+    @Test("Native hosts display compatibility jamo in preedit")
+    func nativeHostUsesCompatibilityJamo() {
+        let (composer, delegate, _) = makeComposer()
+        composer.markKeystroke(bundleId: "com.kakao.KakaoTalkMac")
+        _ = composer.handle(TestEventFactory.keyEvent(char: "r", keyCode: 15)!, delegate: delegate)
+
+        #expect(delegate.markedText == "\u{3131}",
+                "Native preedit stays U+3131 for display; got '\(delegate.markedText)'")
+    }
+
+    @Test("Web host syllable composition still produces a precomposed syllable")
+    func webHostSyllableStillPrecomposed() {
+        let (composer, delegate, _) = makeComposer()
+        composer.markKeystroke(bundleId: "com.google.Chrome")
+        _ = composer.handle(TestEventFactory.keyEvent(char: "r", keyCode: 15)!, delegate: delegate)
+        _ = composer.handle(TestEventFactory.keyEvent(char: "k", keyCode: 40)!, delegate: delegate)
+        #expect(delegate.markedText == "가")
+    }
     
     // MARK: - Syllable Boundary Tests
     

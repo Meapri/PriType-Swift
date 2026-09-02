@@ -3,7 +3,7 @@ import InputMethodKit
 import Cocoa
 import PriTypeCore
 
-let kConnectionName = "PriType_InputString_v2"
+let kConnectionName = Brand.connectionName
 
 // MARK: - App Delegate
 
@@ -34,7 +34,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
         UpdateNotifier.shared.setup()
         
         // Check for updates in background (respects user preference and 24h throttle)
-        if ConfigurationManager.shared.autoUpdateCheckEnabled {
+        if ConfigurationManager.shared.autoUpdateCheckEnabled && Brand.tracksUpstreamUpdates {
             Task.detached(priority: .utility) {
                 let result = await UpdateChecker.shared.checkForUpdatesIfNeeded()
                 if case .updateAvailable(let info) = result {
