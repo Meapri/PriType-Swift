@@ -29,6 +29,9 @@ public final class InputModeCoordinator: @unchecked Sendable {
             return
         }
 
+        // Recheck after the asynchronous key callback in case focus changed.
+        guard !ConfigurationManager.shared.isToggleExcludedForFrontmostApp else { return }
+
         guard let controller = PriTypeInputController.sharedController else {
             DebugLogger.log("InputModeCoordinator: ignored custom toggle because no active controller exists")
             return

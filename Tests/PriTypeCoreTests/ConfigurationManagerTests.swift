@@ -7,6 +7,25 @@ import Foundation
 @Suite("ConfigurationManager", .serialized)
 struct ConfigurationManagerTests {
     
+    @Test("Toggle exclusions persist, deduplicate, match exactly, and can be removed")
+    func toggleExclusions() {
+        let config = ConfigurationManager.shared
+        let key = "com.pritype.toggleExcludedBundleIDs"
+        let original = UserDefaults.standard.object(forKey: key)
+        defer {
+            if let original { UserDefaults.standard.set(original, forKey: key) }
+            else { UserDefaults.standard.removeObject(forKey: key) }
+        }
+        config.toggleExcludedBundleIDs = ["com.microsoft.rdc.macos", "", "com.microsoft.rdc.macos"]
+        #expect(config.toggleExcludedBundleIDs == ["com.microsoft.rdc.macos"])
+        #expect(UserDefaults.standard.stringArray(forKey: key) == ["com.microsoft.rdc.macos"])
+        #expect(config.isToggleExcluded(bundleID: "com.microsoft.rdc.macos"))
+        #expect(!config.isToggleExcluded(bundleID: "com.microsoft.rdc.macos.beta"))
+        #expect(!config.isToggleExcluded(bundleID: nil))
+        config.toggleExcludedBundleIDs = []
+        #expect(!config.isToggleExcluded(bundleID: "com.microsoft.rdc.macos"))
+    }
+
     // MARK: - Keyboard Layout Tests
     
     @Test("Default keyboard ID is Dubeolsik (2)")

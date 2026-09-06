@@ -1,5 +1,6 @@
 import Foundation
 import CoreGraphics
+import AppKit
 
 // MARK: - Types
 
@@ -376,6 +377,24 @@ public final class ConfigurationManager: ConfigurationProviding, @unchecked Send
         }
     }
     
+    /// Apps in which the custom language-toggle key is passed through unchanged.
+    public var toggleExcludedBundleIDs: [String] {
+        get { defaults.stringArray(forKey: "com.pritype.toggleExcludedBundleIDs") ?? [] }
+        set {
+            defaults.set(Array(Set(newValue.filter { !$0.isEmpty })).sorted(),
+                         forKey: "com.pritype.toggleExcludedBundleIDs")
+        }
+    }
+
+    public func isToggleExcluded(bundleID: String?) -> Bool {
+        guard let bundleID else { return false }
+        return toggleExcludedBundleIDs.contains(bundleID)
+    }
+
+    public var isToggleExcludedForFrontmostApp: Bool {
+        isToggleExcluded(bundleID: NSWorkspace.shared.frontmostApplication?.bundleIdentifier)
+    }
+
     // MARK: - Toggle Key (Legacy)
     
     /// The selected toggle key for switching between Korean and English

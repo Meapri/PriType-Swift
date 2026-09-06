@@ -70,3 +70,11 @@
 "system.removeABCButton" = "ABC 끄기";
 "system.removeABCSuccess" = "비활성화 완료";
 "system.removeABCFailed" = "비활성화 실패";
+
+// Language toggle exceptions
+"toggleExclusions.title" = "한/영 전환 예외 앱";
+"toggleExclusions.description" = "선택한 앱에서는 우측 Command 등 설정된 한/영 전환 키를 앱에 그대로 전달합니다. 변경 사항은 즉시 저장·적용됩니다. 한자 키는 별도 설정대로 동작합니다.";
+"toggleExclusions.remove" = "삭제";
+"toggleExclusions.empty" = "등록된 예외 앱이 없습니다.";
+"toggleExclusions.add" = "앱 추가…";
+"toggleExclusions.invalid" = "앱 식별자를 읽을 수 없습니다. 다른 앱을 선택해 주세요.";

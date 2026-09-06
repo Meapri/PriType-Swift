@@ -70,3 +70,11 @@
 "system.removeABCButton" = "Turn Off";
 "system.removeABCSuccess" = "Disabled";
 "system.removeABCFailed" = "Failed";
+
+// Language toggle exceptions
+"toggleExclusions.title" = "Language toggle exceptions";
+"toggleExclusions.description" = "Pass the configured language toggle key, such as Right Command, through to these apps. Changes are saved and applied immediately. The Hanja key keeps its configured behavior.";
+"toggleExclusions.remove" = "Remove";
+"toggleExclusions.empty" = "No excluded apps.";
+"toggleExclusions.add" = "Add apps…";
+"toggleExclusions.invalid" = "Unable to read the application identifier. Please choose another app.";

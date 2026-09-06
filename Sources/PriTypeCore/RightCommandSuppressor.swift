@@ -168,6 +168,7 @@ public final class RightCommandSuppressor: @unchecked Sendable {
         let toggleBinding = config.toggleKeyBinding
         let hanjaBinding = config.hanjaKeyBinding
         let priTypeToggleEnabled = !config.capsLockInputSourceSwitchEnabled
+            && !config.isToggleExcludedForFrontmostApp
         if !priTypeToggleEnabled {
             toggleModifierIsDown = false
         }
