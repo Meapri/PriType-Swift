@@ -72,8 +72,8 @@
 "system.removeABCFailed" = "Failed";
 
 // Language toggle exceptions
-"toggleExclusions.title" = "Language toggle exceptions";
-"toggleExclusions.description" = "Pass the configured language toggle key, such as Right Command, through to these apps. Changes are saved and applied immediately. The Hanja key keeps its configured behavior.";
+"toggleExclusions.title" = "Language toggle and Hanja key exceptions";
+"toggleExclusions.description" = "Pass the language toggle and Hanja keys through when these apps have keyboard focus. Changes are saved and applied immediately.";
 "toggleExclusions.remove" = "Remove";
 "toggleExclusions.empty" = "No excluded apps.";
 "toggleExclusions.add" = "Add apps…";

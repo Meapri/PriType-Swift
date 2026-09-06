@@ -163,17 +163,21 @@ public final class IOKitManager: @unchecked Sendable {
         let toggleBinding = config.toggleKeyBinding
         let hanjaBinding = config.hanjaKeyBinding
         let toggleUsage = Self.hidUsage(for: toggleBinding.keyCode)
-        let needsToggleFocus = toggleUsage == usage || toggleKeyIsDown
+        let hanjaUsage = Self.hidUsage(for: hanjaBinding.keyCode)
+        let needsFocus = toggleUsage == usage || hanjaUsage == usage
+            || toggleKeyIsDown || hanjaKeyIsDown
+        if needsFocus && config.isToggleExcludedForFocusedApp {
+            toggleKeyIsDown = false
+            anyOtherKeyPressed = false
+            hanjaKeyIsDown = false
+            return
+        }
         let priTypeToggleEnabled = !config.capsLockInputSourceSwitchEnabled
-            && (!needsToggleFocus || !config.isToggleExcludedForFocusedApp)
         if !priTypeToggleEnabled {
             toggleKeyIsDown = false
             anyOtherKeyPressed = false
         }
         
-        // Get HID usages for configured keys
-        let hanjaUsage = Self.hidUsage(for: hanjaBinding.keyCode)
-
         // Check for toggle key (only for modifier-only bindings)
         if priTypeToggleEnabled && toggleBinding.isModifierOnly, let expectedUsage = toggleUsage, usage == expectedUsage {
             if pressed {
@@ -215,6 +219,7 @@ public final class IOKitManager: @unchecked Sendable {
                 DebugLogger.log("IOKitManager: Hanja key DOWN (\(hanjaBinding.displayName)) - HANJA")
                 let callback = onRightOptionHanja
                 DispatchQueue.main.async {
+                    guard !ConfigurationManager.shared.isToggleExcludedForFocusedApp else { return }
                     callback?()
                 }
             } else if !pressed && hanjaKeyIsDown {

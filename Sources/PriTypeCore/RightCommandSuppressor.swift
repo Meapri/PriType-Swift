@@ -68,7 +68,7 @@ public final class RightCommandSuppressor: @unchecked Sendable {
     /// Callback for key recording (settings UI)
     public var onKeyRecorded: ((_ keyCode: Int64, _ modifiers: UInt64) -> Void)?
     
-    private init() {}
+    init() {}
     
     // MARK: - Start/Stop
     
@@ -98,7 +98,7 @@ public final class RightCommandSuppressor: @unchecked Sendable {
             callback: { proxy, type, event, refcon in
                 guard let refcon = refcon else { return Unmanaged.passUnretained(event) }
                 let suppressor = Unmanaged<RightCommandSuppressor>.fromOpaque(refcon).takeUnretainedValue()
-                return suppressor.handleEvent(proxy: proxy, type: type, event: event)
+                return suppressor.handleEvent(type: type, event: event)
             },
             userInfo: Unmanaged.passUnretained(self).toOpaque()
         )
@@ -133,7 +133,12 @@ public final class RightCommandSuppressor: @unchecked Sendable {
     
     // MARK: - Event Handling
     
-    private func handleEvent(proxy: CGEventTapProxy, type: CGEventType, event: CGEvent) -> Unmanaged<CGEvent>? {
+    // Internal entry point also allows isolated event tests without installing a tap.
+    func handleEvent(
+        type: CGEventType,
+        event: CGEvent,
+        isExcluded: () -> Bool = { ConfigurationManager.shared.isToggleExcludedForFocusedApp }
+    ) -> Unmanaged<CGEvent>? {
         // Re-enable tap if disabled by system
         if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
             let now = CFAbsoluteTimeGetCurrent()
@@ -167,15 +172,6 @@ public final class RightCommandSuppressor: @unchecked Sendable {
         let config = ConfigurationManager.shared
         let toggleBinding = config.toggleKeyBinding
         let hanjaBinding = config.hanjaKeyBinding
-        // Resolve accessibility focus only for the toggle key or a held toggle
-        // modifier. Ordinary typing and Hanja keys do not need an AX round trip.
-        let needsToggleFocus = keyCode == toggleBinding.keyCode || toggleModifierIsDown
-        let priTypeToggleEnabled = !config.capsLockInputSourceSwitchEnabled
-            && (!needsToggleFocus || !config.isToggleExcludedForFocusedApp)
-        if !priTypeToggleEnabled {
-            toggleModifierIsDown = false
-        }
-        
         // Key recording mode — capture the next key press for settings UI
         if isRecordingKey {
             if type == .flagsChanged {
@@ -202,6 +198,20 @@ public final class RightCommandSuppressor: @unchecked Sendable {
             return Unmanaged.passUnretained(event)
         }
         
+        // Both custom keys share the saved exclusions. Resolve focus only for
+        // relevant keys or held modifiers; leave ordinary typing off the AX path.
+        let needsFocus = keyCode == toggleBinding.keyCode || keyCode == hanjaBinding.keyCode
+            || toggleModifierIsDown || hanjaModifierIsDown
+        if needsFocus && isExcluded() {
+            toggleModifierIsDown = false
+            hanjaModifierIsDown = false
+            return Unmanaged.passUnretained(event)
+        }
+        let priTypeToggleEnabled = !config.capsLockInputSourceSwitchEnabled
+        if !priTypeToggleEnabled {
+            toggleModifierIsDown = false
+        }
+
         // Handle flagsChanged (modifier keys)
         if type == .flagsChanged {
             let flags = event.flags
@@ -342,6 +352,7 @@ public final class RightCommandSuppressor: @unchecked Sendable {
     private func triggerHanjaLookup() {
         let callback = onHanjaLookup
         DispatchQueue.main.async {
+            guard !ConfigurationManager.shared.isToggleExcludedForFocusedApp else { return }
             callback?()
         }
     }

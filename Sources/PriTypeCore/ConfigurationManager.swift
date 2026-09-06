@@ -376,7 +376,8 @@ public final class ConfigurationManager: ConfigurationProviding, @unchecked Send
         }
     }
     
-    /// Apps in which the custom language-toggle key is passed through unchanged.
+    /// Apps in which both custom language-toggle and Hanja keys pass through.
+    /// Keep the existing preference key so previously saved exclusions still apply.
     public var toggleExcludedBundleIDs: [String] {
         get { defaults.stringArray(forKey: "com.pritype.toggleExcludedBundleIDs") ?? [] }
         set {

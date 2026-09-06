@@ -1,5 +1,6 @@
 import Testing
 import Foundation
+import CoreGraphics
 @testable import PriTypeCore
 
 // MARK: - ConfigurationManager Tests
@@ -24,6 +25,53 @@ struct ConfigurationManagerTests {
         #expect(!config.isToggleExcluded(bundleID: nil))
         config.toggleExcludedBundleIDs = []
         #expect(!config.isToggleExcluded(bundleID: "com.microsoft.rdc.macos"))
+    }
+
+    @Test("Excluded Hanja press and release pass through; Spotlight can consume the next press")
+    func hanjaModifierExclusion() throws {
+        let config = ConfigurationManager.shared
+        let originalToggle = config.toggleKeyBinding
+        let originalHanja = config.hanjaKeyBinding
+        defer {
+            config.toggleKeyBinding = originalToggle
+            config.hanjaKeyBinding = originalHanja
+        }
+        config.toggleKeyBinding = .defaultToggle
+        config.hanjaKeyBinding = .defaultHanja
+        let handler = RightCommandSuppressor()
+        let event = try #require(CGEvent(keyboardEventSource: nil, virtualKey: 61, keyDown: true))
+        event.flags = .maskAlternate
+        let down = handler.handleEvent(type: .flagsChanged, event: event, isExcluded: { true })
+        #expect(down?.takeUnretainedValue() === event)
+        #expect(event.flags == .maskAlternate)
+        event.flags = []
+        let up = handler.handleEvent(type: .flagsChanged, event: event, isExcluded: { true })
+        #expect(up?.takeUnretainedValue() === event)
+        // Excluded presses must not leave the modifier down or start debounce.
+        event.flags = .maskAlternate
+        #expect(handler.handleEvent(type: .flagsChanged, event: event, isExcluded: { false }) == nil)
+    }
+
+    @Test("Excluded regular and combination Hanja bindings pass through unchanged")
+    func hanjaRegularKeyExclusion() throws {
+        let config = ConfigurationManager.shared
+        let originalToggle = config.toggleKeyBinding
+        let originalHanja = config.hanjaKeyBinding
+        defer {
+            config.toggleKeyBinding = originalToggle
+            config.hanjaKeyBinding = originalHanja
+        }
+        config.toggleKeyBinding = .defaultToggle
+        for modifiers: UInt64 in [0, CGEventFlags.maskControl.rawValue] {
+            config.hanjaKeyBinding = KeyBinding(keyCode: 101, modifiers: modifiers, displayName: "F9")
+            let handler = RightCommandSuppressor()
+            let event = try #require(CGEvent(keyboardEventSource: nil, virtualKey: 101, keyDown: true))
+            event.flags = CGEventFlags(rawValue: modifiers)
+            let result = handler.handleEvent(type: .keyDown, event: event, isExcluded: { true })
+            #expect(result?.takeUnretainedValue() === event)
+            #expect(event.flags.rawValue == modifiers)
+            #expect(handler.handleEvent(type: .keyDown, event: event, isExcluded: { false }) == nil)
+        }
     }
 
     // MARK: - Keyboard Layout Tests
