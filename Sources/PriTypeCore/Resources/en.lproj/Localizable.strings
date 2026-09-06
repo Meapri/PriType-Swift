@@ -70,3 +70,11 @@
 "system.removeABCButton" = "Turn Off";
 "system.removeABCSuccess" = "Disabled";
 "system.removeABCFailed" = "Failed";
+
+// Language toggle exceptions
+"toggleExclusions.title" = "Language toggle and Hanja key exceptions";
+"toggleExclusions.description" = "Pass the language toggle and Hanja keys through when these apps have keyboard focus. Changes are saved and applied immediately.";
+"toggleExclusions.remove" = "Remove";
+"toggleExclusions.empty" = "No excluded apps.";
+"toggleExclusions.add" = "Add apps…";
+"toggleExclusions.invalid" = "Unable to read the application identifier. Please choose another app.";
