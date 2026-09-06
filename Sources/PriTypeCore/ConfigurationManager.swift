@@ -1,6 +1,5 @@
 import Foundation
 import CoreGraphics
-import AppKit
 
 // MARK: - Types
 
@@ -391,8 +390,8 @@ public final class ConfigurationManager: ConfigurationProviding, @unchecked Send
         return toggleExcludedBundleIDs.contains(bundleID)
     }
 
-    public var isToggleExcludedForFrontmostApp: Bool {
-        isToggleExcluded(bundleID: NSWorkspace.shared.frontmostApplication?.bundleIdentifier)
+    public var isToggleExcludedForFocusedApp: Bool {
+        ToggleAppFocus.isExcluded(bundleIDs: toggleExcludedBundleIDs)
     }
 
     // MARK: - Toggle Key (Legacy)

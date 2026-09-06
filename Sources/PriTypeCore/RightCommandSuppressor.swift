@@ -167,8 +167,11 @@ public final class RightCommandSuppressor: @unchecked Sendable {
         let config = ConfigurationManager.shared
         let toggleBinding = config.toggleKeyBinding
         let hanjaBinding = config.hanjaKeyBinding
+        // Resolve accessibility focus only for the toggle key or a held toggle
+        // modifier. Ordinary typing and Hanja keys do not need an AX round trip.
+        let needsToggleFocus = keyCode == toggleBinding.keyCode || toggleModifierIsDown
         let priTypeToggleEnabled = !config.capsLockInputSourceSwitchEnabled
-            && !config.isToggleExcludedForFrontmostApp
+            && (!needsToggleFocus || !config.isToggleExcludedForFocusedApp)
         if !priTypeToggleEnabled {
             toggleModifierIsDown = false
         }

@@ -162,15 +162,16 @@ public final class IOKitManager: @unchecked Sendable {
         let config = ConfigurationManager.shared
         let toggleBinding = config.toggleKeyBinding
         let hanjaBinding = config.hanjaKeyBinding
+        let toggleUsage = Self.hidUsage(for: toggleBinding.keyCode)
+        let needsToggleFocus = toggleUsage == usage || toggleKeyIsDown
         let priTypeToggleEnabled = !config.capsLockInputSourceSwitchEnabled
-            && !config.isToggleExcludedForFrontmostApp
+            && (!needsToggleFocus || !config.isToggleExcludedForFocusedApp)
         if !priTypeToggleEnabled {
             toggleKeyIsDown = false
             anyOtherKeyPressed = false
         }
         
         // Get HID usages for configured keys
-        let toggleUsage = Self.hidUsage(for: toggleBinding.keyCode)
         let hanjaUsage = Self.hidUsage(for: hanjaBinding.keyCode)
 
         // Check for toggle key (only for modifier-only bindings)
