@@ -35,7 +35,11 @@ enum TextDeliveryPolicy {
         return .markedText
     }
 
-    static func makeAdapter(for client: IMKTextInput, context: ClientContext) -> BaseClientAdapter {
+    static func makeAdapter(
+        for client: IMKTextInput,
+        context: ClientContext,
+        hasLiveMarkedText: Bool = false
+    ) -> BaseClientAdapter {
         switch mode(for: context) {
         case .immediate:
             return ImmediateModeAdapter(client: client, bundleId: context.bundleId)
@@ -43,7 +47,11 @@ enum TextDeliveryPolicy {
             DebugLogger.log("TextDeliveryPolicy: DirectInsertionAdapter (experimental) for \(context.bundleId)")
             return DirectInsertionAdapter(client: client, bundleId: context.bundleId)
         case .markedText:
-            return MarkedTextAdapter(client: client, bundleId: context.bundleId)
+            let adapter = MarkedTextAdapter(client: client, bundleId: context.bundleId)
+            if hasLiveMarkedText {
+                adapter.assumeLiveMarkedText()
+            }
+            return adapter
         }
     }
 }
@@ -192,6 +200,12 @@ enum MarkedTextReplacement {
               selectedRange.location < maxLocation else {
             return notFound
         }
+        // Empty-list placeholders are length 0 or 1. A real selection (a word)
+        // must still be replaced via NSNotFound, or the first jamo inserts in
+        // front of the selected text in Chrome/Safari/Slack.
+        if selectedRange.length > 1 {
+            return notFound
+        }
         return NSRange(location: selectedRange.location, length: 0)
     }
 }
@@ -203,7 +217,13 @@ final class MarkedTextAdapter: BaseClientAdapter {
     /// True after we have sent a non-empty marked string that has not yet been
     /// committed or cleared. Used instead of `client.markedRange()` because
     /// Chromium often reports NSNotFound for markedRange even during preedit.
+    /// Must survive adapter rebuild / activateServer: Electron often recreates
+    /// the IMK session mid-syllable.
     private var hasLiveMarkedText = false
+
+    func assumeLiveMarkedText() {
+        hasLiveMarkedText = true
+    }
 
     override func insertText(_ text: String) {
         hasLiveMarkedText = false

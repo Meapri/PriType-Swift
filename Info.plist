@@ -32,6 +32,10 @@
 			<dict>
 				<key>TISIconIsTemplate</key>
 				<true/>
+				<key>TISIntendedLanguage</key>
+				<string>ko</string>
+				<key>tsInputModeIsVisibleKey</key>
+				<true/>
 				<key>tsInputModeMenuIconFileKey</key>
 				<string>input-ko.tiff</string>
 				<key>tsInputModePaletteIconFileKey</key>
@@ -45,6 +49,10 @@
 			<dict>
 				<key>TISIconIsTemplate</key>
 				<true/>
+				<key>TISIntendedLanguage</key>
+				<string>en</string>
+				<key>tsInputModeIsVisibleKey</key>
+				<false/>
 				<key>tsInputModeMenuIconFileKey</key>
 				<string>input-en.tiff</string>
 				<key>tsInputModePaletteIconFileKey</key>
@@ -70,6 +78,8 @@
 	<string>stable</string>
 	<key>TICapsLockLanguageSwitchCapable</key>
 	<true/>
+	<key>TISIntendedLanguage</key>
+	<string>ko</string>
 	<key>tsInputMethodCharacterRepertoireKey</key>
 	<array>
 		<string>Hang</string>

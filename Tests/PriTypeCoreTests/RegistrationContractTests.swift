@@ -73,7 +73,9 @@ struct RegistrationContractTests {
     @Test("Forbidden registration keys are absent (regression guard)")
     func noForbiddenKeys() throws {
         let info = try loadInfoPlist()
-        // The 030a035 regression: a top-level TISInputSourceID equal to a child mode id.
+        // 030a035 broke composition by setting top-level TISInputSourceID equal to a
+        // *child mode* id. Do not put TISInputSourceID at the top level at all —
+        // even parent-id == bundle id makes TIS mint `.v2.v2.korean`.
         #expect(info["TISInputSourceID"] == nil, "top-level TISInputSourceID must NOT be present")
 
         for (id, value) in modes(info) {
@@ -81,6 +83,18 @@ struct RegistrationContractTests {
             #expect(mode["TISInputSourceID"] == nil, "per-mode TISInputSourceID must be absent (\(id))")
             #expect(mode["tsInputModeDefaultStateKey"] == nil, "tsInputModeDefaultStateKey must be absent (\(id))")
         }
+    }
+
+    @Test("Declares Korean as the intended language so Settings lists it under 한글")
+    func intendedLanguageKorean() throws {
+        let info = try loadInfoPlist()
+        #expect(info["TISIntendedLanguage"] as? String == "ko")
+        let korean = modes(info)["com.pritype.inputmethod.v2.korean"] as? [String: Any]
+        let english = modes(info)["com.pritype.inputmethod.v2.english"] as? [String: Any]
+        #expect(korean?["TISIntendedLanguage"] as? String == "ko")
+        #expect(korean?["tsInputModeIsVisibleKey"] as? Bool == true)
+        #expect(english?["TISIntendedLanguage"] as? String == "en")
+        #expect(english?["tsInputModeIsVisibleKey"] as? Bool == false)
     }
 
     @Test("Core identity keys are correct")

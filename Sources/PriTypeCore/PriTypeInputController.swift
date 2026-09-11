@@ -31,13 +31,29 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
     // displayed as the app name.
     private static let priTypeKoreanInputModeID = Brand.koreanModeID
     private static let priTypeEnglishInputModeID = Brand.englishModeID
-    private static let legacyKoreanInputModeIDs: Set<String> = [
-        Brand.bundleID,
-        Brand.mintedCollisionModeID(forBundleID: Brand.bundleID),
-        Brand.officialBundleID,
-        Brand.officialKoreanModeID,
-        Brand.mintedCollisionModeID(forBundleID: Brand.officialBundleID)
-    ]
+    private static let legacyKoreanInputModeIDs: Set<String> = {
+        let minted = Brand.mintedCollisionModeID(forBundleID: Brand.bundleID)
+        let officialMinted = Brand.mintedCollisionModeID(forBundleID: Brand.officialBundleID)
+        return [
+            Brand.bundleID,
+            minted,
+            "\(minted).korean",
+            Brand.officialBundleID,
+            Brand.officialKoreanModeID,
+            officialMinted,
+            "\(officialMinted).korean"
+        ]
+    }()
+    private static let englishInputModeIDs: Set<String> = {
+        let minted = Brand.mintedCollisionModeID(forBundleID: Brand.bundleID)
+        let officialMinted = Brand.mintedCollisionModeID(forBundleID: Brand.officialBundleID)
+        return [
+            Brand.englishModeID,
+            "\(minted).english",
+            Brand.officialEnglishModeID,
+            "\(officialMinted).english"
+        ]
+    }()
 
     // MARK: - Shared State
     //
@@ -301,13 +317,13 @@ public class PriTypeInputController: IMKInputController, @unchecked Sendable {
             // Korean and English modes reaches the composer — synchronously, so the
             // next keyDown already sees the new mode (no first-key race).
             let targetMode: InputMode?
-            switch inputModeID {
-            case Self.priTypeEnglishInputModeID:
+            if Self.englishInputModeIDs.contains(inputModeID) {
                 targetMode = .english
-            case Self.priTypeKoreanInputModeID:
+            } else if inputModeID == Self.priTypeKoreanInputModeID
+                        || Self.legacyKoreanInputModeIDs.contains(inputModeID) {
                 targetMode = .korean
-            default:
-                targetMode = Self.legacyKoreanInputModeIDs.contains(inputModeID) ? .korean : nil
+            } else {
+                targetMode = nil
             }
             DebugLogger.log("PriTypeInputController: setValue inputMode='\(inputModeID)' target=\(String(describing: targetMode)) current=\(composer.inputMode)")
             guard let targetMode else {

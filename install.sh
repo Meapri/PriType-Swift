@@ -6,11 +6,11 @@ usage() {
 Usage: ./install.sh [--as-patchtype]
 
   (default)          Install as PriTypeV2 using the source-tree identity.
-  --as-patchtype     Install as PatchType / 패치타입 with a distinct bundle id
-                     and version 2.7.4-patch.1 so it cannot be confused with
-                     official PriType 2.7.4. Copies to /Library/Input Methods
-                     only (never also ~/Library). A new bundle id usually
-                     needs a logout before it appears in Input Sources.
+  --as-patchtype     Install a local overlay named PatchType / 패치타입,
+                     version 2.7.4-patch.1. Keeps the official bundle id
+                     (com.pritype.inputmethod.v2) so Gatekeeper/TIS will list
+                     it under 한글. Copies to /Library/Input Methods/PriTypeV2.app
+                     only. Log out after install, then add 패치 한글.
 EOF
 }
 
@@ -28,8 +28,10 @@ for arg in "$@"; do
 done
 
 if [ "$AS_PATCHTYPE" -eq 1 ]; then
-    APP_NAME="PatchType"
-    EXEC_NAME="PatchType"
+    # Same path + bundle id as the original notarized PriType. A new ad-hoc
+    # bundle id is rejected by Gatekeeper and never appears in Settings.
+    APP_NAME="PriTypeV2"
+    EXEC_NAME="PriTypeV2"
     SYSTEM_ONLY=1
 else
     APP_NAME="PriTypeV2"
@@ -55,27 +57,29 @@ import plistlib
 import sys
 
 path = sys.argv[1]
-old = "com.pritype.inputmethod.v2"
-new = "com.calvinjkim.patchtype"
-
 with open(path, "rb") as handle:
     info = plistlib.load(handle)
 
-modes = info.get("ComponentInputModeDict", {}).get("tsInputModeListKey", {})
-rewritten = {}
-for key, value in modes.items():
-    rewritten[key.replace(old, new)] = value
-info.setdefault("ComponentInputModeDict", {})["tsInputModeListKey"] = rewritten
-info["ComponentInputModeDict"]["tsVisibleInputModeOrderedArrayKey"] = [f"{new}.korean"]
-
 info["CFBundleDisplayName"] = "PatchType"
 info["CFBundleName"] = "PatchType"
-info["CFBundleExecutable"] = "PatchType"
-info["CFBundleIdentifier"] = new
 info["CFBundleShortVersionString"] = "2.7.4-patch.1"
 info["CFBundleVersion"] = "51"
-info["InputMethodConnectionName"] = "PatchType_InputString"
 info["PriTypeReleaseChannel"] = "local"
+info["TISIntendedLanguage"] = "ko"
+
+# Never change the official bundle id. A new ad-hoc id is Gatekeeper-rejected
+# and install then wiping PriTypeV2.app leaves the user with no IME.
+bundle_id = info.get("CFBundleIdentifier")
+if bundle_id != "com.pritype.inputmethod.v2":
+    raise SystemExit(f"refusing to install overlay with bundle id {bundle_id!r}")
+
+modes = info.get("ComponentInputModeDict", {}).get("tsInputModeListKey", {})
+if "com.pritype.inputmethod.v2.korean" in modes:
+    modes["com.pritype.inputmethod.v2.korean"]["TISIntendedLanguage"] = "ko"
+    modes["com.pritype.inputmethod.v2.korean"]["tsInputModeIsVisibleKey"] = True
+if "com.pritype.inputmethod.v2.english" in modes:
+    modes["com.pritype.inputmethod.v2.english"]["TISIntendedLanguage"] = "en"
+    modes["com.pritype.inputmethod.v2.english"]["tsInputModeIsVisibleKey"] = False
 
 with open(path, "wb") as handle:
     plistlib.dump(info, handle, sort_keys=False)
@@ -86,27 +90,28 @@ PY
 /* Localized versions of Info.plist keys */
 "CFBundleName" = "PatchType";
 "CFBundleDisplayName" = "PatchType";
-"com.calvinjkim.patchtype" = "PatchType";
-"com.calvinjkim.patchtype.korean" = "Patch Korean";
-"com.calvinjkim.patchtype.english" = "Patch English";
+"com.pritype.inputmethod.v2" = "PatchType";
+"com.pritype.inputmethod.v2.korean" = "Patch Korean";
+"com.pritype.inputmethod.v2.english" = "Patch English";
 EOF
     cat > "$RESOURCES_DIR/ko.lproj/InfoPlist.strings" <<'EOF'
 /* Localized versions of Info.plist keys */
 "CFBundleName" = "패치타입";
 "CFBundleDisplayName" = "패치타입";
-"com.calvinjkim.patchtype" = "패치타입";
-"com.calvinjkim.patchtype.korean" = "패치 한글";
-"com.calvinjkim.patchtype.english" = "패치 영어";
+"com.pritype.inputmethod.v2" = "패치타입";
+"com.pritype.inputmethod.v2.korean" = "패치 한글";
+"com.pritype.inputmethod.v2.english" = "패치 영어";
 EOF
 }
 
 copy_to_system() {
     local src="$1"
     local dest="$2"
+    # Never delete $dest after copying into it. Remove only leftover names.
     if sudo -n true 2>/dev/null; then
         sudo ditto "$src" "$dest"
         sudo rm -rf \
-            "/Library/Input Methods/PriTypeV2.app" \
+            "/Library/Input Methods/PatchType.app" \
             "/Library/Input Methods/PriType.app" \
             "/tmp/PriTypeV2.app.disabled"
         return 0
@@ -118,7 +123,7 @@ copy_to_system() {
 on run argv
     set src to item 1 of argv
     set dest to item 2 of argv
-    do shell script "ditto " & quoted form of src & " " & quoted form of dest & " && rm -rf '/Library/Input Methods/PriTypeV2.app' '/Library/Input Methods/PriType.app' '/tmp/PriTypeV2.app.disabled'" with administrator privileges
+    do shell script "ditto " & quoted form of src & " " & quoted form of dest & " && rm -rf '/Library/Input Methods/PatchType.app' '/Library/Input Methods/PriType.app' '/tmp/PriTypeV2.app.disabled'" with administrator privileges
 end run
 APPLESCRIPT
 }
@@ -209,12 +214,12 @@ killall TextInputMenuAgent TextInputSwitcher keyboardservicesd imklaunchagent Pr
 
 echo "Installation complete: $INSTALL_PATH"
 if [ "$AS_PATCHTYPE" -eq 1 ]; then
-    echo "Name: PatchType / 패치타입"
+    echo "Name: PatchType / 패치타입  (shown in Settings; bundle is still PriType)"
     echo "Version: 2.7.4-patch.1 (local patch)  — not official PriType 2.7.4"
-    echo "Bundle ID: com.calvinjkim.patchtype"
-    echo "Log out and back in, then enable '패치 한글' (Patch Korean) under"
-    echo "System Settings > Keyboard > Input Sources. Do not add every row"
-    echo "from '모든 입력 소스'. Apple 2-Set Korean can stay as a fallback."
+    echo "Bundle ID: com.pritype.inputmethod.v2"
+    echo "Log out and back in, then add 한국어 → 패치 한글 (Patch Korean)."
+    echo "Do not add every row from '모든 입력 소스'."
+    echo "Apple 2-Set Korean can stay as a fallback."
 else
     echo "Please log out and log back in, or restart your computer."
     echo "Then enable '$APP_NAME' in System Settings > Keyboard > Input Sources."

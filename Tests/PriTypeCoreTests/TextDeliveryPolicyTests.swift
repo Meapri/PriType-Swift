@@ -204,6 +204,26 @@ struct MarkedTextReplacementTests {
         ) == NSRange(location: 12, length: 0))
     }
 
+    @Test("First mark on a web host with a real selection still replaces it")
+    func firstWebMarkRealSelectionReplaces() {
+        #expect(MarkedTextReplacement.range(
+            isClearing: false,
+            hasLiveMarkedText: false,
+            selectedRange: NSRange(location: 4, length: 5),
+            prefersCollapsedStart: true
+        ) == notFound)
+    }
+
+    @Test("Composer-active / rebuilt adapter still uses NSNotFound")
+    func rebuiltAdapterWithLiveCompositionUsesNotFound() {
+        #expect(MarkedTextReplacement.range(
+            isClearing: false,
+            hasLiveMarkedText: true,
+            selectedRange: collapsedCaret,
+            prefersCollapsedStart: true
+        ) == notFound)
+    }
+
     @Test("Invalid or Chromium-garbage selection falls back to NSNotFound")
     func garbageSelectionFallsBack() {
         #expect(MarkedTextReplacement.range(

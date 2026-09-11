@@ -54,7 +54,11 @@ final class InputSession: @unchecked Sendable {
         self.client = client
         self.context = context
         self.composer = composer
-        self.adapter = TextDeliveryPolicy.makeAdapter(for: client, context: context)
+        self.adapter = TextDeliveryPolicy.makeAdapter(
+            for: client,
+            context: context,
+            hasLiveMarkedText: composer.hasActiveComposition
+        )
     }
 
     deinit {
@@ -90,7 +94,11 @@ final class InputSession: @unchecked Sendable {
     func ensureAdapterMatchesPolicy() {
         let resolved = TextDeliveryPolicy.mode(for: context)
         guard adapter.deliveryMode != resolved else { return }
-        adapter = TextDeliveryPolicy.makeAdapter(for: client, context: context)
+        adapter = TextDeliveryPolicy.makeAdapter(
+            for: client,
+            context: context,
+            hasLiveMarkedText: composer.hasActiveComposition
+        )
     }
 
     // MARK: Duplicate keyDown suppression

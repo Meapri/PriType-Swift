@@ -8,7 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### 수정
-- 로컬 설치 `./install.sh --as-patchtype`은 입력기를 **PatchType / 패치타입**으로 등록합니다. 번들 ID는 `com.calvinjkim.patchtype`, 버전은 `2.7.4-patch.1 (local patch)`라서 설정·정보창에서 공식 PriType 2.7.4와 구분됩니다. 소스 트리 `Info.plist`의 공식 identity는 PR용으로 유지합니다.
+- `--as-patchtype`은 공식 번들 ID와 `PriTypeV2.app` 경로를 유지합니다. 새 ad-hoc 번들 ID로 갈아끼우며 공식 복사본을 지우면 Gatekeeper가 거절해 설정에 입력기가 안 나옵니다.
+- TIS가 만든 `…v2.v2.korean` 자식 모드는 기동 시 `.korean`으로 다시 쓰지 않습니다. 그 ID를 레거시로 취급하면 HIToolbox에서 한글 모드가 빠지고 부모만 남아 두벌식 Hangul을 뺏습니다.
+- 웹 호스트 첫 `setMarkedText`의 `{caret, 0}` 삽입은 선택 길이가 0~1일 때만입니다. 단어처럼 길이가 2 이상이면 `NSNotFound`로 교체합니다.
+- Electron이 음절 중간에 `activateServer`를 다시 호출해도, 활성 조합이 있으면 새 어댑터가 첫 마크로 취급하지 않습니다.
+- 로컬 설치 `./install.sh --as-patchtype`은 표시 이름만 **PatchType / 패치타입**, 버전만 `2.7.4-patch.1 (local patch)`로 바꿉니다. 번들 ID는 공식 `com.pritype.inputmethod.v2`를 유지합니다.
+- 설정이 한글 언어 아래에서 입력기를 고를 수 있도록 `TISIntendedLanguage=ko`를 등록합니다. 최상위 `TISInputSourceID`는 넣지 않습니다. 번들 ID와 같아도 TIS가 `.v2.v2.korean`을 만들기 때문입니다.
 - Confluence 같은 웹 편집기 목록에서 `감사합니다.`를 치면 초성 `ㄱ`이 따로 한 항목이 되고 나머지가 다음 항목으로 들어가던 문제를 고쳤습니다. 웹 호스트는 첫 `setMarkedText`가 비어 있는 목록의 선택 영역을 통째로 갈아치우지 않도록 캐럿에만 삽입하고, 조합 중인 초성을 호환 자모(U+3131)가 아니라 초성 자모(U+1100)로 보내 조합이 첫 타건에서 끝나지 않게 합니다. 카카오톡 등 네이티브 호스트는 기존 `NSNotFound` + 호환 자모 경로를 유지합니다.
 - 설정에 PriType가 여러 개로 보이던 문제를 줄였습니다. 한글 모드 키를 번들 ID와 같게 두면 TIS가 `com.pritype.inputmethod.v2.v2`를 만들고 모든 행이 `PriType`으로 표시됩니다. 한글 모드를 `com.pritype.inputmethod.v2.korean`으로 구분해 `한글`/`영어`로 보이게 하고, 예전 모드 ID는 기동 시 마이그레이션합니다. `~/Library`와 `/Library`에 동시에 설치하면 여전히 복제가 생기므로 `install.sh`가 경고합니다. 문자 레퍼토리에서 `Latn`을 빼고 설정에 한글 모드만 노출합니다. `Hang`+`Latn`이면 입력 소스 추가 화면이 PriType를 모든 라틴/한글 자판과 짝지어 수백 줄로 보여 줍니다.
 - 한→영 전환 직후 첫 글자가 대문자로 들어가던 문제를 고쳤습니다. 영어 자동 대문자 폴백이 커서 앞 텍스트를 빈 문자열로 보면 문장 시작으로 취급했는데, Chromium/Electron은 전환 직후 그 조회가 자주 비어 있었습니다. 이제 빈 컨텍스트는 패스스루하고, `.!?` 뒤 공백처럼 문장 끝이 확인될 때만 대문자로 넣습니다.

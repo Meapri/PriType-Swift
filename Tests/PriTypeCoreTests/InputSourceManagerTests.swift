@@ -187,4 +187,29 @@ struct InputSourceManagerTests {
         #expect(sanitized.contains { ($0["Input Mode"] as? String) == Brand.patchKoreanModeID })
         #expect(sanitized.contains { ($0["Bundle ID"] as? String) == "com.apple.inputmethod.Korean" })
     }
+
+    @Test("Live minted Korean child id is kept, not rewritten to .korean")
+    func keepsMintedV2KoreanChildId() {
+        let mintedKorean = Brand.mintedCollisionModeID(forBundleID: Brand.officialBundleID) + ".korean"
+        let sources: [[String: Any]] = [
+            [
+                "Bundle ID": Brand.officialBundleID,
+                "InputSourceKind": "Keyboard Input Method"
+            ],
+            [
+                "Bundle ID": Brand.officialBundleID,
+                "InputSourceKind": "Input Mode",
+                "Input Mode": mintedKorean
+            ]
+        ]
+        let sanitized = InputSourceManager.sanitizedInputSources(
+            sources,
+            removeAppleKoreanInputModes: false,
+            allowsPriTypeParentEntry: true,
+            activeBundleID: Brand.officialBundleID
+        )
+        #expect(sanitized.count == 2)
+        #expect(sanitized.contains { ($0["Input Mode"] as? String) == mintedKorean })
+        #expect(!sanitized.contains { ($0["Input Mode"] as? String) == Brand.officialKoreanModeID })
+    }
 }

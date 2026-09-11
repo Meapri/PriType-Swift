@@ -54,9 +54,13 @@ public enum Brand: Sendable {
         return officialConnectionName
     }
 
-    /// PatchType builds must not offer official PriType GitHub updates.
+    /// Local patch overlays skip official PriType GitHub updates.
     public static var tracksUpstreamUpdates: Bool {
-        bundleID == officialBundleID
+        guard bundleID == officialBundleID else { return false }
+        let channel = (Bundle.main.object(forInfoDictionaryKey: "PriTypeReleaseChannel") as? String ?? "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+        return channel != "local" && channel != "patch"
     }
 
     public static func koreanModeID(forBundleID bundleID: String) -> String {

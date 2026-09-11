@@ -31,14 +31,20 @@ public final class InputSourceManager: @unchecked Sendable {
     /// Modes belonging to `activeBundleID`. cleanupStaleInputSources must NOT
     /// strip the English mode (it is a real registered mode, not a leftover).
     private static func currentInputModes(forBundleID bundleID: String) -> Set<String> {
-        [
+        let minted = Brand.mintedCollisionModeID(forBundleID: bundleID)
+        return [
             Brand.koreanModeID(forBundleID: bundleID),
-            Brand.englishModeID(forBundleID: bundleID)
+            Brand.englishModeID(forBundleID: bundleID),
+            "\(minted).korean",
+            "\(minted).english"
         ]
     }
 
     /// Old Korean mode key was the bundle id itself. TIS then minted
-    /// `<bundleID>.<last-component>` and Settings showed every row as the app name.
+    /// `<bundleID>.<last-component>` (`…v2.v2`). Do **not** treat
+    /// `…v2.v2.korean` as legacy — that is the live TIS child id on machines
+    /// that still have the minted row. Rewriting it to `.korean` drops Hangul
+    /// from HIToolbox while the parent IM stays enabled.
     private static func legacyKoreanModeIds(forBundleID bundleID: String) -> Set<String> {
         [
             bundleID,
