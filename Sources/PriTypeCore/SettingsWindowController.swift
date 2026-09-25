@@ -1,6 +1,7 @@
 import Cocoa
 import SwiftUI
 import Carbon
+import UniformTypeIdentifiers
 
 /// Manages the settings window for the input method
 @MainActor
@@ -92,6 +93,8 @@ extension SettingsWindowController: NSWindowDelegate {
 // MARK: - SwiftUI Settings View
 
 struct SettingsView: View {
+    @State private var excludedApps = ConfigurationManager.shared.toggleExcludedBundleIDs
+    @State private var invalidExcludedApp = false
     @State private var selectedKeyboard = ConfigurationManager.shared.keyboardId
     @State private var toggleKeyBinding = ConfigurationManager.shared.toggleKeyBinding
     @State private var hanjaKeyBinding = ConfigurationManager.shared.hanjaKeyBinding
@@ -115,6 +118,75 @@ struct SettingsView: View {
 
     // Experimental Windows-style direct insertion (Phase 3). Default OFF.
     @State private var experimentalDirectInsertion = false
+
+    private func exclusionText(_ key: String) -> String {
+        NSLocalizedString("toggleExclusions." + key, bundle: .module, comment: "")
+    }
+
+    private var toggleExclusionsSection: some View {
+        SettingsSection(title: exclusionText("title"), icon: "app.badge") {
+            VStack(alignment: .leading, spacing: 12) {
+                Text(exclusionText("description"))
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+                ForEach(excludedApps, id: \.self) { bundleID in
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(excludedAppName(bundleID))
+                            Text(bundleID).font(.caption).foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Button {
+                            excludedApps.removeAll { $0 == bundleID }
+                            ConfigurationManager.shared.toggleExcludedBundleIDs = excludedApps
+                        } label: {
+                            Image(systemName: "minus.circle")
+                        }
+                        .accessibilityLabel(exclusionText("remove") + " " + excludedAppName(bundleID))
+                    }
+                }
+                if excludedApps.isEmpty {
+                    Text(exclusionText("empty")).font(.caption).foregroundStyle(.secondary)
+                }
+                Button(exclusionText("add"), action: addExcludedApps)
+            }
+            .padding(12)
+        }
+        .alert(exclusionText("invalid"), isPresented: $invalidExcludedApp) {
+            Button("OK", role: .cancel) {}
+        }
+    }
+
+    private func excludedAppName(_ bundleID: String) -> String {
+        guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) else {
+            return bundleID
+        }
+        return FileManager.default.displayName(atPath: url.path)
+    }
+
+    private func addExcludedApps() {
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = [.applicationBundle]
+        panel.canChooseDirectories = false
+        panel.canChooseFiles = true
+        panel.treatsFilePackagesAsDirectories = false
+        panel.allowsMultipleSelection = true
+        panel.directoryURL = URL(fileURLWithPath: "/Applications")
+        panel.prompt = exclusionText("add")
+        panel.begin { response in
+            guard response == .OK else { return }
+            var ids = ConfigurationManager.shared.toggleExcludedBundleIDs
+            for url in panel.urls {
+                guard let id = Bundle(url: url)?.bundleIdentifier, !id.isEmpty else {
+                    invalidExcludedApp = true
+                    continue
+                }
+                ids.append(id)
+            }
+            ConfigurationManager.shared.toggleExcludedBundleIDs = ids
+            excludedApps = ConfigurationManager.shared.toggleExcludedBundleIDs
+        }
+    }
 
     private enum UpdateStatus: Equatable {
         case idle
@@ -154,6 +226,7 @@ struct SettingsView: View {
         }
         .frame(width: PriTypeConfig.settingsWindowWidth, height: PriTypeConfig.settingsWindowHeight)
         .onAppear {
+            excludedApps = ConfigurationManager.shared.toggleExcludedBundleIDs
             selectedKeyboard = ConfigurationManager.shared.keyboardId
             toggleKeyBinding = ConfigurationManager.shared.toggleKeyBinding
             hanjaKeyBinding = ConfigurationManager.shared.hanjaKeyBinding
@@ -281,6 +354,8 @@ struct SettingsView: View {
                 ConfigurationManager.shared.hanjaKeyBinding = newValue
                 clearKeyConflict()
             }
+
+            toggleExclusionsSection
 
             SettingsSection(
                 title: L10n.update.title,

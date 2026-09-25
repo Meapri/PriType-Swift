@@ -376,6 +376,25 @@ public final class ConfigurationManager: ConfigurationProviding, @unchecked Send
         }
     }
     
+    /// Apps in which both custom language-toggle and Hanja keys pass through.
+    /// Keep the existing preference key so previously saved exclusions still apply.
+    public var toggleExcludedBundleIDs: [String] {
+        get { defaults.stringArray(forKey: "com.pritype.toggleExcludedBundleIDs") ?? [] }
+        set {
+            defaults.set(Array(Set(newValue.filter { !$0.isEmpty })).sorted(),
+                         forKey: "com.pritype.toggleExcludedBundleIDs")
+        }
+    }
+
+    public func isToggleExcluded(bundleID: String?) -> Bool {
+        guard let bundleID else { return false }
+        return toggleExcludedBundleIDs.contains(bundleID)
+    }
+
+    public var isToggleExcludedForFocusedApp: Bool {
+        ToggleAppFocus.isExcluded(bundleIDs: toggleExcludedBundleIDs)
+    }
+
     // MARK: - Toggle Key (Legacy)
     
     /// The selected toggle key for switching between Korean and English
